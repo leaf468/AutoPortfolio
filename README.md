@@ -1,6 +1,6 @@
-# Careeroad Portfolio Assistant 🚀
+# AI Portfolio Assistant 🚀
 
-AI 기반 자동 포트폴리오 생성 웹서비스
+OpenAI GPT-4 기반 자동 포트폴리오 생성 웹서비스
 
 ## 📋 주요 기능
 
@@ -12,81 +12,50 @@ AI 기반 자동 포트폴리오 생성 웹서비스
 
 ## 🛠 기술 스택
 
-### Backend
-- FastAPI (Python)
-- Pydantic
-- WeasyPrint (PDF 생성)
-- Markdown to HTML 변환
-- Redis (캐싱)
-- PostgreSQL (데이터베이스)
-
-### Frontend
-- React 18 + TypeScript
-- Tailwind CSS
-- React Router
-- React Query (TanStack Query)
-- Framer Motion (애니메이션)
-- Heroicons
-
-### Infrastructure
-- Docker & Docker Compose
-- Nginx (리버스 프록시)
+- **React 18 + TypeScript** - 모던 프론트엔드 프레임워크
+- **OpenAI GPT-4 API** - AI 텍스트 생성 및 분석
+- **Tailwind CSS** - 유틸리티 기반 스타일링
+- **React Query** - 서버 상태 관리
+- **Framer Motion** - 부드러운 애니메이션
+- **Mustache** - 템플릿 렌더링
 
 ## 🚀 시작하기
 
 ### 사전 요구사항
-- Docker & Docker Compose
-- Node.js 18+ (개발 환경)
-- Python 3.11+ (개발 환경)
-- OpenAI API Key (AI 기능 사용 시)
+- Node.js 18+
+- OpenAI API Key (필수)
 
 ### 설치 및 실행
 
 1. **프로젝트 클론**
 ```bash
-git clone <repository-url>
-cd careeroad-portfolio
+git clone https://github.com/leaf468/AutoPortfolio.git
+cd AutoPortfolio
 ```
 
 2. **환경 설정**
 ```bash
-# 백엔드 환경 변수 설정
-cp backend/.env.example backend/.env
-# OpenAI API 키 설정 (backend/.env 파일에서)
-
-# 프론트엔드 환경 변수 설정 (필요시)
+# 환경 변수 파일 생성
 cp frontend/.env.example frontend/.env
+
+# .env 파일에서 OpenAI API 키 설정
+# REACT_APP_OPENAI_API_KEY=your-api-key-here
 ```
 
 3. **개발 환경에서 실행**
-
-**방법 1: 프론트엔드만 실행 (추천)**
 ```bash
+# 프론트엔드 폴더로 이동
 cd frontend
-npm install
-npm run dev
-```
 
-**방법 2: 전체 서비스 실행**
-```bash
 # 의존성 설치
-npm install -g concurrently
-cd frontend && npm install
-cd ../backend && pip install -r requirements.txt
+npm install
 
-# 전체 서비스 동시 실행
+# 개발 서버 실행
 npm run dev
-```
-
-**방법 3: Docker Compose**
-```bash
-docker-compose up --build
 ```
 
 ### 접속 URL
-- **Frontend**: http://localhost:3000
-- Backend API: http://localhost:8000
-- API 문서: http://localhost:8000/docs
+- **개발 서버**: http://localhost:3000
 
 ### 사용법
 
@@ -105,39 +74,32 @@ docker-compose up --build
 ## 📁 프로젝트 구조
 
 ```
-careeroad-portfolio/
-├── backend/
-│   ├── main.py              # FastAPI 메인 애플리케이션
-│   ├── requirements.txt     # Python 의존성
-│   └── Dockerfile
+AutoPortfolio/
 ├── frontend/
 │   ├── src/
 │   │   ├── components/      # React 컴포넌트
+│   │   │   ├── InteractiveChatbot.tsx
+│   │   │   ├── TemplateUpload.tsx
+│   │   │   └── TextDumpInput.tsx
 │   │   ├── pages/          # 페이지 컴포넌트
-│   │   ├── services/       # API 서비스
+│   │   ├── services/       # 서비스
+│   │   │   ├── aiService.ts     # OpenAI 통합
+│   │   │   └── api.ts           # API 래퍼
 │   │   ├── types/          # TypeScript 타입 정의
 │   │   └── App.tsx         # 메인 앱 컴포넌트
-│   ├── package.json
-│   └── Dockerfile
-├── templates/              # 포트폴리오 템플릿
-├── docker-compose.yml      # Docker Compose 설정
-├── nginx.conf             # Nginx 설정
+│   └── package.json
+├── vercel.json            # Vercel 배포 설정
 └── README.md
 ```
 
-## 🔧 API 엔드포인트
+## 🔧 주요 기능 설명
 
-### 포트폴리오 생성
-- `POST /api/generate` - 포트폴리오 생성
-- `POST /api/analyze` - 포트폴리오 데이터 분석
-- `GET /api/download/{id}` - 포트폴리오 다운로드
-- `GET /api/preview/{id}` - 포트폴리오 미리보기
-
-### 템플릿
-- `GET /api/templates` - 템플릿 목록 조회
-
-### AI 어시스턴트
-- `POST /api/chat` - AI 어시스턴트와 대화
+### AI 서비스 (프론트엔드 통합)
+- **텍스트 파싱**: 자유형식 텍스트를 구조화된 데이터로 변환
+- **질문 생성**: 부족한 정보에 대한 스마트한 질문 생성
+- **답변 처리**: 사용자 답변을 포트폴리오 데이터에 통합
+- **포트폴리오 생성**: Mustache 템플릿을 사용한 동적 렌더링
+- **내용 개선**: GPT-4를 통한 전문적인 표현 최적화
 
 ## 💡 사용 방법
 

@@ -32,13 +32,14 @@ export interface Project {
 }
 
 export interface Education {
-  institution: string;
+  institution?: string;
+  school?: string; // 별칭 추가
   degree: string;
-  field: string;
-  startDate: string;
+  field?: string;
+  startDate?: string;
   endDate?: string;
   gpa?: number;
-  achievements: string[];
+  achievements?: string[];
 }
 
 export interface Skill {
@@ -64,18 +65,25 @@ export interface PortfolioRequest extends PortfolioData {
 }
 
 export interface AssistantResponse {
-  action: string;
-  message: string;
+  action?: string;
+  message?: string;
   payload?: any;
-  missingFields: string[];
-  stop: boolean;
+  missingFields?: string[];
+  suggestions?: string[];
+  isComplete?: boolean;
+  stop?: boolean;
 }
 
 export interface GenerateResponse {
   portfolioId: string;
-  format: string;
+  format?: string;
+  formats?: {
+    markdown: string;
+    html: string;
+    pdf: string | null;
+  };
   content?: string;
   previewUrl?: string;
-  downloadUrl: string;
-  message: string;
+  downloadUrl?: string;
+  message?: string;
 }
