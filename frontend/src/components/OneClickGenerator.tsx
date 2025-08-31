@@ -5,6 +5,7 @@ import {
   DocumentArrowDownIcon,
   EyeIcon,
   CheckCircleIcon,
+  CheckIcon,
   StarIcon,
   DocumentTextIcon
 } from '@heroicons/react/24/outline';
@@ -19,12 +20,14 @@ import { BoostResult } from '../services/interactiveBooster';
 interface OneClickGeneratorProps {
   enhancedContent: OrganizedContent;
   boostResult?: BoostResult;
+  template?: string;
   onComplete: (result: GenerationResult) => void;
 }
 
 const OneClickGenerator: React.FC<OneClickGeneratorProps> = ({ 
   enhancedContent, 
   boostResult,
+  template,
   onComplete 
 }) => {
   const [selectedTemplate, setSelectedTemplate] = useState<string>('modern-dev');
@@ -66,11 +69,17 @@ const OneClickGenerator: React.FC<OneClickGeneratorProps> = ({
         customStyles
       };
 
-      const generationResult = await oneClickGenerator.generatePortfolio(enhancedContent, options);
+      console.log('Generating portfolio with options:', options);
+      console.log('Enhanced content:', enhancedContent);
+      
+      const generationResult = await oneClickGenerator.generatePortfolio(enhancedContent, options, template);
+      console.log('Generation result:', generationResult);
+      
       setResult(generationResult);
       onComplete(generationResult);
     } catch (error) {
       console.error('포트폴리오 생성 오류:', error);
+      alert(`포트폴리오 생성 중 오류가 발생했습니다: ${error}`);
     } finally {
       setIsGenerating(false);
     }
@@ -262,28 +271,45 @@ const OneClickGenerator: React.FC<OneClickGeneratorProps> = ({
       {/* 템플릿 선택 */}
       <div className="mb-8">
         <h3 className="text-xl font-semibold mb-4">템플릿 선택</h3>
+        
+        {/* 업로드된 커스텀 템플릿 표시 */}
+        {template && (
+          <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+            <div className="flex items-center mb-2">
+              <CheckIcon className="w-5 h-5 text-green-600 mr-2" />
+              <span className="font-medium text-green-800">사용자 정의 템플릿이 업로드되었습니다</span>
+            </div>
+            <div className="text-sm text-green-700 bg-white p-3 rounded border max-h-32 overflow-y-auto">
+              <pre className="whitespace-pre-wrap">{template.substring(0, 200)}...</pre>
+            </div>
+            <p className="text-xs text-green-600 mt-2">
+              이 템플릿이 최종 포트폴리오 생성에 사용됩니다.
+            </p>
+          </div>
+        )}
+        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {templates.map((template) => (
+          {templates.map((tmpl) => (
             <button
-              key={template.id}
-              onClick={() => handleTemplateSelect(template.id)}
+              key={tmpl.id}
+              onClick={() => handleTemplateSelect(tmpl.id)}
               className={`p-6 border-2 rounded-lg text-left transition-colors ${
-                selectedTemplate === template.id
+                selectedTemplate === tmpl.id
                   ? 'border-purple-600 bg-purple-50'
                   : 'border-gray-300 hover:border-gray-400'
               }`}
             >
               <div className="flex items-center mb-2">
                 <DocumentTextIcon className="w-5 h-5 mr-2 text-purple-600" />
-                <h4 className="font-semibold">{template.name}</h4>
+                <h4 className="font-semibold">{tmpl.name}</h4>
                 <span className="ml-auto text-xs bg-gray-200 px-2 py-1 rounded-full">
-                  {template.targetAudience}
+                  {tmpl.targetAudience}
                 </span>
               </div>
-              <p className="text-sm text-gray-600">{template.description}</p>
+              <p className="text-sm text-gray-600">{tmpl.description}</p>
               <div className="mt-2 flex items-center text-xs text-gray-500">
-                <span className="mr-3">형식: {template.format.toUpperCase()}</span>
-                <span>카테고리: {template.category}</span>
+                <span className="mr-3">형식: {tmpl.format.toUpperCase()}</span>
+                <span>카테고리: {tmpl.category}</span>
               </div>
             </button>
           ))}

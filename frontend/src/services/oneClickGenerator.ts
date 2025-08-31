@@ -173,7 +173,7 @@ class OneClickGenerator {
                     <h3>{{category}}</h3>
                     <div class="keywords">
                         {{#skills}}
-                        <span class="keyword">{{.}}</span>
+                        <span class="keyword">{{value}}</span>
                         {{/skills}}
                     </div>
                     <p style="margin-top: 1rem; color: #666;">{{experience}}</p>
@@ -233,7 +233,7 @@ class OneClickGenerator {
 
 ## 기술 역량
 {{#skills}}
-**{{category}}:** {{#skills}}{{.}}{{^last}}, {{/last}}{{/skills}} ({{experience}})  
+**{{category}}:** {{#skills}}{{value}}{{^last}}, {{/last}}{{/skills}} ({{experience}})  
 {{/skills}}
 
 ---
@@ -247,66 +247,135 @@ class OneClickGenerator {
     }
   ];
 
-  async generatePortfolio(content: OrganizedContent, options: GenerationOptions): Promise<GenerationResult> {
-    const template = this.templates.find(t => t.id === options.templateId);
-    if (!template) {
-      throw new Error('템플릿을 찾을 수 없습니다.');
+  async generatePortfolio(content: OrganizedContent, options: GenerationOptions, customTemplate?: string): Promise<GenerationResult> {
+    try {
+      console.log('Starting portfolio generation with options:', options);
+      console.log('Custom template provided:', !!customTemplate);
+      
+      let templateToUse;
+      let templateName = '';
+      
+      if (customTemplate) {
+        // 사용자 커스텀 템플릿 사용
+        templateToUse = {
+          id: 'custom',
+          name: '사용자 정의 템플릿',
+          template: customTemplate,
+          format: 'markdown',
+          styles: {
+            primaryColor: '#0168FF',
+            secondaryColor: '#00D9FF'
+          }
+        };
+        templateName = '사용자 정의 템플릿';
+      } else {
+        // 기본 템플릿 사용
+        templateToUse = this.templates.find(t => t.id === options.templateId);
+        if (!templateToUse) {
+          throw new Error('템플릿을 찾을 수 없습니다.');
+        }
+        templateName = templateToUse.name;
+      }
+
+      // 스타일 적용
+      const styles = {
+        ...templateToUse.styles,
+        ...options.customStyles
+      };
+
+      // 콘텐츠 준비
+      const templateData = this.prepareTemplateData(content, options, styles);
+      console.log('Template data prepared:', templateData);
+
+      let generatedContent: string;
+
+      if (customTemplate) {
+        // 커스텀 템플릿은 AI로 처리
+        generatedContent = await this.generateWithAI(customTemplate, templateData);
+      } else if (templateToUse.format === 'html') {
+        generatedContent = this.generateHTML(templateToUse.template, templateData);
+      } else if (templateToUse.format === 'markdown') {
+        generatedContent = this.generateMarkdown(templateToUse.template, templateData);
+      } else if (options.format === 'notion-json') {
+        generatedContent = await this.generateNotionJSON(content, templateData);
+      } else {
+        generatedContent = Mustache.render(templateToUse.template, templateData);
+      }
+
+      console.log('Content generated, length:', generatedContent.length);
+
+      // 품질 점수 계산 (에러 시 기본값 사용)
+      let qualityScore = 75;
+      try {
+        qualityScore = await this.calculateQualityScore(generatedContent, content);
+      } catch (error) {
+        console.error('Quality score calculation failed:', error);
+      }
+      
+      // 개선 제안 생성 (에러 시 기본값 사용)
+      let suggestions: string[] = [];
+      try {
+        suggestions = await this.generateSuggestions(generatedContent, content);
+      } catch (error) {
+        console.error('Suggestions generation failed:', error);
+        suggestions = ['포트폴리오가 성공적으로 생성되었습니다.'];
+      }
+
+      const result: GenerationResult = {
+        id: `gen_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        format: options.format,
+        content: generatedContent,
+        downloadUrl: this.createDownloadUrl(generatedContent, options.format),
+        metadata: {
+          wordCount: this.countWords(generatedContent),
+          estimatedReadTime: Math.ceil(this.countWords(generatedContent) / 200),
+          generatedAt: new Date(),
+          template: templateName
+        },
+        qualityScore,
+        suggestions
+      };
+
+      console.log('Portfolio generation complete:', result);
+      return result;
+    } catch (error) {
+      console.error('Portfolio generation error:', error);
+      throw error;
     }
-
-    // 스타일 적용
-    const styles = {
-      ...template.styles,
-      ...options.customStyles
-    };
-
-    // 콘텐츠 준비
-    const templateData = this.prepareTemplateData(content, options, styles);
-
-    let generatedContent: string;
-
-    if (template.format === 'html') {
-      generatedContent = this.generateHTML(template.template, templateData);
-    } else if (template.format === 'markdown') {
-      generatedContent = this.generateMarkdown(template.template, templateData);
-    } else if (options.format === 'notion-json') {
-      generatedContent = await this.generateNotionJSON(content, templateData);
-    } else {
-      generatedContent = Mustache.render(template.template, templateData);
-    }
-
-    // 품질 점수 계산
-    const qualityScore = await this.calculateQualityScore(generatedContent, content);
-    
-    // 개선 제안 생성
-    const suggestions = await this.generateSuggestions(generatedContent, content);
-
-    const result: GenerationResult = {
-      id: `gen_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      format: options.format,
-      content: generatedContent,
-      downloadUrl: this.createDownloadUrl(generatedContent, options.format),
-      metadata: {
-        wordCount: this.countWords(generatedContent),
-        estimatedReadTime: Math.ceil(this.countWords(generatedContent) / 200),
-        generatedAt: new Date(),
-        template: template.name
-      },
-      qualityScore,
-      suggestions
-    };
-
-    return result;
   }
 
   private prepareTemplateData(content: OrganizedContent, options: GenerationOptions, styles: any) {
+    // 이름 추출 로직 - 첫 번째 경력에서 추출하거나 기본값 사용
+    const name = content.experiences.length > 0 
+      ? `${content.experiences[0].position} 개발자`
+      : '포트폴리오';
+    
     return {
       ...content,
       ...styles,
+      name,
       timestamp: new Date().toLocaleDateString('ko-KR'),
       // 추가 헬퍼 함수들
       'experiences.length': content.experiences.length > 0,
       'projects.length': content.projects.length > 0,
       'skills.length': content.skills.length > 0,
+      // 각 항목의 last 플래그 추가 (Mustache 템플릿용)
+      experiences: content.experiences.map((exp, idx) => ({
+        ...exp,
+        last: idx === content.experiences.length - 1
+      })),
+      projects: content.projects.map((proj, idx) => ({
+        ...proj,
+        last: idx === content.projects.length - 1
+      })),
+      skills: content.skills.map((skill, idx) => ({
+        ...skill,
+        skills: skill.skills.map((s, i) => ({
+          value: s,
+          last: i === skill.skills.length - 1
+        })),
+        last: idx === content.skills.length - 1
+      }))
     };
   }
 
@@ -316,6 +385,46 @@ class OneClickGenerator {
 
   private generateMarkdown(template: string, data: any): string {
     return Mustache.render(template, data);
+  }
+
+  private async generateWithAI(userTemplate: string, data: any): Promise<string> {
+    const systemPrompt = `
+사용자가 제공한 포트폴리오 템플릿에 실제 데이터를 채워서 완성된 포트폴리오를 생성하세요.
+
+규칙:
+1. 사용자 템플릿의 구조와 스타일을 완전히 유지하세요
+2. 템플릿의 플레이스홀더나 예시 텍스트를 실제 데이터로 교체하세요
+3. 템플릿에 없는 새로운 섹션이나 스타일을 추가하지 마세요
+4. 마크다운 형식을 유지하세요
+
+사용자 템플릿:
+${userTemplate}
+
+위 템플릿에 다음 데이터를 채워 넣어주세요.
+`;
+
+    try {
+      const response = await openai.chat.completions.create({
+        model: "gpt-4",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `포트폴리오 데이터:\n${JSON.stringify(data, null, 2)}` }
+        ],
+        temperature: 0.2,
+        max_tokens: 3000
+      });
+
+      return response.choices[0].message.content || userTemplate;
+    } catch (error) {
+      console.error('AI template generation error:', error);
+      // AI 실패 시 기본 Mustache 렌더링 시도
+      try {
+        return Mustache.render(userTemplate, data);
+      } catch (mustacheError) {
+        console.error('Mustache fallback error:', mustacheError);
+        return userTemplate; // 최종 fallback
+      }
+    }
   }
 
   private async generateNotionJSON(content: OrganizedContent, data: any): Promise<string> {

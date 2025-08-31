@@ -294,7 +294,15 @@ const InteractiveBoosterChat: React.FC<InteractiveBoosterChatProps> = ({
                 {currentQuestion.suggestions.map((suggestion, idx) => (
                   <button
                     key={idx}
-                    onClick={() => setAnswer(suggestion)}
+                    onClick={() => {
+                      // number 타입일 때는 숫자만 추출
+                      if (currentQuestion.expectedAnswer === 'number') {
+                        const numericValue = suggestion.replace(/[^0-9.-]/g, '');
+                        setAnswer(numericValue);
+                      } else {
+                        setAnswer(suggestion);
+                      }
+                    }}
                     className="px-3 py-1 text-sm bg-purple-100 text-purple-700 rounded-full hover:bg-purple-200 transition-colors"
                   >
                     {suggestion}

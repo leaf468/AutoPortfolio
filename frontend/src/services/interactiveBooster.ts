@@ -62,16 +62,19 @@ class InteractiveBooster {
 - metric: 구체적 수치 관련
 - general: 일반적 보완사항
 
+중요: expectedAnswer가 "number"인 경우, suggestions는 반드시 순수 숫자만 포함해야 합니다 (예: "1000", "30", "50")
+텍스트나 단위는 포함하지 마세요.
+
 JSON 배열 형식으로 반환:
 [
   {
     "id": "q1",
     "category": "metric",
     "priority": "high", 
-    "question": "마케팅 캠페인으로 얼마나 많은 사용자를 유치했나요?",
+    "question": "마케팅 캠페인으로 유치한 사용자 수는 몇 명인가요?",
     "context": "구체적 성과 수치는 채용담당자가 임팩트를 평가하는 핵심 지표입니다",
     "expectedAnswer": "number",
-    "suggestions": ["1000명", "전월 대비 30% 증가", "MAU 50% 상승"],
+    "suggestions": ["1000", "5000", "10000"],
     "targetField": "projects[0].achievements",
     "relatedItem": { "name": "마케팅 플랫폼", "index": 0 }
   }
@@ -102,7 +105,19 @@ JSON 배열 형식으로 반환:
         cleanedResult = match ? match[1] : result;
       }
 
-      return JSON.parse(cleanedResult) as BoosterQuestion[];
+      const questions = JSON.parse(cleanedResult) as BoosterQuestion[];
+      
+      // number 타입 질문의 suggestions 정제
+      return questions.map(q => {
+        if (q.expectedAnswer === 'number' && q.suggestions) {
+          q.suggestions = q.suggestions.map(s => {
+            // 숫자만 추출
+            const numericValue = s.toString().replace(/[^0-9.-]/g, '');
+            return numericValue || '0';
+          });
+        }
+        return q;
+      });
     } catch (error) {
       console.error('Question generation 오류:', error);
       return [];

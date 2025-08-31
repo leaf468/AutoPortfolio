@@ -4,16 +4,18 @@ import {
   CheckIcon,
   SparklesIcon,
   ChatBubbleLeftRightIcon,
-  DocumentArrowDownIcon
+  DocumentArrowDownIcon,
+  DocumentArrowUpIcon
 } from '@heroicons/react/24/outline';
 import AIOrganizer from './AIOrganizer';
 import InteractiveBoosterChat from './InteractiveBoosterChat';
 import OneClickGenerator from './OneClickGenerator';
+import TemplateUpload from './TemplateUpload';
 import { OrganizedContent } from '../services/aiOrganizer';
 import { BoostResult } from '../services/interactiveBooster';
 import { GenerationResult } from '../services/oneClickGenerator';
 
-type WizardStep = 'organize' | 'boost' | 'generate' | 'complete';
+type WizardStep = 'template' | 'organize' | 'boost' | 'generate' | 'complete';
 
 interface StepInfo {
   id: WizardStep;
@@ -23,12 +25,19 @@ interface StepInfo {
 }
 
 const PortfolioWizard: React.FC = () => {
-  const [currentStep, setCurrentStep] = useState<WizardStep>('organize');
+  const [currentStep, setCurrentStep] = useState<WizardStep>('template');
+  const [template, setTemplate] = useState<string>('');
   const [organizedContent, setOrganizedContent] = useState<OrganizedContent | null>(null);
   const [boostResult, setBoostResult] = useState<BoostResult | null>(null);
   const [finalResult, setFinalResult] = useState<GenerationResult | null>(null);
 
   const steps: StepInfo[] = [
+    {
+      id: 'template',
+      name: '템플릿 업로드',
+      description: '원하는 포트폴리오 양식 업로드',
+      icon: DocumentArrowUpIcon
+    },
     {
       id: 'organize',
       name: 'AI 정리',
@@ -49,6 +58,11 @@ const PortfolioWizard: React.FC = () => {
     }
   ];
 
+  const handleTemplateUpload = (uploadedTemplate: string) => {
+    setTemplate(uploadedTemplate);
+    setCurrentStep('organize');
+  };
+
   const handleOrganizeComplete = (content: OrganizedContent) => {
     setOrganizedContent(content);
     setCurrentStep('boost');
@@ -66,7 +80,8 @@ const PortfolioWizard: React.FC = () => {
   };
 
   const resetWizard = () => {
-    setCurrentStep('organize');
+    setCurrentStep('template');
+    setTemplate('');
     setOrganizedContent(null);
     setBoostResult(null);
     setFinalResult(null);
@@ -91,6 +106,9 @@ const PortfolioWizard: React.FC = () => {
 
   const renderStepContent = () => {
     switch (currentStep) {
+      case 'template':
+        return <TemplateUpload onUpload={handleTemplateUpload} />;
+        
       case 'organize':
         return <AIOrganizer onComplete={handleOrganizeComplete} />;
       
@@ -107,6 +125,7 @@ const PortfolioWizard: React.FC = () => {
           <OneClickGenerator 
             enhancedContent={organizedContent}
             boostResult={boostResult || undefined}
+            template={template}
             onComplete={handleGenerateComplete}
           />
         ) : null;
@@ -212,7 +231,7 @@ const PortfolioWizard: React.FC = () => {
                 AI 포트폴리오 제작소
               </h1>
               <p className="text-gray-600">
-                3단계로 완성하는 채용 최적화 포트폴리오
+                4단계로 완성하는 맞춤형 포트폴리오
               </p>
             </div>
             <div className="text-sm text-gray-500">
