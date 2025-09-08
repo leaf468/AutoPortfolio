@@ -30,9 +30,9 @@ const OneClickGenerator: React.FC<OneClickGeneratorProps> = ({
   template,
   onComplete 
 }) => {
-  const [selectedTemplate, setSelectedTemplate] = useState<string>('modern-dev');
+  const [selectedTemplate, setSelectedTemplate] = useState<string>('improved-modern-dev');
   const [generationOptions, setGenerationOptions] = useState<GenerationOptions>({
-    templateId: 'modern-dev',
+    templateId: 'improved-modern-dev',
     format: 'html',
     sections: ['all'],
     length: 'standard',

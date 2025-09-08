@@ -143,10 +143,10 @@ class AIPortfolioAssistant {
       // JSON 추출 (코드 블록 제거)
       let cleanedJson = extractedJson;
       if (extractedJson.includes('```json')) {
-        const match = extractedJson.match(/```json\n(.*?)\n```/s);
+        const match = extractedJson.match(/```json\n([\s\S]*?)\n```/);
         cleanedJson = match ? match[1] : extractedJson;
       } else if (extractedJson.includes('```')) {
-        const match = extractedJson.match(/```\n(.*?)\n```/s);
+        const match = extractedJson.match(/```\n([\s\S]*?)\n```/);
         cleanedJson = match ? match[1] : extractedJson;
       }
       
@@ -219,10 +219,10 @@ class AIPortfolioAssistant {
       
       let cleanedJson = questionsJson;
       if (questionsJson.includes('```json')) {
-        const match = questionsJson.match(/```json\n(.*?)\n```/s);
+        const match = questionsJson.match(/```json\n([\s\S]*?)\n```/);
         cleanedJson = match ? match[1] : questionsJson;
       } else if (questionsJson.includes('```')) {
-        const match = questionsJson.match(/```\n(.*?)\n```/s);
+        const match = questionsJson.match(/```\n([\s\S]*?)\n```/);
         cleanedJson = match ? match[1] : questionsJson;
       }
       
@@ -261,10 +261,10 @@ class AIPortfolioAssistant {
       
       let cleanedJson = updatedJson;
       if (updatedJson.includes('```json')) {
-        const match = updatedJson.match(/```json\n(.*?)\n```/s);
+        const match = updatedJson.match(/```json\n([\s\S]*?)\n```/);
         cleanedJson = match ? match[1] : updatedJson;
       } else if (updatedJson.includes('```')) {
-        const match = updatedJson.match(/```\n(.*?)\n```/s);
+        const match = updatedJson.match(/```\n([\s\S]*?)\n```/);
         cleanedJson = match ? match[1] : updatedJson;
       }
       

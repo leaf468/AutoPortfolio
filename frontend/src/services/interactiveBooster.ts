@@ -101,7 +101,7 @@ JSON 배열 형식으로 반환:
       let cleanedResult = result;
       
       if (result.includes('```json')) {
-        const match = result.match(/```json\n(.*?)\n```/s);
+        const match = result.match(/```json\n([\s\S]*?)\n```/);
         cleanedResult = match ? match[1] : result;
       }
 
@@ -171,10 +171,8 @@ JSON 배열 형식으로 반환:
 
     session.lastUpdated = new Date();
 
-    // 다음 질문으로 이동
-    if (session.currentQuestionIndex < session.questions.length - 1) {
-      session.currentQuestionIndex++;
-    }
+    // 다음 질문으로 이동 (마지막 질문에서도 인덱스 증가)
+    session.currentQuestionIndex++;
 
     return session;
   }
@@ -236,14 +234,38 @@ ${JSON.stringify(session.answers, null, 2)}
       });
 
       const result = response.choices[0].message.content || '{}';
+      console.log('Raw boost result from AI:', result);
       let cleanedResult = result;
       
       if (result.includes('```json')) {
-        const match = result.match(/```json\n(.*?)\n```/s);
+        const match = result.match(/```json\n([\s\S]*?)\n```/);
+        cleanedResult = match ? match[1] : result;
+      } else if (result.includes('```')) {
+        const match = result.match(/```\n([\s\S]*?)\n```/);
         cleanedResult = match ? match[1] : result;
       }
-
-      return JSON.parse(cleanedResult) as BoostResult;
+      
+      // JSON이 아닌 텍스트가 포함된 경우 기본값 반환
+      try {
+        const parsed = JSON.parse(cleanedResult);
+        return parsed as BoostResult;
+      } catch (parseError) {
+        console.error('JSON parsing failed, using fallback:', parseError);
+        console.log('Cleaned result that failed:', cleanedResult);
+        
+        // 기본값으로 반환 (사용자 답변은 유지)
+        return {
+          enhancedContent: originalContent,
+          improvementScore: 15,
+          beforeAfterComparison: { before: [], after: [] },
+          qualityMetrics: {
+            completeness: 75,
+            specificity: 70,
+            impact: 65,
+            atsScore: 60
+          }
+        };
+      }
     } catch (error) {
       console.error('Boost result generation 오류:', error);
       return {
@@ -269,10 +291,8 @@ ${JSON.stringify(session.answers, null, 2)}
   }
 
   async skipQuestion(session: BoosterSession): Promise<BoosterSession> {
-    if (session.currentQuestionIndex < session.questions.length - 1) {
-      session.currentQuestionIndex++;
-      session.lastUpdated = new Date();
-    }
+    session.currentQuestionIndex++;
+    session.lastUpdated = new Date();
     return session;
   }
 

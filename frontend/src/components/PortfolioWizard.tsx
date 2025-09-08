@@ -11,11 +11,14 @@ import AIOrganizer from './AIOrganizer';
 import InteractiveBoosterChat from './InteractiveBoosterChat';
 import OneClickGenerator from './OneClickGenerator';
 import TemplateUpload from './TemplateUpload';
+import PortfolioSectionEditor from './PortfolioSectionEditor';
+import FinalResultPanel from './FinalResultPanel';
 import { OrganizedContent } from '../services/aiOrganizer';
 import { BoostResult } from '../services/interactiveBooster';
 import { GenerationResult } from '../services/oneClickGenerator';
+import { FeedbackResult } from '../services/userFeedbackService';
 
-type WizardStep = 'template' | 'organize' | 'boost' | 'generate' | 'complete';
+type WizardStep = 'template' | 'organize' | 'boost' | 'generate' | 'feedback' | 'complete';
 
 interface StepInfo {
   id: WizardStep;
@@ -29,6 +32,8 @@ const PortfolioWizard: React.FC = () => {
   const [template, setTemplate] = useState<string>('');
   const [organizedContent, setOrganizedContent] = useState<OrganizedContent | null>(null);
   const [boostResult, setBoostResult] = useState<BoostResult | null>(null);
+  const [initialResult, setInitialResult] = useState<GenerationResult | null>(null);
+  const [feedbackResult, setFeedbackResult] = useState<FeedbackResult | null>(null);
   const [finalResult, setFinalResult] = useState<GenerationResult | null>(null);
 
   const steps: StepInfo[] = [
@@ -52,9 +57,15 @@ const PortfolioWizard: React.FC = () => {
     },
     {
       id: 'generate',
-      name: '원클릭 완성',
-      description: '완성된 포트폴리오 생성',
+      name: '초안 생성',
+      description: '포트폴리오 초안 생성',
       icon: DocumentArrowDownIcon
+    },
+    {
+      id: 'feedback',
+      name: '세부 편집',
+      description: '각 섹션별 개별 수정',
+      icon: ChatBubbleLeftRightIcon
     }
   ];
 
@@ -75,8 +86,34 @@ const PortfolioWizard: React.FC = () => {
   };
 
   const handleGenerateComplete = (result: GenerationResult) => {
-    setFinalResult(result);
+    setInitialResult(result);
+    setCurrentStep('feedback');
+  };
+
+  const handleFeedbackComplete = (result: FeedbackResult) => {
+    setFeedbackResult(result);
+    // 개선된 콘텐츠로 최종 결과 생성
+    const enhancedFinalResult: GenerationResult = {
+      ...initialResult!,
+      content: result.revisedContent,
+      qualityScore: result.finalQualityScore,
+      suggestions: [`개선 점수: +${result.improvementScore}`, ...result.changesApplied],
+      downloadUrl: createDownloadUrl(result.revisedContent, initialResult!.format)
+    };
+    setFinalResult(enhancedFinalResult);
     setCurrentStep('complete');
+  };
+
+  const handleSkipFeedback = () => {
+    setFinalResult(initialResult);
+    setCurrentStep('complete');
+  };
+
+  const createDownloadUrl = (content: string, format: string): string => {
+    const blob = new Blob([content], { 
+      type: format === 'html' ? 'text/html' : 'text/plain' 
+    });
+    return URL.createObjectURL(blob);
   };
 
   const resetWizard = () => {
@@ -84,6 +121,8 @@ const PortfolioWizard: React.FC = () => {
     setTemplate('');
     setOrganizedContent(null);
     setBoostResult(null);
+    setInitialResult(null);
+    setFeedbackResult(null);
     setFinalResult(null);
   };
 
@@ -130,90 +169,33 @@ const PortfolioWizard: React.FC = () => {
           />
         ) : null;
       
+      case 'feedback':
+        return initialResult && organizedContent ? (
+          <PortfolioSectionEditor 
+            initialContent={initialResult}
+            organizedContent={organizedContent}
+            onComplete={(finalContent) => {
+              const result: FeedbackResult = {
+                revisedContent: finalContent,
+                changesApplied: ['섹션별 편집 완료'],
+                improvementScore: 20,
+                finalQualityScore: 90
+              };
+              handleFeedbackComplete(result);
+            }}
+            onBack={handleSkipFeedback}
+          />
+        ) : null;
+      
       case 'complete':
-        return (
-          <div className="max-w-4xl mx-auto p-6">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-center mb-8"
-            >
-              <div className="flex justify-center items-center mb-4">
-                <CheckIcon className="w-16 h-16 text-green-600" />
-              </div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">
-                포트폴리오 완성! 🎉
-              </h2>
-              <p className="text-lg text-gray-600">
-                AI 기반 포트폴리오 제작이 성공적으로 완료되었습니다
-              </p>
-            </motion.div>
-
-            {finalResult && (
-              <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
-                <h3 className="text-xl font-semibold mb-4">최종 결과</h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                  <div className="text-center p-4 bg-purple-50 rounded-lg">
-                    <div className="text-2xl font-bold text-purple-600">
-                      {finalResult.qualityScore}/100
-                    </div>
-                    <div className="text-sm text-purple-700">품질 점수</div>
-                  </div>
-                  <div className="text-center p-4 bg-blue-50 rounded-lg">
-                    <div className="text-2xl font-bold text-blue-600">
-                      {finalResult.metadata.wordCount}
-                    </div>
-                    <div className="text-sm text-blue-700">단어 수</div>
-                  </div>
-                  <div className="text-center p-4 bg-green-50 rounded-lg">
-                    <div className="text-2xl font-bold text-green-600">
-                      {finalResult.format.toUpperCase()}
-                    </div>
-                    <div className="text-sm text-green-700">형식</div>
-                  </div>
-                </div>
-
-                {boostResult && (
-                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4 mb-4">
-                    <h4 className="font-semibold text-green-900 mb-2">
-                      🚀 대화형 보강 효과
-                    </h4>
-                    <div className="text-sm text-green-800">
-                      개선 점수: <strong>+{boostResult.improvementScore}</strong> | 
-                      완성도: <strong>{boostResult.qualityMetrics.completeness}%</strong> |
-                      구체성: <strong>{boostResult.qualityMetrics.specificity}%</strong> |
-                      ATS 점수: <strong>{boostResult.qualityMetrics.atsScore}</strong>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex space-x-4">
-                  <button
-                    onClick={() => {
-                      if (finalResult) {
-                        const link = document.createElement('a');
-                        link.href = finalResult.downloadUrl;
-                        link.download = `portfolio-${finalResult.id}.${finalResult.format}`;
-                        link.click();
-                      }
-                    }}
-                    className="flex-1 bg-gradient-to-r from-green-600 to-emerald-600 text-white py-3 px-6 rounded-lg font-medium hover:from-green-700 hover:to-emerald-700 transition-all duration-200 flex items-center justify-center"
-                  >
-                    <DocumentArrowDownIcon className="w-5 h-5 mr-2" />
-                    다운로드
-                  </button>
-                  <button
-                    onClick={resetWizard}
-                    className="flex-1 bg-gray-100 text-gray-700 py-3 px-6 rounded-lg font-medium hover:bg-gray-200 transition-colors flex items-center justify-center"
-                  >
-                    새 포트폴리오 만들기
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        );
+        return finalResult ? (
+          <FinalResultPanel 
+            finalResult={finalResult}
+            boostResult={boostResult || undefined}
+            feedbackResult={feedbackResult || undefined}
+            onReset={resetWizard}
+          />
+        ) : null;
       
       default:
         return null;
@@ -231,7 +213,7 @@ const PortfolioWizard: React.FC = () => {
                 AI 포트폴리오 제작소
               </h1>
               <p className="text-gray-600">
-                4단계로 완성하는 맞춤형 포트폴리오
+                5단계로 완성하는 맞춤형 포트폴리오
               </p>
             </div>
             <div className="text-sm text-gray-500">

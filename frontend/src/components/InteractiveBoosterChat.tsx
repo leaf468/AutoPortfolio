@@ -34,6 +34,7 @@ const InteractiveBoosterChat: React.FC<InteractiveBoosterChatProps> = ({
 
   useEffect(() => {
     initializeSession();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const initializeSession = async () => {
@@ -63,11 +64,14 @@ const InteractiveBoosterChat: React.FC<InteractiveBoosterChatProps> = ({
       setSession(updatedSession);
       
       const nextQuestion = await interactiveBooster.getNextQuestion(updatedSession);
+      console.log('Next question after answer:', nextQuestion);
+      console.log('Updated session:', updatedSession);
       setCurrentQuestion(nextQuestion);
       setAnswer('');
 
       // 모든 질문이 완료되었으면 결과 생성
       if (!nextQuestion) {
+        console.log('All questions completed, generating result...');
         await generateResult(updatedSession);
       }
     } catch (error) {
@@ -86,10 +90,13 @@ const InteractiveBoosterChat: React.FC<InteractiveBoosterChatProps> = ({
       setSession(updatedSession);
       
       const nextQuestion = await interactiveBooster.getNextQuestion(updatedSession);
+      console.log('Next question after skip:', nextQuestion);
+      console.log('Updated session after skip:', updatedSession);
       setCurrentQuestion(nextQuestion);
       setAnswer('');
 
       if (!nextQuestion) {
+        console.log('All questions completed after skip, generating result...');
         await generateResult(updatedSession);
       }
     } catch (error) {
@@ -100,9 +107,11 @@ const InteractiveBoosterChat: React.FC<InteractiveBoosterChatProps> = ({
   };
 
   const generateResult = async (finalSession: BoosterSession) => {
+    console.log('Starting result generation with session:', finalSession);
     setIsProcessing(true);
     try {
       const result = await interactiveBooster.generateBoostResult(organizedContent, finalSession);
+      console.log('Generated boost result:', result);
       onComplete(result);
     } catch (error) {
       console.error('결과 생성 오류:', error);

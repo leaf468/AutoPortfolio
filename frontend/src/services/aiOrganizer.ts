@@ -136,10 +136,10 @@ class AIOrganizer {
       
       // JSON 추출
       if (result.includes('```json')) {
-        const match = result.match(/```json\n(.*?)\n```/s);
+        const match = result.match(/```json\n([\s\S]*?)\n```/);
         cleanedResult = match ? match[1] : result;
       } else if (result.includes('```')) {
-        const match = result.match(/```\n(.*?)\n```/s);
+        const match = result.match(/```\n([\s\S]*?)\n```/);
         cleanedResult = match ? match[1] : result;
       }
 
@@ -197,7 +197,7 @@ class AIOrganizer {
       let cleanedResult = result;
       
       if (result.includes('```json')) {
-        const match = result.match(/```json\n(.*?)\n```/s);
+        const match = result.match(/```json\n([\s\S]*?)\n```/);
         cleanedResult = match ? match[1] : result;
       }
 
@@ -244,7 +244,7 @@ JSON 형식으로 반환:
       let cleanedResult = result;
       
       if (result.includes('```json')) {
-        const match = result.match(/```json\n(.*?)\n```/s);
+        const match = result.match(/```json\n([\s\S]*?)\n```/);
         cleanedResult = match ? match[1] : result;
       }
 
