@@ -1,0 +1,1057 @@
+import OpenAI from 'openai';
+
+const openai = new OpenAI({
+  apiKey: process.env.REACT_APP_OPENAI_API_KEY || '',
+  dangerouslyAllowBrowser: true
+});
+
+// 섹션 타입 정의
+export interface Section {
+  section_id: string;
+  doc_id: string;
+  title: string;
+  current_text: string;
+  original_text: string;
+  history: SectionHistory[];
+  required: boolean;
+  type: 'experience' | 'project' | 'skill' | 'achievement' | 'summary';
+}
+
+export interface SectionHistory {
+  timestamp: string;
+  user_id?: string;
+  action: 'suggest_apply' | 'manual_edit' | 'revert';
+  text: string;
+  source?: string; // 'user' | 'ai_suggestion'
+}
+
+// 추천 문구 타입
+export interface Suggestion {
+  suggestion_id: string;
+  section_id: string;
+  text: string;
+  tone: 'formal' | 'concise' | 'impact' | 'STAR' | 'ATS' | 'technical' | 'structured' | 'professional';
+  reason: string;
+  confidence: number;
+  hasPlaceholder?: boolean; // 숫자 입력 필요 여부
+}
+
+// 추천 요청 파라미터
+export interface SuggestionRequest {
+  section_id: string;
+  current_text: string;
+  section_type?: string;
+  content?: string;
+  role?: string;
+  target_job?: string;
+  locale?: 'ko-KR' | 'en-US';
+  tone_preferences?: string[];
+}
+
+// 추천 응답
+export interface SuggestionResponse {
+  suggestions: Suggestion[];
+  metadata?: {
+    processing_time?: number;
+    model_used?: string;
+  };
+}
+
+class SectionEditorService {
+  private sections: Map<string, Section> = new Map();
+  private cachedSuggestions: Map<string, SuggestionResponse> = new Map();
+
+  // 포트폴리오를 섹션별로 분할 (마크다운 및 HTML 지원)
+  parsePortfolioIntoSections(content: string, docId: string): Section[] {
+    console.log('Parsing portfolio content:', content);
+    const sections: Section[] = [];
+    
+    // 먼저 마크다운 형태인지 확인
+    if (content.includes('#') || content.includes('##') || content.includes('###')) {
+      // 마크다운 파싱
+      console.log('Detected markdown format, using markdown parsing');
+      return this.parseMarkdownContent(content, docId);
+    }
+    
+    // HTML 태그를 기준으로 섹션 분할
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(content, 'text/html');
+    
+    // HTML 파싱 로직 (기존 코드)
+    // 1. 요약 섹션 파싱
+    const heroElem = doc.querySelector('.hero p');
+    if (heroElem && heroElem.textContent?.trim()) {
+      const section: Section = {
+        section_id: 'summary_main',
+        doc_id: docId,
+        title: '전문 요약',
+        current_text: heroElem.textContent.trim(),
+        original_text: heroElem.textContent.trim(),
+        history: [],
+        required: true,
+        type: 'summary'
+      };
+      sections.push(section);
+      this.sections.set('summary_main', section);
+    }
+    
+    // About 섹션 찾기
+    const aboutSection = doc.querySelector('h2');
+    if (aboutSection?.textContent?.includes('About')) {
+      const aboutContent = aboutSection.nextElementSibling;
+      if (aboutContent && aboutContent.textContent?.trim()) {
+        const section: Section = {
+          section_id: 'about_main',
+          doc_id: docId,
+          title: '소개',
+          current_text: aboutContent.textContent.trim(),
+          original_text: aboutContent.textContent.trim(),
+          history: [],
+          required: true,
+          type: 'summary'
+        };
+        sections.push(section);
+        this.sections.set('about_main', section);
+      }
+    }
+
+    // 2. 경험 섹션 파싱
+    const experienceElements = doc.querySelectorAll('.experience-item');
+    console.log('Found experience elements:', experienceElements.length);
+    
+    experienceElements.forEach((elem, idx) => {
+      const companyElem = elem.querySelector('.company');
+      const positionElem = elem.querySelector('.position');
+      const impactElem = elem.querySelector('.impact');
+      const achievementsList = elem.querySelector('.achievements');
+      
+      if (companyElem || positionElem) {
+        const company = companyElem?.textContent?.trim() || `회사 ${idx + 1}`;
+        const position = positionElem?.textContent?.trim() || '직책';
+        const impact = impactElem?.textContent?.trim() || '';
+        const achievements = achievementsList?.textContent?.trim() || '';
+        
+        const combinedText = [impact, achievements].filter(t => t).join('\n');
+        
+        const sectionId = `exp_${idx}`;
+        const section: Section = {
+          section_id: sectionId,
+          doc_id: docId,
+          title: `${company} - ${position}`,
+          current_text: combinedText,
+          original_text: combinedText,
+          history: [],
+          required: true,
+          type: 'experience'
+        };
+        sections.push(section);
+        this.sections.set(sectionId, section);
+      }
+    });
+
+    // 3. 프로젝트 섹션 파싱
+    const projectElements = doc.querySelectorAll('.project-item, .card');
+    console.log('Found project elements:', projectElements.length);
+    
+    projectElements.forEach((elem, idx) => {
+      const nameElem = elem.querySelector('h3');
+      const summaryElems = elem.querySelectorAll('p');
+      const achievementsList = elem.querySelector('.achievements');
+      
+      if (nameElem) {
+        const name = nameElem.textContent?.trim() || `프로젝트 ${idx + 1}`;
+        const summaries = Array.from(summaryElems)
+          .map(p => p.textContent?.trim())
+          .filter(t => t && !t.includes('Role:'));
+        const achievements = achievementsList?.textContent?.trim() || '';
+        
+        const combinedText = [...summaries, achievements].filter(t => t).join('\n');
+        
+        if (combinedText) {
+          const sectionId = `proj_${idx}`;
+          const section: Section = {
+            section_id: sectionId,
+            doc_id: docId,
+            title: name,
+            current_text: combinedText,
+            original_text: combinedText,
+            history: [],
+            required: true,
+            type: 'project'
+          };
+          sections.push(section);
+          this.sections.set(sectionId, section);
+        }
+      }
+    });
+    
+    // 4. 전체 텍스트에서 섹션 추출 (백업)
+    if (sections.length === 0) {
+      console.log('No sections found with CSS selectors, trying text-based parsing');
+      return this.parseTextContent(content, docId);
+    }
+
+    console.log('Parsed sections:', sections.length, sections);
+    return sections;
+  }
+  
+  // 마크다운 내용 파싱
+  private parseMarkdownContent(content: string, docId: string): Section[] {
+    const sections: Section[] = [];
+    const lines = content.split('\n');
+    let currentSection: { title: string; content: string[]; type: 'summary' | 'experience' | 'project' | 'skill' | 'achievement' } | null = null;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      
+      if (line.startsWith('# ')) {
+        // 메인 제목 - 일반적으로 이름이나 전체 제목
+        if (currentSection) {
+          this.addSectionFromMarkdown(sections, currentSection, docId);
+        }
+        currentSection = {
+          title: line.substring(2).trim() || '포트폴리오',
+          content: [],
+          type: 'summary'
+        };
+      } else if (line.startsWith('## ')) {
+        // 섹션 제목
+        if (currentSection) {
+          this.addSectionFromMarkdown(sections, currentSection, docId);
+        }
+        const sectionTitle = line.substring(3).trim();
+        let sectionType: 'summary' | 'experience' | 'project' | 'skill' | 'achievement' = 'summary';
+        
+        // 섹션 타입 추론
+        if (sectionTitle.includes('경력') || sectionTitle.includes('경험') || sectionTitle.includes('Experience') || sectionTitle.includes('Work')) {
+          sectionType = 'experience';
+        } else if (sectionTitle.includes('프로젝트') || sectionTitle.includes('Project')) {
+          sectionType = 'project';
+        } else if (sectionTitle.includes('기술') || sectionTitle.includes('스킬') || sectionTitle.includes('Skills')) {
+          sectionType = 'skill';
+        } else if (sectionTitle.includes('성과') || sectionTitle.includes('Achievement')) {
+          sectionType = 'achievement';
+        }
+        
+        currentSection = {
+          title: sectionTitle,
+          content: [],
+          type: sectionType
+        };
+      } else if (line.startsWith('### ')) {
+        // 하위 제목 - 새로운 섹션으로 처리
+        if (currentSection) {
+          this.addSectionFromMarkdown(sections, currentSection, docId);
+        }
+        currentSection = {
+          title: line.substring(4).trim(),
+          content: [],
+          type: 'project' // 보통 프로젝트나 경험의 세부사항
+        };
+      } else if (line && currentSection) {
+        // 내용 추가
+        currentSection.content.push(line);
+      } else if (line && !currentSection) {
+        // 제목 없이 시작하는 내용 - 요약으로 처리
+        if (!currentSection) {
+          currentSection = {
+            title: '소개',
+            content: [],
+            type: 'summary'
+          };
+        }
+        currentSection.content.push(line);
+      }
+    }
+    
+    // 마지막 섹션 추가
+    if (currentSection) {
+      this.addSectionFromMarkdown(sections, currentSection, docId);
+    }
+    
+    console.log('Markdown parsing result:', sections.length, sections);
+    return sections;
+  }
+  
+  // 마크다운 섹션을 Section 객체로 변환
+  private addSectionFromMarkdown(sections: Section[], mdSection: { title: string; content: string[]; type: 'summary' | 'experience' | 'project' | 'skill' | 'achievement' }, docId: string): void {
+    if (mdSection.content.length === 0) return;
+    
+    const combinedText = mdSection.content.join('\n').trim();
+    if (!combinedText) return;
+    
+    const sectionId = `${mdSection.type}_${sections.length}`;
+    const section: Section = {
+      section_id: sectionId,
+      doc_id: docId,
+      title: mdSection.title,
+      current_text: combinedText,
+      original_text: combinedText,
+      history: [],
+      required: true,
+      type: mdSection.type
+    };
+    
+    sections.push(section);
+    this.sections.set(sectionId, section);
+  }
+  
+  // 텍스트 내용 파싱 (백업용)
+  private parseTextContent(content: string, docId: string): Section[] {
+    const sections: Section[] = [];
+    const fullText = content.replace(/<[^>]*>/g, ''); // HTML 태그 제거
+    const paragraphs = fullText.split('\n').filter(p => p.trim().length > 20);
+    
+    paragraphs.forEach((paragraph, idx) => {
+      if (paragraph.trim()) {
+        const sectionId = `text_${idx}`;
+        const section: Section = {
+          section_id: sectionId,
+          doc_id: docId,
+          title: `내용 ${idx + 1}`,
+          current_text: paragraph.trim(),
+          original_text: paragraph.trim(),
+          history: [],
+          required: true,
+          type: 'summary'
+        };
+        sections.push(section);
+        this.sections.set(sectionId, section);
+      }
+    });
+    
+    return sections;
+  }
+
+  // LLM에게 추천 문구 요청
+  async getSuggestions(request: SuggestionRequest): Promise<SuggestionResponse> {
+    // 캐시 확인
+    const cacheKey = `${request.section_id}_${request.current_text}`;
+    if (this.cachedSuggestions.has(cacheKey)) {
+      return this.cachedSuggestions.get(cacheKey)!;
+    }
+
+    const systemPrompt = `You are a Portfolio Writing Expert specializing in creating high-impact, specific portfolio content.
+
+IMPORTANT: Return ONLY valid JSON. No markdown, no backticks, no extra text.
+
+Task: Generate 3 improved versions of the portfolio section with:
+- Specific quantifiable metrics (performance improvements, time savings, revenue impact)
+- Technical details and tech stack
+- Business impact and user benefits
+- STAR methodology (Situation-Task-Action-Result)
+- Industry-relevant keywords
+
+Language: Korean
+
+Example transformation:
+Before: "성능을 개선했습니다"
+After: "Redis 캐시 도입과 DB 인덱스 최적화로 API 응답속도를 2.3초에서 0.8초로 65% 향상시켜 월간 사용자 15만명의 대기시간 감소로 고객 만족도 20% 증가"
+
+Return this exact JSON structure:
+{"suggestions":[{"id":"s1","text":"detailed improved content","tone":"impact","reason":"improvement reason","confidence":0.9}]}`;
+
+    const userPrompt = `Section Type: ${this.sections.get(request.section_id)?.title || request.section_type || 'Unknown'}
+Target Role: ${request.role || request.target_job || 'Software Developer'}
+
+Current Content:
+${request.current_text}
+
+Requirements:
+1. Add specific numbers, percentages, timeframes
+2. Include technical stack and implementation details  
+3. Show business/user impact with measurable results
+4. Use action verbs and industry keywords
+5. Structure with clear problem-solution-result flow
+
+Generate 3 increasingly detailed versions (concise → detailed → comprehensive).`;
+
+    try {
+      const response = await openai.chat.completions.create({
+        model: "gpt-4",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
+        ],
+        temperature: 0.2,
+        max_tokens: 500
+      });
+
+      const result = response.choices[0].message.content || '{}';
+      console.log('Raw AI response:', result);
+      let cleanedResult = result;
+      
+      // JSON 추출
+      if (result.includes('```json')) {
+        const match = result.match(/```json\n([\s\S]*?)\n```/);
+        cleanedResult = match ? match[1] : result;
+      } else if (result.includes('```')) {
+        const match = result.match(/```\n([\s\S]*?)\n```/);
+        cleanedResult = match ? match[1] : result;
+      }
+
+      // JSON 문자열 정제 - 제어 문자 및 잘못된 문자 제거
+      cleanedResult = cleanedResult
+        // eslint-disable-next-line no-control-regex
+        .replace(/[\x00-\x1F\x7F-\x9F]/g, '') // 제어 문자 제거
+        .replace(/\\/g, '\\\\') // 백슬래시 이스케이프
+        .replace(/\n/g, '\\n') // 개행 문자 이스케이프  
+        .replace(/\r/g, '\\r') // 캐리지 리턴 이스케이프
+        .replace(/\t/g, '\\t') // 탭 문자 이스케이프
+        .trim();
+
+      let parsed;
+      try {
+        parsed = JSON.parse(cleanedResult);
+      } catch (parseError) {
+        console.error('JSON parsing failed, trying alternative cleanup:', parseError);
+        console.log('Failed content:', cleanedResult);
+        
+        // 더 강력한 정제 시도 - JSON 객체 추출
+        const jsonMatch = result.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          cleanedResult = jsonMatch[0]
+            // eslint-disable-next-line no-control-regex
+            .replace(/[\x00-\x1F\x7F-\x9F]/g, ' ') // 제어 문자를 공백으로 대체
+            .replace(/\n/g, ' ') // 개행을 공백으로 대체
+            .replace(/\r/g, ' ') // 캐리지 리턴을 공백으로 대체
+            .replace(/\t/g, ' ') // 탭을 공백으로 대체
+            .replace(/\s+/g, ' ') // 연속된 공백을 단일 공백으로
+            .trim();
+        } else {
+          // JSON 구조가 전혀 없는 경우 기본 구조 사용
+          cleanedResult = '{"suggestions": []}';
+        }
+        
+        try {
+          parsed = JSON.parse(cleanedResult);
+        } catch (secondError) {
+          console.error('Second JSON parsing also failed:', secondError);
+          // 최종 폴백: 기본 응답 구조 사용
+          parsed = { suggestions: [] };
+        }
+      }
+      
+      // suggestion_id 추가 및 placeholder 체크
+      const suggestions = parsed.suggestions.map((s: any, idx: number) => ({
+        ...s,
+        suggestion_id: `${request.section_id}_sug_${idx}`,
+        section_id: request.section_id,
+        hasPlaceholder: s.text.includes('{') && s.text.includes('}')
+      }));
+
+      const suggestionResponse: SuggestionResponse = {
+        suggestions,
+        metadata: {
+          processing_time: Date.now(),
+          model_used: 'gpt-4'
+        }
+      };
+
+      // 캐시 저장 (5분 TTL)
+      this.cachedSuggestions.set(cacheKey, suggestionResponse);
+      setTimeout(() => this.cachedSuggestions.delete(cacheKey), 5 * 60 * 1000);
+
+      return suggestionResponse;
+    } catch (error) {
+      console.error('Suggestion generation error:', error);
+      
+      // 개선된 폴백 시스템 - 섹션 유형별 맞춤 제안
+      const createSmartFallback = () => {
+        const currentText = request.current_text || request.content || '';
+        const sectionType = request.section_type || this.sections.get(request.section_id)?.type || '';
+        const baseId = request.section_id;
+        
+        // 경력 섹션인 경우
+        if (sectionType.includes('experience') || sectionType.includes('경력')) {
+          return [
+            {
+              suggestion_id: `${baseId}_exp_impact`,
+              section_id: baseId,
+              text: `${currentText}\n\n**주요 성과:**\n• 성능 개선: [구체적 %] 향상\n• 비용 절감: 월 [금액]만원 절약\n• 사용자 영향: [수치]명 사용자 경험 개선\n\n**기술 스택:** React, Node.js, PostgreSQL, AWS`,
+              tone: 'impact' as const,
+              reason: '정량적 성과와 기술적 세부사항 추가',
+              confidence: 0.85
+            },
+            {
+              suggestion_id: `${baseId}_exp_star`,
+              section_id: baseId,
+              text: `**상황:** ${currentText.split('.')[0] || '회사 또는 프로젝트 배경'}\n**과제:** [해결해야 할 문제점 명시]\n**행동:** [구체적 수행 내용과 사용 기술]\n**결과:** 성능 20% 향상, 비용 30% 절감, DAU 15% 증가`,
+              tone: 'structured' as const,
+              reason: 'STAR 기법으로 체계적 재구성',
+              confidence: 0.9
+            }
+          ];
+        }
+        
+        // 프로젝트 섹션인 경우
+        if (sectionType.includes('project') || sectionType.includes('프로젝트')) {
+          return [
+            {
+              suggestion_id: `${baseId}_proj_detailed`,
+              section_id: baseId,
+              text: `#### ${currentText.split('\n')[0] || '프로젝트명'}\n\n**개발 기간:** 2023.03 ~ 2023.08 (6개월)\n**팀 구성:** 프론트엔드 2명, 백엔드 2명\n**내 역할:** 풀스택 개발자\n\n**주요 기능:**\n${currentText}\n\n**기술 스택:**\n• Frontend: React, TypeScript, Tailwind CSS\n• Backend: Node.js, Express, MongoDB\n• 배포: AWS EC2, S3, CloudFront\n\n**성과 지표:**\n• 로딩 속도 40% 개선\n• 사용자 만족도 4.2/5.0 달성\n• 월간 액티브 사용자 500명 돌파`,
+              tone: 'technical' as const,
+              reason: '기술적 세부사항과 측정 가능한 성과 추가',
+              confidence: 0.88
+            }
+          ];
+        }
+        
+        // 기본 제안 (어떤 섹션이든)
+        return [
+          {
+            suggestion_id: `${baseId}_enhanced`,
+            section_id: baseId,
+            text: `${currentText}\n\n**추가된 구체적 정보:**\n• 정량적 성과: [수치]% 향상/감소\n• 기술적 도구: [사용한 기술/도구]\n• 비즈니스 영향: [사용자/매출/효율성 개선]\n• 협업 범위: [팀 규모]에서 [역할] 담당`,
+            tone: 'impact' as const,
+            reason: '구체성과 비즈니스 가치 강화',
+            confidence: 0.8
+          },
+          {
+            suggestion_id: `${baseId}_keywords`,
+            section_id: baseId,
+            text: `${currentText.trim()}\n\n하이라이트된 키워드: **데이터 분석**, **성능 최적화**, **사용자 경험**, **협업**, **문제 해결**`,
+            tone: 'professional' as const,
+            reason: '산업 키워드 및 ATS 최적화',
+            confidence: 0.75
+          }
+        ];
+      };
+      
+      return { suggestions: createSmartFallback() };
+    }
+  }
+
+  // 추천 문구 적용
+  applySuggestion(sectionId: string, suggestionText: string): void {
+    const section = this.sections.get(sectionId);
+    if (!section) return;
+
+    // 히스토리 저장
+    section.history.push({
+      timestamp: new Date().toISOString(),
+      action: 'suggest_apply',
+      text: section.current_text,
+      source: 'ai_suggestion'
+    });
+
+    // 텍스트 업데이트
+    section.current_text = suggestionText;
+    this.sections.set(sectionId, section);
+  }
+
+  // 수동 편집
+  manualEdit(sectionId: string, newText: string): void {
+    const section = this.sections.get(sectionId);
+    if (!section) return;
+
+    // 히스토리 저장
+    section.history.push({
+      timestamp: new Date().toISOString(),
+      action: 'manual_edit',
+      text: section.current_text,
+      source: 'user'
+    });
+
+    // 텍스트 업데이트
+    section.current_text = newText;
+    this.sections.set(sectionId, section);
+  }
+
+  // 되돌리기
+  revertSection(sectionId: string): void {
+    const section = this.sections.get(sectionId);
+    if (!section || section.history.length === 0) return;
+
+    // 마지막 히스토리에서 이전 텍스트 복원
+    const lastHistory = section.history.pop();
+    if (lastHistory) {
+      section.current_text = lastHistory.text;
+      this.sections.set(sectionId, section);
+    }
+  }
+
+  // 원본으로 되돌리기
+  revertToOriginal(sectionId: string): void {
+    const section = this.sections.get(sectionId);
+    if (!section) return;
+
+    section.history.push({
+      timestamp: new Date().toISOString(),
+      action: 'revert',
+      text: section.current_text,
+      source: 'user'
+    });
+
+    section.current_text = section.original_text;
+    this.sections.set(sectionId, section);
+  }
+
+  // 전체 문서 조합 (개선된 디자인 템플릿 사용)
+  buildFinalDocument(): string {
+    const sections = Array.from(this.sections.values());
+    
+    // 섹션 타입별로 그룹화
+    const experiences = sections.filter(s => s.type === 'experience');
+    const projects = sections.filter(s => s.type === 'project');
+    const skills = sections.filter(s => s.type === 'skill');
+    // const achievements = sections.filter(s => s.type === 'achievement');
+    const summaries = sections.filter(s => s.type === 'summary');
+    
+    // 기본 정보 추출
+    const mainSummary = summaries[0];
+    const profileName = this.extractNameFromSections(sections);
+    const profileTitle = this.extractTitleFromSections(sections);
+    
+    // 개선된 HTML 템플릿 사용
+    return `<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>${profileName} - ${profileTitle}</title>
+    <style>
+        /* 리셋 및 기본 설정 */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.7;
+            color: #333;
+            background: #ffffff;
+            font-size: 16px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+        
+        /* 타이포그래피 */
+        h1, h2, h3 {
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 1rem;
+        }
+        
+        h1 { font-size: 2.5rem; line-height: 1.2; }
+        h2 { font-size: 1.75rem; line-height: 1.3; }
+        h3 { font-size: 1.25rem; line-height: 1.4; }
+        
+        p {
+            margin-bottom: 1rem;
+            color: #555;
+        }
+        
+        /* 헤더 */
+        .header {
+            padding: 80px 0 60px;
+            text-align: center;
+            border-bottom: 1px solid #e8e8e8;
+        }
+        
+        .header h1 {
+            margin-bottom: 0.5rem;
+        }
+        
+        .subtitle {
+            font-size: 1.125rem;
+            color: #666;
+            margin-bottom: 2rem;
+            font-weight: 400;
+        }
+        
+        /* 섹션 공통 */
+        .section {
+            padding: 60px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .section:last-child {
+            border-bottom: none;
+        }
+        
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 2rem;
+            color: #1a1a1a;
+            position: relative;
+        }
+        
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 0;
+            width: 40px;
+            height: 3px;
+            background: #0066cc;
+        }
+        
+        /* About 섹션 */
+        .about-content {
+            font-size: 1.1rem;
+            line-height: 1.8;
+            max-width: 700px;
+        }
+        
+        /* Experience 섹션 */
+        .experience-item {
+            margin-bottom: 3rem;
+            border-left: 3px solid #0066cc;
+            padding-left: 2rem;
+        }
+        
+        .experience-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .company-info h3 {
+            margin-bottom: 0.25rem;
+        }
+        
+        .position {
+            color: #666;
+            font-size: 1rem;
+        }
+        
+        .duration {
+            color: #888;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        .impact {
+            font-weight: 600;
+            color: #0066cc;
+            margin-bottom: 1rem;
+            font-size: 1.05rem;
+        }
+        
+        .achievements {
+            list-style: none;
+            margin-left: 0;
+        }
+        
+        .achievements li {
+            position: relative;
+            padding-left: 1.5rem;
+            margin-bottom: 0.5rem;
+            color: #555;
+        }
+        
+        .achievements li::before {
+            content: '▶';
+            position: absolute;
+            left: 0;
+            color: #0066cc;
+            font-size: 0.8rem;
+        }
+        
+        .tech-tags {
+            margin-top: 1rem;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        
+        .tech-tag {
+            background: #f8f9fa;
+            color: #495057;
+            padding: 0.25rem 0.75rem;
+            border-radius: 16px;
+            font-size: 0.875rem;
+            border: 1px solid #e9ecef;
+        }
+        
+        /* Projects 섹션 */
+        .projects-grid {
+            display: grid;
+            gap: 2rem;
+        }
+        
+        .project-item {
+            border: 1px solid #e8e8e8;
+            border-radius: 8px;
+            padding: 2rem;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .project-item:hover {
+            border-color: #0066cc;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .project-header {
+            margin-bottom: 1rem;
+        }
+        
+        .project-title {
+            color: #1a1a1a;
+            margin-bottom: 0.25rem;
+        }
+        
+        .project-role {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+        
+        .project-description {
+            margin-bottom: 1.5rem;
+            color: #555;
+        }
+        
+        /* Skills 섹션 */
+        .skills-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+        }
+        
+        .skill-category {
+            border: 1px solid #e8e8e8;
+            border-radius: 8px;
+            padding: 1.5rem;
+        }
+        
+        .skill-category h3 {
+            color: #1a1a1a;
+            margin-bottom: 1rem;
+        }
+        
+        .skill-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .skill-item {
+            background: #0066cc;
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 16px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        
+        .skill-description {
+            color: #666;
+            font-size: 0.9rem;
+            line-height: 1.6;
+        }
+        
+        /* 편집됨 표시 */
+        .edited {
+            background: linear-gradient(to right, rgba(255, 152, 0, 0.1), transparent);
+            border-left: 3px solid #ff9800;
+            padding-left: 1rem;
+            margin: 1rem 0;
+        }
+        
+        .edited-badge {
+            display: inline-block;
+            background: #ff9800;
+            color: white;
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 12px;
+            margin-left: 0.5rem;
+        }
+        
+        /* 반응형 */
+        @media (max-width: 768px) {
+            .container {
+                padding: 0 16px;
+            }
+            
+            .header {
+                padding: 40px 0 30px;
+            }
+            
+            .section {
+                padding: 40px 0;
+            }
+            
+            .experience-header {
+                flex-direction: column;
+            }
+            
+            .duration {
+                margin-top: 0.5rem;
+            }
+            
+            .experience-item {
+                padding-left: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <h1>${profileName}</h1>
+            <div class="subtitle">${profileTitle}</div>
+        </div>
+    </header>
+    
+    ${mainSummary ? `
+    <!-- About -->
+    <section class="section">
+        <div class="container">
+            <h2 class="section-title">About</h2>
+            <div class="about-content ${mainSummary.current_text !== mainSummary.original_text ? 'edited' : ''}">
+                <p>${this.formatText(mainSummary.current_text)}</p>
+                ${mainSummary.current_text !== mainSummary.original_text ? '<span class="edited-badge">AI 개선됨</span>' : ''}
+            </div>
+        </div>
+    </section>` : ''}
+    
+    ${experiences.length > 0 ? `
+    <!-- Experience -->
+    <section class="section">
+        <div class="container">
+            <h2 class="section-title">Experience</h2>
+            ${experiences.map((exp, idx) => `
+            <div class="experience-item ${exp.current_text !== exp.original_text ? 'edited' : ''}">
+                <div class="experience-header">
+                    <div class="company-info">
+                        <h3>${exp.title}${exp.current_text !== exp.original_text ? '<span class="edited-badge">AI 개선됨</span>' : ''}</h3>
+                    </div>
+                </div>
+                <div class="impact">
+                    ${this.formatText(exp.current_text)}
+                </div>
+            </div>`).join('')}
+        </div>
+    </section>` : ''}
+    
+    ${projects.length > 0 ? `
+    <!-- Projects -->
+    <section class="section">
+        <div class="container">
+            <h2 class="section-title">Projects</h2>
+            <div class="projects-grid">
+                ${projects.map(proj => `
+                <div class="project-item ${proj.current_text !== proj.original_text ? 'edited' : ''}">
+                    <div class="project-header">
+                        <h3 class="project-title">${proj.title}${proj.current_text !== proj.original_text ? '<span class="edited-badge">AI 개선됨</span>' : ''}</h3>
+                    </div>
+                    <p class="project-description">
+                        ${this.formatText(proj.current_text)}
+                    </p>
+                </div>`).join('')}
+            </div>
+        </div>
+    </section>` : ''}
+    
+    ${skills.length > 0 ? `
+    <!-- Skills -->
+    <section class="section">
+        <div class="container">
+            <h2 class="section-title">Skills</h2>
+            <div class="skills-grid">
+                ${skills.map(skill => `
+                <div class="skill-category ${skill.current_text !== skill.original_text ? 'edited' : ''}">
+                    <h3>${skill.title}${skill.current_text !== skill.original_text ? '<span class="edited-badge">AI 개선됨</span>' : ''}</h3>
+                    <div class="skill-description">
+                        ${this.formatText(skill.current_text)}
+                    </div>
+                </div>`).join('')}
+            </div>
+        </div>
+    </section>` : ''}
+
+</body>
+</html>`;
+  }
+  
+  // 이름 추출 헬퍼
+  private extractNameFromSections(sections: Section[]): string {
+    const summaries = sections.filter(s => s.type === 'summary');
+    if (summaries.length > 0) {
+      const text = summaries[0].current_text;
+      // 이름 패턴 찾기 (예: 김개발, Kim Developer 등)
+      const nameMatch = text.match(/([가-힣]{2,4}|[A-Z][a-z]+\s[A-Z][a-z]+)/);
+      if (nameMatch) {
+        return nameMatch[1];
+      }
+    }
+    return '포트폴리오 개발자';
+  }
+  
+  // 직책 추출 헬퍼
+  private extractTitleFromSections(sections: Section[]): string {
+    const summaries = sections.filter(s => s.type === 'summary');
+    const experiences = sections.filter(s => s.type === 'experience');
+    
+    // 경험에서 추출
+    if (experiences.length > 0) {
+      const expTitle = experiences[0].title;
+      if (expTitle.includes('개발자') || expTitle.includes('Developer')) {
+        return expTitle.split(' - ')[1] || '개발자';
+      }
+    }
+    
+    // 요약에서 추출
+    if (summaries.length > 0) {
+      const text = summaries[0].current_text;
+      if (text.includes('백엔드') || text.includes('Backend')) {
+        return 'Backend Developer';
+      } else if (text.includes('프론트엔드') || text.includes('Frontend')) {
+        return 'Frontend Developer';
+      } else if (text.includes('풀스택') || text.includes('Full Stack')) {
+        return 'Full Stack Developer';
+      }
+    }
+    
+    return '소프트웨어 개발자';
+  }
+  
+  // 텍스트 포맷팅 헬퍼
+  private formatText(text: string): string {
+    return text
+      .replace(/\n/g, '<br>')
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>');
+  }
+
+  // 변경 사항 요약
+  getChangeSummary(): { totalChanges: number; sections: string[] } {
+    let totalChanges = 0;
+    const changedSections: string[] = [];
+
+    this.sections.forEach((section, id) => {
+      if (section.current_text !== section.original_text) {
+        totalChanges++;
+        changedSections.push(section.title);
+      }
+    });
+
+    return { totalChanges, sections: changedSections };
+  }
+
+  // 섹션 가져오기
+  getSection(sectionId: string): Section | undefined {
+    return this.sections.get(sectionId);
+  }
+
+  // 모든 섹션 가져오기
+  getAllSections(): Section[] {
+    return Array.from(this.sections.values());
+  }
+}
+
+export const sectionEditorService = new SectionEditorService();
