@@ -7,6 +7,7 @@ const openai = new OpenAI({
   apiKey: process.env.REACT_APP_OPENAI_API_KEY || '',
   dangerouslyAllowBrowser: true // 브라우저에서 실행 허용 (보안 주의!)
 });
+const OPENAI_MODEL = process.env.OPEN_AI_MODEL || "gpt-4";
 
 export interface ParsedInfo {
   name?: string;
@@ -130,7 +131,7 @@ class AIPortfolioAssistant {
 
     try {
       const response = await openai.chat.completions.create({
-        model: "gpt-4",
+        model: OPENAI_MODEL,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `다음 텍스트에서 정보를 추출해주세요:\n\n${rawText}` }
@@ -207,7 +208,7 @@ class AIPortfolioAssistant {
 
     try {
       const response = await openai.chat.completions.create({
-        model: "gpt-4",
+        model: OPENAI_MODEL,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `다음 정보가 부족합니다. 적절한 질문을 생성해주세요:\n${missingInfo.join(', ')}\n\n현재 수집된 정보:\n${JSON.stringify(context, null, 2)}` }
@@ -248,7 +249,7 @@ class AIPortfolioAssistant {
 
     try {
       const response = await openai.chat.completions.create({
-        model: "gpt-4",
+        model: OPENAI_MODEL,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `현재 데이터:\n${JSON.stringify(currentData, null, 2)}\n\n답변: ${answer}` }
@@ -320,7 +321,7 @@ class AIPortfolioAssistant {
 
     try {
       const response = await openai.chat.completions.create({
-        model: "gpt-4",
+        model: OPENAI_MODEL,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `다음 포트폴리오를 개선해주세요:\n\n${portfolioContent}` }

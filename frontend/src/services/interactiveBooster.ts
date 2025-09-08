@@ -6,6 +6,8 @@ const openai = new OpenAI({
   dangerouslyAllowBrowser: true
 });
 
+const OPENAI_MODEL = process.env.OPEN_AI_MODEL || "gpt-4";
+
 export interface BoosterQuestion {
   id: string;
   category: 'experience' | 'project' | 'skill' | 'achievement' | 'metric' | 'general';
@@ -85,7 +87,7 @@ JSON 배열 형식으로 반환:
 
     try {
       const response = await openai.chat.completions.create({
-        model: "gpt-4",
+        model: OPENAI_MODEL,
         messages: [
           { role: "system", content: systemPrompt },
           { 
@@ -213,7 +215,7 @@ JSON 형식으로 반환:
 
     try {
       const response = await openai.chat.completions.create({
-        model: "gpt-4",
+        model: OPENAI_MODEL,
         messages: [
           { role: "system", content: systemPrompt },
           { 

@@ -7,6 +7,8 @@ const openai = new OpenAI({
   dangerouslyAllowBrowser: true
 });
 
+const OPENAI_MODEL = process.env.OPEN_AI_MODEL || "gpt-4";
+
 // 직무별 핵심 역량 매핑
 const JOB_COMPETENCIES = {
   'backend-developer': {
@@ -114,7 +116,7 @@ JSON 형식으로 반환:
 
     try {
       const response = await openai.chat.completions.create({
-        model: "gpt-4",
+        model: OPENAI_MODEL,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `포트폴리오 분석 대상:\n${JSON.stringify(content, null, 2)}` }
@@ -169,7 +171,7 @@ JSON 형식 반환:
 
       try {
         const response = await openai.chat.completions.create({
-          model: "gpt-4", 
+          model: OPENAI_MODEL, 
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: `프로젝트: ${JSON.stringify(project, null, 2)}` }

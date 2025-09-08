@@ -6,6 +6,8 @@ const openai = new OpenAI({
   dangerouslyAllowBrowser: true
 });
 
+const OPENAI_MODEL = process.env.OPEN_AI_MODEL || "gpt-4";
+
 export interface FeedbackOption {
   id: string;
   category: 'tone' | 'style' | 'content' | 'structure' | 'design';
@@ -176,7 +178,7 @@ ${allRequests.map((req, idx) => `${idx + 1}. ${req}`).join('\n')}
 `;
 
       const response = await openai.chat.completions.create({
-        model: "gpt-4",
+        model: OPENAI_MODEL,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `수정할 포트폴리오:\n\n${originalContent}` }
@@ -245,7 +247,7 @@ ${allRequests.map((req, idx) => `${idx + 1}. ${req}`).join('\n')}
 `;
 
       const response = await openai.chat.completions.create({
-        model: "gpt-4",
+        model: OPENAI_MODEL,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `원본:\n${original}\n\n수정본:\n${revised}` }
@@ -277,7 +279,7 @@ ${allRequests.map((req, idx) => `${idx + 1}. ${req}`).join('\n')}
 `;
 
       const response = await openai.chat.completions.create({
-        model: "gpt-4",
+        model: OPENAI_MODEL,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `포트폴리오:\n${content}` }

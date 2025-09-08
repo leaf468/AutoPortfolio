@@ -9,6 +9,8 @@ const openai = new OpenAI({
   dangerouslyAllowBrowser: true
 });
 
+const OPENAI_MODEL = process.env.OPEN_AI_MODEL || "gpt-4";
+
 export interface GenerationTemplate {
   id: string;
   name: string;
@@ -2148,7 +2150,7 @@ ${userTemplate}
 
     try {
       const response = await openai.chat.completions.create({
-        model: "gpt-4",
+        model: OPENAI_MODEL,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `포트폴리오 데이터:\n${JSON.stringify(data, null, 2)}` }
@@ -2187,7 +2189,7 @@ JSON 형식:
 
     try {
       const response = await openai.chat.completions.create({
-        model: "gpt-4",
+        model: OPENAI_MODEL,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `다음 포트폴리오 데이터를 Notion JSON 블록으로 변환해주세요:\n${JSON.stringify(content, null, 2)}` }
@@ -2217,7 +2219,7 @@ JSON 형식:
 
     try {
       const response = await openai.chat.completions.create({
-        model: "gpt-4",
+        model: OPENAI_MODEL,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `생성된 포트폴리오:\n${generatedContent}\n\n원본 데이터:\n${JSON.stringify(originalContent, null, 2)}` }
@@ -2245,7 +2247,7 @@ JSON 배열 형식으로 반환:
 
     try {
       const response = await openai.chat.completions.create({
-        model: "gpt-4",
+        model: OPENAI_MODEL,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `포트폴리오:\n${generatedContent}` }

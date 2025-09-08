@@ -5,6 +5,8 @@ const openai = new OpenAI({
   dangerouslyAllowBrowser: true
 });
 
+const OPENAI_MODEL = process.env.OPEN_AI_MODEL || "gpt-4";
+
 // 섹션 타입 정의
 export interface Section {
   section_id: string;
@@ -364,7 +366,7 @@ Generate 3 improved versions with specific metrics and technical details.`;
 
     try {
       const response = await openai.chat.completions.create({
-        model: "gpt-4",
+        model: OPENAI_MODEL,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt }
