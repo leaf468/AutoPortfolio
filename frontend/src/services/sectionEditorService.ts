@@ -331,40 +331,36 @@ class SectionEditorService {
       return this.cachedSuggestions.get(cacheKey)!;
     }
 
-    const systemPrompt = `You are a Portfolio Writing Expert specializing in creating high-impact, specific portfolio content.
+    const systemPrompt = `You are a Portfolio Writing Expert. Generate improved portfolio content.
 
-IMPORTANT: Return ONLY valid JSON. No markdown, no backticks, no extra text.
+CRITICAL JSON RULES:
+1. Return ONLY valid JSON - no markdown, no backticks, no extra text
+2. Use simple ASCII characters only - no special unicode
+3. Keep text under 500 characters per suggestion
+4. Use double quotes for all strings
+5. Escape quotes inside strings as \\"
 
-Task: Generate 3 improved versions of the portfolio section with:
-- Specific quantifiable metrics (performance improvements, time savings, revenue impact)
-- Technical details and tech stack
-- Business impact and user benefits
-- STAR methodology (Situation-Task-Action-Result)
-- Industry-relevant keywords
+JSON Format (copy exactly):
+{"suggestions":[{"id":"s1","text":"content here","tone":"impact","reason":"why improved","confidence":0.9}]}
 
-Language: Korean
+Text Guidelines:
+- Add specific numbers and percentages
+- Include technical details
+- Show measurable business impact
+- Use Korean language
+- Structure: Problem-Solution-Result
 
-Example transformation:
+Example:
 Before: "성능을 개선했습니다"
-After: "Redis 캐시 도입과 DB 인덱스 최적화로 API 응답속도를 2.3초에서 0.8초로 65% 향상시켜 월간 사용자 15만명의 대기시간 감소로 고객 만족도 20% 증가"
+After: "Redis 캐시와 DB 최적화로 응답속도를 65% 향상시켜 고객 만족도 20% 증가"`;
 
-Return this exact JSON structure:
-{"suggestions":[{"id":"s1","text":"detailed improved content","tone":"impact","reason":"improvement reason","confidence":0.9}]}`;
+    const userPrompt = `Section: ${this.sections.get(request.section_id)?.title || 'Portfolio'}
+Role: ${request.role || 'Developer'}
 
-    const userPrompt = `Section Type: ${this.sections.get(request.section_id)?.title || request.section_type || 'Unknown'}
-Target Role: ${request.role || request.target_job || 'Software Developer'}
+Current text:
+${request.current_text.substring(0, 300)}
 
-Current Content:
-${request.current_text}
-
-Requirements:
-1. Add specific numbers, percentages, timeframes
-2. Include technical stack and implementation details  
-3. Show business/user impact with measurable results
-4. Use action verbs and industry keywords
-5. Structure with clear problem-solution-result flow
-
-Generate 3 increasingly detailed versions (concise → detailed → comprehensive).`;
+Generate 3 improved versions with specific metrics and technical details.`;
 
     try {
       const response = await openai.chat.completions.create({
@@ -390,47 +386,8 @@ Generate 3 increasingly detailed versions (concise → detailed → comprehensiv
         cleanedResult = match ? match[1] : result;
       }
 
-      // JSON 문자열 정제 - 제어 문자 및 잘못된 문자 제거
-      cleanedResult = cleanedResult
-        // eslint-disable-next-line no-control-regex
-        .replace(/[\x00-\x1F\x7F-\x9F]/g, '') // 제어 문자 제거
-        .replace(/\\/g, '\\\\') // 백슬래시 이스케이프
-        .replace(/\n/g, '\\n') // 개행 문자 이스케이프  
-        .replace(/\r/g, '\\r') // 캐리지 리턴 이스케이프
-        .replace(/\t/g, '\\t') // 탭 문자 이스케이프
-        .trim();
-
-      let parsed;
-      try {
-        parsed = JSON.parse(cleanedResult);
-      } catch (parseError) {
-        console.error('JSON parsing failed, trying alternative cleanup:', parseError);
-        console.log('Failed content:', cleanedResult);
-        
-        // 더 강력한 정제 시도 - JSON 객체 추출
-        const jsonMatch = result.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          cleanedResult = jsonMatch[0]
-            // eslint-disable-next-line no-control-regex
-            .replace(/[\x00-\x1F\x7F-\x9F]/g, ' ') // 제어 문자를 공백으로 대체
-            .replace(/\n/g, ' ') // 개행을 공백으로 대체
-            .replace(/\r/g, ' ') // 캐리지 리턴을 공백으로 대체
-            .replace(/\t/g, ' ') // 탭을 공백으로 대체
-            .replace(/\s+/g, ' ') // 연속된 공백을 단일 공백으로
-            .trim();
-        } else {
-          // JSON 구조가 전혀 없는 경우 기본 구조 사용
-          cleanedResult = '{"suggestions": []}';
-        }
-        
-        try {
-          parsed = JSON.parse(cleanedResult);
-        } catch (secondError) {
-          console.error('Second JSON parsing also failed:', secondError);
-          // 최종 폴백: 기본 응답 구조 사용
-          parsed = { suggestions: [] };
-        }
-      }
+      // 더 강력한 JSON 정리
+      const parsed = this.parseJSONSafely(cleanedResult, result, request.section_id);
       
       // suggestion_id 추가 및 placeholder 체크
       const suggestions = parsed.suggestions.map((s: any, idx: number) => ({
@@ -1051,6 +1008,169 @@ Generate 3 increasingly detailed versions (concise → detailed → comprehensiv
   // 모든 섹션 가져오기
   getAllSections(): Section[] {
     return Array.from(this.sections.values());
+  }
+
+  // 안전한 JSON 파싱
+  private parseJSONSafely(cleanedResult: string, originalResult: string, sectionId: string): any {
+    console.log('Attempting to parse JSON:', cleanedResult.substring(0, 200) + '...');
+    
+    // 1단계: 기본 파싱 시도
+    try {
+      return JSON.parse(cleanedResult);
+    } catch (error) {
+      console.error('First JSON parsing failed:', error);
+    }
+
+    // 2단계: 강력한 문자열 정리 및 파싱 시도  
+    try {
+      let fixed = this.fixJSONString(cleanedResult);
+      return JSON.parse(fixed);
+    } catch (error) {
+      console.error('Second JSON parsing failed:', error);
+    }
+
+    // 3단계: 정규식으로 개별 필드 추출
+    try {
+      const suggestions = this.extractSuggestionsFromText(originalResult, sectionId);
+      if (suggestions.length > 0) {
+        return { suggestions };
+      }
+    } catch (error) {
+      console.error('Field extraction failed:', error);
+    }
+
+    // 4단계: 최종 폴백 - 섹션별 기본 추천
+    console.log('Using fallback suggestions for section:', sectionId);
+    return {
+      suggestions: this.getFallbackSuggestionsByType(sectionId)
+    };
+  }
+
+  // 텍스트에서 추천 내용 추출
+  private extractSuggestionsFromText(text: string, sectionId: string): Suggestion[] {
+    const suggestions: Suggestion[] = [];
+    
+    // text 필드 추출 시도
+    const textMatches = text.match(/"text":\s*"([^"]*(?:\\"[^"]*)*)"/g);
+    if (textMatches) {
+      textMatches.forEach((match, idx) => {
+        const textContent = match.replace(/"text":\s*"/, '').replace(/"$/, '').replace(/\\"/g, '"');
+        if (textContent.length > 20) { // 의미있는 길이만
+          suggestions.push({
+            suggestion_id: `${sectionId}_extracted_${idx}`,
+            section_id: sectionId,
+            text: textContent,
+            tone: 'impact' as const,
+            reason: '텍스트에서 추출된 추천',
+            confidence: 0.7
+          });
+        }
+      });
+    }
+    
+    return suggestions;
+  }
+
+  // JSON 문자열 수정
+  private fixJSONString(jsonStr: string): string {
+    console.log('Fixing JSON string:', jsonStr.substring(0, 200) + '...');
+    
+    let fixed = jsonStr
+      // eslint-disable-next-line no-control-regex
+      .replace(/[\x00-\x1F\x7F-\x9F]/g, '') // 제어 문자 제거
+      .trim();
+
+    // 1. 잘못된 이스케이프 수정
+    fixed = fixed
+      .replace(/\\n/g, ' ') // 개행 문자를 공백으로
+      .replace(/\\r/g, ' ') // 캐리지 리턴을 공백으로
+      .replace(/\\t/g, ' ') // 탭을 공백으로
+      .replace(/\n/g, ' ')  // 실제 개행도 공백으로
+      .replace(/\r/g, ' ')  // 실제 캐리지 리턴도 공백으로
+      .replace(/\t/g, ' ')  // 실제 탭도 공백으로
+      .replace(/\s+/g, ' ') // 연속된 공백을 단일 공백으로
+      .replace(/\\"/g, '""') // 이스케이프된 따옴표를 임시로 처리
+      .replace(/"/g, '\\"')  // 모든 따옴표를 이스케이프
+      .replace(/""/g, '\\"'); // 임시 처리한 것을 다시 이스케이프된 따옴표로
+
+    // 2. JSON 속성 이름 앞뒤 따옴표 복원
+    fixed = fixed
+      .replace(/\\\"([a-zA-Z_][a-zA-Z0-9_]*)\\\"/g, '"$1"') // 속성 이름
+      .replace(/:\s*\\\"([^\\\"]*)\\\"/g, ': "$1"'); // 속성 값
+
+    // 3. 배열과 객체 구조 확인 및 수정
+    if (!fixed.startsWith('{')) {
+      fixed = '{' + fixed;
+    }
+
+    // 4. 잘린 문자열 복구
+    if (!fixed.endsWith('}')) {
+      // suggestions 배열이 열린 상태인지 확인
+      const suggestionsStart = fixed.indexOf('"suggestions":[');
+      if (suggestionsStart !== -1) {
+        // 마지막 완성된 객체를 찾아서 그 뒤를 자름
+        let lastValidEnd = fixed.lastIndexOf('"}');
+        if (lastValidEnd === -1) {
+          lastValidEnd = fixed.lastIndexOf('"');
+          if (lastValidEnd > suggestionsStart) {
+            fixed = fixed.substring(0, lastValidEnd + 1) + '"}]}';
+          } else {
+            fixed = fixed + ']}';
+          }
+        } else {
+          fixed = fixed.substring(0, lastValidEnd + 2) + ']}';
+        }
+      } else {
+        fixed = fixed + '}';
+      }
+    }
+
+    // 5. 연속된 콤마나 잘못된 콤마 제거
+    fixed = fixed
+      .replace(/,\s*,/g, ',') // 연속된 콤마
+      .replace(/,\s*}/g, '}') // 객체 끝의 콤마
+      .replace(/,\s*]/g, ']') // 배열 끝의 콤마
+      .replace(/{\s*,/g, '{') // 객체 시작의 콤마
+      .replace(/\[\s*,/g, '['); // 배열 시작의 콤마
+
+    console.log('Fixed JSON:', fixed.substring(0, 300) + '...');
+    return fixed;
+  }
+
+  // 섹션 타입별 폴백 추천
+  private getFallbackSuggestionsByType(sectionId: string): Suggestion[] {
+    const baseId = sectionId.replace(/_\d+$/, '');
+    
+    if (baseId.includes('summary')) {
+      return [{
+        suggestion_id: `${sectionId}_fallback_1`,
+        section_id: sectionId,
+        text: '5년 이상의 개발 경험을 바탕으로 한 풀스택 개발자로, React와 Node.js를 활용한 확장 가능한 웹 애플리케이션 개발에 특화되어 있습니다. 팀 협업과 코드 품질 향상을 통해 프로젝트 성공률을 높이는 데 기여해왔습니다.',
+        tone: 'professional' as const,
+        reason: 'AI 응답 실패로 인한 기본 추천',
+        confidence: 0.6
+      }];
+    }
+    
+    if (baseId.includes('project')) {
+      return [{
+        suggestion_id: `${sectionId}_fallback_1`,
+        section_id: sectionId,
+        text: '**프로젝트 개요:** React와 Node.js를 활용한 웹 애플리케이션 개발\n**주요 기술:** React, TypeScript, Node.js, MongoDB\n**성과:** 사용자 경험 향상을 통해 만족도 20% 증가\n**기간:** 6개월 (기획 1개월, 개발 4개월, 운영 1개월)',
+        tone: 'structured' as const,
+        reason: 'AI 응답 실패로 인한 기본 추천',
+        confidence: 0.6
+      }];
+    }
+    
+    return [{
+      suggestion_id: `${sectionId}_fallback_1`,
+      section_id: sectionId,
+      text: '관련 경험과 성과를 구체적인 수치와 함께 기술해보세요. 예: "성능 개선을 통해 응답속도 50% 향상 달성"',
+      tone: 'concise' as const,
+      reason: 'AI 응답 실패로 인한 기본 가이드',
+      confidence: 0.5
+    }];
   }
 }
 

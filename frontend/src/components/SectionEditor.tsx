@@ -9,11 +9,8 @@ import {
   XMarkIcon,
   DocumentDuplicateIcon
 } from '@heroicons/react/24/outline';
-import { 
-  Section, 
-  Suggestion,
-  sectionEditorService 
-} from '../services/sectionEditorService';
+import type { Section, Suggestion } from '../services/sectionEditorService';
+import { sectionEditorService } from '../services/sectionEditorService';
 
 interface SectionEditorProps {
   section: Section;
