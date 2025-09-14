@@ -265,7 +265,7 @@ const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
               onClick={handleComplete}
               className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 px-6 rounded-lg font-medium hover:from-purple-700 hover:to-pink-700 transition-all duration-200 flex items-center justify-center"
             >
-              대화형 보강으로 계속
+              포트폴리오 생성하기
               <ArrowRightIcon className="w-5 h-5 ml-2" />
             </button>
           </div>

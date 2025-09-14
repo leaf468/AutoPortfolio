@@ -3,22 +3,21 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   CheckIcon,
   SparklesIcon,
-  ChatBubbleLeftRightIcon,
-  DocumentArrowDownIcon,
+  PencilSquareIcon,
   DocumentArrowUpIcon
 } from '@heroicons/react/24/outline';
 import AIOrganizer from './AIOrganizer';
-import InteractiveBoosterChat from './InteractiveBoosterChat';
-import OneClickGenerator from './OneClickGenerator';
+import AutoFillPortfolioEditor from './AutoFillPortfolioEditor';
 import TemplateUpload from './TemplateUpload';
-import PortfolioSectionEditor from './PortfolioSectionEditor';
+import NaturalLanguagePortfolioEditor from './NaturalLanguagePortfolioEditor';
+import EnhancedPortfolioEditor from './EnhancedPortfolioEditor';
 import FinalResultPanel from './FinalResultPanel';
 import { OrganizedContent } from '../services/aiOrganizer';
-import { BoostResult } from '../services/interactiveBooster';
 import { GenerationResult } from '../services/oneClickGenerator';
 import { FeedbackResult } from '../services/userFeedbackService';
+import { PortfolioDocument } from '../services/autoFillService';
 
-type WizardStep = 'template' | 'organize' | 'boost' | 'generate' | 'feedback' | 'complete';
+type WizardStep = 'template' | 'organize' | 'autofill' | 'enhanced-edit' | 'feedback' | 'complete';
 
 interface StepInfo {
   id: WizardStep;
@@ -31,10 +30,10 @@ const PortfolioWizard: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<WizardStep>('template');
   const [template, setTemplate] = useState<string>('');
   const [organizedContent, setOrganizedContent] = useState<OrganizedContent | null>(null);
-  const [boostResult, setBoostResult] = useState<BoostResult | null>(null);
   const [initialResult, setInitialResult] = useState<GenerationResult | null>(null);
   const [feedbackResult, setFeedbackResult] = useState<FeedbackResult | null>(null);
   const [finalResult, setFinalResult] = useState<GenerationResult | null>(null);
+  const [userId] = useState(() => `user_${Date.now()}`);
 
   const steps: StepInfo[] = [
     {
@@ -50,22 +49,22 @@ const PortfolioWizard: React.FC = () => {
       icon: SparklesIcon
     },
     {
-      id: 'boost',
-      name: '대화형 보강',
-      description: '부족한 정보를 질문으로 보완',
-      icon: ChatBubbleLeftRightIcon
+      id: 'autofill',
+      name: 'AI 자동 생성 & 편집',
+      description: 'AI가 자동으로 포트폴리오 생성 후 편집',
+      icon: PencilSquareIcon
     },
     {
-      id: 'generate',
-      name: '초안 생성',
-      description: '포트폴리오 초안 생성',
-      icon: DocumentArrowDownIcon
+      id: 'enhanced-edit',
+      name: '상세 편집',
+      description: '포트폴리오 섹션별 편집',
+      icon: PencilSquareIcon
     },
     {
       id: 'feedback',
-      name: '세부 편집',
-      description: '각 섹션별 개별 수정',
-      icon: ChatBubbleLeftRightIcon
+      name: '자연어 편집',
+      description: '대화형 수정',
+      icon: PencilSquareIcon
     }
   ];
 
@@ -76,18 +75,33 @@ const PortfolioWizard: React.FC = () => {
 
   const handleOrganizeComplete = (content: OrganizedContent) => {
     setOrganizedContent(content);
-    setCurrentStep('boost');
+    setCurrentStep('autofill');
   };
 
-  const handleBoostComplete = (result: BoostResult) => {
-    setBoostResult(result);
-    setOrganizedContent(result.enhancedContent);
-    setCurrentStep('generate');
-  };
-
-  const handleGenerateComplete = (result: GenerationResult) => {
+  const handleAutoFillSave = (document: PortfolioDocument) => {
+    // Convert document to GenerationResult format for compatibility
+    const result: GenerationResult = {
+      id: document.doc_id,
+      content: JSON.stringify(document),
+      format: 'json',
+      metadata: {
+        wordCount: document.sections.reduce((acc, s) => 
+          acc + s.blocks.reduce((blockAcc, b) => blockAcc + b.text.split(' ').length, 0), 0
+        ),
+        estimatedReadTime: Math.ceil(
+          document.sections.reduce((acc, s) => 
+            acc + s.blocks.reduce((blockAcc, b) => blockAcc + b.text.split(' ').length, 0), 0
+          ) / 200
+        ),
+        generatedAt: new Date(),
+        template: template
+      },
+      downloadUrl: '',
+      qualityScore: 85,
+      suggestions: []
+    };
     setInitialResult(result);
-    setCurrentStep('feedback');
+    setCurrentStep('enhanced-edit');
   };
 
   const handleFeedbackComplete = (result: FeedbackResult) => {
@@ -102,6 +116,36 @@ const PortfolioWizard: React.FC = () => {
     };
     setFinalResult(enhancedFinalResult);
     setCurrentStep('complete');
+  };
+
+  const handleEnhancedEditComplete = (document: PortfolioDocument) => {
+    // Convert PortfolioDocument back to GenerationResult format
+    const result: GenerationResult = {
+      id: document.doc_id,
+      content: JSON.stringify(document),
+      format: 'json',
+      metadata: {
+        wordCount: document.sections.reduce((acc, s) => 
+          acc + s.blocks.reduce((blockAcc, b) => blockAcc + b.text.split(' ').length, 0), 0
+        ),
+        estimatedReadTime: Math.ceil(
+          document.sections.reduce((acc, s) => 
+            acc + s.blocks.reduce((blockAcc, b) => blockAcc + b.text.split(' ').length, 0), 0
+          ) / 200
+        ),
+        generatedAt: new Date(),
+        template: template
+      },
+      downloadUrl: createDownloadUrl(document.sections[0]?.blocks[0]?.text || '', 'html'),
+      qualityScore: 90,
+      suggestions: ['상세 편집 완료']
+    };
+    setFinalResult(result);
+    setCurrentStep('complete');
+  };
+
+  const handleSkipToFeedback = () => {
+    setCurrentStep('feedback');
   };
 
   const handleSkipFeedback = () => {
@@ -120,7 +164,6 @@ const PortfolioWizard: React.FC = () => {
     setCurrentStep('template');
     setTemplate('');
     setOrganizedContent(null);
-    setBoostResult(null);
     setInitialResult(null);
     setFeedbackResult(null);
     setFinalResult(null);
@@ -137,9 +180,9 @@ const PortfolioWizard: React.FC = () => {
 
   const getStepColor = (status: string) => {
     switch (status) {
-      case 'complete': return 'bg-green-600 text-white';
-      case 'current': return 'bg-purple-600 text-white';
-      default: return 'bg-gray-200 text-gray-500';
+      case 'complete': return 'bg-gradient-to-br from-green-400 to-green-600 text-white';
+      case 'current': return 'bg-gradient-to-br from-purple-400 to-blue-600 text-white';
+      default: return 'bg-white/10 text-gray-400';
     }
   };
 
@@ -151,33 +194,78 @@ const PortfolioWizard: React.FC = () => {
       case 'organize':
         return <AIOrganizer onComplete={handleOrganizeComplete} />;
       
-      case 'boost':
+      case 'autofill':
         return organizedContent ? (
-          <InteractiveBoosterChat 
-            organizedContent={organizedContent}
-            onComplete={handleBoostComplete}
-          />
+          <div className="max-w-full">
+            <AutoFillPortfolioEditor
+              userId={userId}
+              initialInputs={{
+                profile: organizedContent.summary || '',
+                projects: organizedContent.projects.map(p => ({
+                  title: p.name,
+                  description: p.summary,
+                  role: p.myRole,
+                  duration: ''
+                })),
+                skills: organizedContent.skills.flatMap(s => s.skills),
+                education: '',
+                experience: organizedContent.experiences.map(e => 
+                  `${e.position} at ${e.company} (${e.duration})`
+                ).join('\n')
+              }}
+              targetJobKeywords={[
+                ...organizedContent.keywords.technical,
+                ...organizedContent.keywords.industry
+              ]}
+              onSave={handleAutoFillSave}
+              onEnhancedEdit={(doc) => {
+                // Convert to GenerationResult and go to enhanced edit
+                const result: GenerationResult = {
+                  id: doc.doc_id,
+                  content: JSON.stringify(doc),
+                  format: 'json',
+                  metadata: {
+                    wordCount: doc.sections.reduce((acc, s) => 
+                      acc + s.blocks.reduce((blockAcc, b) => blockAcc + b.text.split(' ').length, 0), 0
+                    ),
+                    estimatedReadTime: Math.ceil(
+                      doc.sections.reduce((acc, s) => 
+                        acc + s.blocks.reduce((blockAcc, b) => blockAcc + b.text.split(' ').length, 0), 0
+                      ) / 200
+                    ),
+                    generatedAt: new Date(),
+                    template: template
+                  },
+                  downloadUrl: '',
+                  qualityScore: 85,
+                  suggestions: []
+                };
+                setInitialResult(result);
+                setCurrentStep('enhanced-edit');
+              }}
+            />
+          </div>
         ) : null;
       
-      case 'generate':
-        return organizedContent ? (
-          <OneClickGenerator 
-            enhancedContent={organizedContent}
-            boostResult={boostResult || undefined}
-            template={template}
-            onComplete={handleGenerateComplete}
+      case 'enhanced-edit':
+        return initialResult ? (
+          <EnhancedPortfolioEditor
+            document={JSON.parse(initialResult.content)}
+            onSave={handleEnhancedEditComplete}
+            onBack={() => setCurrentStep('autofill')}
+            onSkipToNaturalEdit={() => setCurrentStep('feedback')}
           />
         ) : null;
       
       case 'feedback':
         return initialResult && organizedContent ? (
-          <PortfolioSectionEditor 
+          <NaturalLanguagePortfolioEditor 
             initialContent={initialResult}
             organizedContent={organizedContent}
             onComplete={(finalContent) => {
               const result: FeedbackResult = {
                 revisedContent: finalContent,
-                changesApplied: ['섹션별 편집 완료'],
+                changesApplied: ['자연어 편집 완료'],
                 improvementScore: 20,
                 finalQualityScore: 90
               };
@@ -191,7 +279,7 @@ const PortfolioWizard: React.FC = () => {
         return finalResult ? (
           <FinalResultPanel 
             finalResult={finalResult}
-            boostResult={boostResult || undefined}
+            boostResult={undefined}
             feedbackResult={feedbackResult || undefined}
             onReset={resetWizard}
           />

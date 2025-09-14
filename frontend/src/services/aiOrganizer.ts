@@ -1,62 +1,65 @@
-import OpenAI from 'openai';
+import OpenAI from "openai";
 
 const openai = new OpenAI({
-  apiKey: process.env.REACT_APP_OPENAI_API_KEY || '',
-  dangerouslyAllowBrowser: true
+    apiKey: process.env.REACT_APP_OPENAI_API_KEY || "",
+    dangerouslyAllowBrowser: true,
 });
 
-const OPENAI_MODEL = process.env.OPEN_AI_MODEL || 'gpt-4';
+const REACT_APP_OPENAI_MODEL = process.env.REACT_APP_OPENAI_MODEL || "gpt-4";
 
 export interface OrganizedContent {
-  oneLinerPitch: string; // 1문장 핵심 요약
-  summary: string; // 전체 요약
-  experiences: OrganizedExperience[];
-  projects: OrganizedProject[];
-  skills: OrganizedSkill[];
-  achievements: string[]; // 주요 성과 리스트
-  keywords: {
-    technical: string[]; // 기술 키워드
-    soft: string[]; // 소프트 스킬
-    industry: string[]; // 산업/도메인 키워드
-    ats: string[]; // ATS 최적화 키워드
-  };
-  missingFields: string[]; // 누락된 중요 필드들
-  improvementSuggestions: string[]; // 개선 제안
+    oneLinerPitch: string; // 1문장 핵심 요약
+    summary: string; // 전체 요약
+    experiences: OrganizedExperience[];
+    projects: OrganizedProject[];
+    skills: OrganizedSkill[];
+    achievements: string[]; // 주요 성과 리스트
+    keywords: {
+        technical: string[]; // 기술 키워드
+        soft: string[]; // 소프트 스킬
+        industry: string[]; // 산업/도메인 키워드
+        ats: string[]; // ATS 최적화 키워드
+    };
+    missingFields: string[]; // 누락된 중요 필드들
+    improvementSuggestions: string[]; // 개선 제안
 }
 
 export interface OrganizedExperience {
-  company: string;
-  position: string;
-  duration: string;
-  responsibilities: string[]; // 담당 업무 (불릿 포인트)
-  achievements: string[]; // 성과 (수치 포함)
-  technologies: string[];
-  impact: string; // 비즈니스 임팩트
+    company: string;
+    position: string;
+    duration: string;
+    responsibilities: string[]; // 담당 업무 (불릿 포인트)
+    achievements: string[]; // 성과 (수치 포함)
+    technologies: string[];
+    impact: string; // 비즈니스 임팩트
 }
 
 export interface OrganizedProject {
-  name: string;
-  summary: string; // 1-2문장 요약
-  myRole: string; // 나의 역할
-  responsibilities: string[];
-  achievements: string[];
-  technologies: string[];
-  impact: string;
-  metrics?: string; // 성과 수치
-  url?: string;
-  githubUrl?: string;
+    name: string;
+    summary: string; // 1-2문장 요약
+    myRole: string; // 나의 역할
+    responsibilities: string[];
+    achievements: string[];
+    technologies: string[];
+    impact: string;
+    metrics?: string; // 성과 수치
+    url?: string;
+    githubUrl?: string;
 }
 
 export interface OrganizedSkill {
-  category: string;
-  skills: string[];
-  proficiency: 'beginner' | 'intermediate' | 'advanced' | 'expert';
-  experience: string; // 경험 기간/프로젝트
+    category: string;
+    skills: string[];
+    proficiency: "beginner" | "intermediate" | "advanced" | "expert";
+    experience: string; // 경험 기간/프로젝트
 }
 
 class AIOrganizer {
-  async organizeContent(rawInput: string, inputType: 'freetext' | 'resume' | 'markdown' = 'freetext'): Promise<OrganizedContent> {
-    const systemPrompt = `
+    async organizeContent(
+        rawInput: string,
+        inputType: "freetext" | "resume" | "markdown" = "freetext"
+    ): Promise<OrganizedContent> {
+        const systemPrompt = `
 당신은 채용 관점에서 포트폴리오를 최적화하는 전문가입니다.
 15초 내에 후보자의 가치를 파악할 수 있도록 정보를 정리하고 구조화하세요.
 
@@ -119,57 +122,60 @@ class AIOrganizer {
 특히 성과는 수치화를 우선하고, 기술 스택은 최신 트렌드를 반영하세요.
 `;
 
-    try {
-      const response = await openai.chat.completions.create({
-        model: OPENAI_MODEL,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { 
-            role: "user", 
-            content: `다음 ${inputType} 정보를 채용 관점에서 정리해주세요:\n\n${rawInput}` 
-          }
-        ],
-        temperature: 0.3,
-        max_tokens: 3000
-      });
+        try {
+            const response = await openai.chat.completions.create({
+                model: REACT_APP_OPENAI_MODEL,
+                messages: [
+                    { role: "system", content: systemPrompt },
+                    {
+                        role: "user",
+                        content: `다음 ${inputType} 정보를 채용 관점에서 정리해주세요:\n\n${rawInput}`,
+                    },
+                ],
+                temperature: 0.3,
+                max_tokens: 3000,
+            });
 
-      const result = response.choices[0].message.content || '{}';
-      let cleanedResult = result;
-      
-      // JSON 추출
-      if (result.includes('```json')) {
-        const match = result.match(/```json\n([\s\S]*?)\n```/);
-        cleanedResult = match ? match[1] : result;
-      } else if (result.includes('```')) {
-        const match = result.match(/```\n([\s\S]*?)\n```/);
-        cleanedResult = match ? match[1] : result;
-      }
+            const result = response.choices[0].message.content || "{}";
+            let cleanedResult = result;
 
-      return JSON.parse(cleanedResult) as OrganizedContent;
-    } catch (error) {
-      console.error('AI Organizer 오류:', error);
-      // 기본 구조 반환
-      return {
-        oneLinerPitch: '정보 정리 중 오류가 발생했습니다.',
-        summary: rawInput.slice(0, 200) + '...',
-        experiences: [],
-        projects: [],
-        skills: [],
-        achievements: [],
-        keywords: {
-          technical: [],
-          soft: [],
-          industry: [],
-          ats: []
-        },
-        missingFields: ['모든 필드'],
-        improvementSuggestions: ['다시 시도해주세요.']
-      };
+            // JSON 추출
+            if (result.includes("```json")) {
+                const match = result.match(/```json\n([\s\S]*?)\n```/);
+                cleanedResult = match ? match[1] : result;
+            } else if (result.includes("```")) {
+                const match = result.match(/```\n([\s\S]*?)\n```/);
+                cleanedResult = match ? match[1] : result;
+            }
+
+            return JSON.parse(cleanedResult) as OrganizedContent;
+        } catch (error) {
+            console.error("AI Organizer 오류:", error);
+            // 기본 구조 반환
+            return {
+                oneLinerPitch: "정보 정리 중 오류가 발생했습니다.",
+                summary: rawInput.slice(0, 200) + "...",
+                experiences: [],
+                projects: [],
+                skills: [],
+                achievements: [],
+                keywords: {
+                    technical: [],
+                    soft: [],
+                    industry: [],
+                    ats: [],
+                },
+                missingFields: ["모든 필드"],
+                improvementSuggestions: ["다시 시도해주세요."],
+            };
+        }
     }
-  }
 
-  async enhanceWithJobPosting(organizedContent: OrganizedContent, jobPosting: string): Promise<OrganizedContent> {
-    const systemPrompt = `
+    async enhanceWithJobPosting(
+        organizedContent: OrganizedContent,
+        jobPosting: string
+    ): Promise<OrganizedContent> {
+        const systemPrompt = `
 채용공고 내용을 분석하여 포트폴리오를 최적화하세요.
 
 분석 포인트:
@@ -181,37 +187,44 @@ class AIOrganizer {
 기존 정보는 유지하되, 공고에 맞게 표현과 순서를 조정하세요.
 `;
 
-    try {
-      const response = await openai.chat.completions.create({
-        model: OPENAI_MODEL,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { 
-            role: "user", 
-            content: `채용공고:\n${jobPosting}\n\n현재 정리된 포트폴리오:\n${JSON.stringify(organizedContent, null, 2)}` 
-          }
-        ],
-        temperature: 0.2,
-        max_tokens: 3000
-      });
+        try {
+            const response = await openai.chat.completions.create({
+                model: REACT_APP_OPENAI_MODEL,
+                messages: [
+                    { role: "system", content: systemPrompt },
+                    {
+                        role: "user",
+                        content: `채용공고:\n${jobPosting}\n\n현재 정리된 포트폴리오:\n${JSON.stringify(
+                            organizedContent,
+                            null,
+                            2
+                        )}`,
+                    },
+                ],
+                temperature: 0.2,
+                max_tokens: 3000,
+            });
 
-      const result = response.choices[0].message.content || '{}';
-      let cleanedResult = result;
-      
-      if (result.includes('```json')) {
-        const match = result.match(/```json\n([\s\S]*?)\n```/);
-        cleanedResult = match ? match[1] : result;
-      }
+            const result = response.choices[0].message.content || "{}";
+            let cleanedResult = result;
 
-      return JSON.parse(cleanedResult) as OrganizedContent;
-    } catch (error) {
-      console.error('Job posting enhancement 오류:', error);
-      return organizedContent; // 원본 반환
+            if (result.includes("```json")) {
+                const match = result.match(/```json\n([\s\S]*?)\n```/);
+                cleanedResult = match ? match[1] : result;
+            }
+
+            return JSON.parse(cleanedResult) as OrganizedContent;
+        } catch (error) {
+            console.error("Job posting enhancement 오류:", error);
+            return organizedContent; // 원본 반환
+        }
     }
-  }
 
-  async generateKeywords(content: string, jobPosting?: string): Promise<OrganizedContent['keywords']> {
-    const systemPrompt = `
+    async generateKeywords(
+        content: string,
+        jobPosting?: string
+    ): Promise<OrganizedContent["keywords"]> {
+        const systemPrompt = `
 채용 관점에서 중요한 키워드를 추출하고 분류하세요.
 
 카테고리:
@@ -229,38 +242,40 @@ JSON 형식으로 반환:
 }
 `;
 
-    try {
-      const response = await openai.chat.completions.create({
-        model: OPENAI_MODEL,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { 
-            role: "user", 
-            content: `포트폴리오 내용:\n${content}\n\n${jobPosting ? `채용공고:\n${jobPosting}` : ''}` 
-          }
-        ],
-        temperature: 0.2
-      });
+        try {
+            const response = await openai.chat.completions.create({
+                model: REACT_APP_OPENAI_MODEL,
+                messages: [
+                    { role: "system", content: systemPrompt },
+                    {
+                        role: "user",
+                        content: `포트폴리오 내용:\n${content}\n\n${
+                            jobPosting ? `채용공고:\n${jobPosting}` : ""
+                        }`,
+                    },
+                ],
+                temperature: 0.2,
+            });
 
-      const result = response.choices[0].message.content || '{}';
-      let cleanedResult = result;
-      
-      if (result.includes('```json')) {
-        const match = result.match(/```json\n([\s\S]*?)\n```/);
-        cleanedResult = match ? match[1] : result;
-      }
+            const result = response.choices[0].message.content || "{}";
+            let cleanedResult = result;
 
-      return JSON.parse(cleanedResult);
-    } catch (error) {
-      console.error('Keyword generation 오류:', error);
-      return {
-        technical: [],
-        soft: [],
-        industry: [],
-        ats: []
-      };
+            if (result.includes("```json")) {
+                const match = result.match(/```json\n([\s\S]*?)\n```/);
+                cleanedResult = match ? match[1] : result;
+            }
+
+            return JSON.parse(cleanedResult);
+        } catch (error) {
+            console.error("Keyword generation 오류:", error);
+            return {
+                technical: [],
+                soft: [],
+                industry: [],
+                ats: [],
+            };
+        }
     }
-  }
 }
 
 export const aiOrganizer = new AIOrganizer();
