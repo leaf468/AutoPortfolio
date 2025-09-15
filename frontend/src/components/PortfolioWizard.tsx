@@ -8,14 +8,16 @@ import {
 } from '@heroicons/react/24/outline';
 import AIOrganizer from './AIOrganizer';
 import AutoFillPortfolioEditor from './AutoFillPortfolioEditor';
-import TemplateUpload from './TemplateUpload';
-import NaturalLanguagePortfolioEditor from './NaturalLanguagePortfolioEditor';
-import EnhancedPortfolioEditor from './EnhancedPortfolioEditor';
+import TemplateSelector from './TemplateSelector';
+import SimpleNaturalLanguageEditor from './SimpleNaturalLanguageEditor';
 import FinalResultPanel from './FinalResultPanel';
+import EnhancedPortfolioEditor from './EnhancedPortfolioEditor';
 import { OrganizedContent } from '../services/aiOrganizer';
 import { GenerationResult } from '../services/oneClickGenerator';
 import { FeedbackResult } from '../services/userFeedbackService';
 import { PortfolioDocument } from '../services/autoFillService';
+
+type TemplateType = 'james' | 'geon' | 'eunseong' | 'iu';
 
 type WizardStep = 'template' | 'organize' | 'autofill' | 'enhanced-edit' | 'feedback' | 'complete';
 
@@ -28,7 +30,7 @@ interface StepInfo {
 
 const PortfolioWizard: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<WizardStep>('template');
-  const [template, setTemplate] = useState<string>('');
+  const [selectedTemplate, setSelectedTemplate] = useState<TemplateType | null>(null);
   const [organizedContent, setOrganizedContent] = useState<OrganizedContent | null>(null);
   const [initialResult, setInitialResult] = useState<GenerationResult | null>(null);
   const [feedbackResult, setFeedbackResult] = useState<FeedbackResult | null>(null);
@@ -38,9 +40,9 @@ const PortfolioWizard: React.FC = () => {
   const steps: StepInfo[] = [
     {
       id: 'template',
-      name: '템플릿 업로드',
-      description: '원하는 포트폴리오 양식 업로드',
-      icon: DocumentArrowUpIcon
+      name: '템플릿 선택',
+      description: '원하는 포트폴리오 디자인 선택',
+      icon: SparklesIcon
     },
     {
       id: 'organize',
@@ -68,8 +70,8 @@ const PortfolioWizard: React.FC = () => {
     }
   ];
 
-  const handleTemplateUpload = (uploadedTemplate: string) => {
-    setTemplate(uploadedTemplate);
+  const handleTemplateSelect = (templateType: TemplateType) => {
+    setSelectedTemplate(templateType);
     setCurrentStep('organize');
   };
 
@@ -94,7 +96,7 @@ const PortfolioWizard: React.FC = () => {
           ) / 200
         ),
         generatedAt: new Date(),
-        template: template
+        template: selectedTemplate || 'james'
       },
       downloadUrl: '',
       qualityScore: 85,
@@ -104,17 +106,16 @@ const PortfolioWizard: React.FC = () => {
     setCurrentStep('enhanced-edit');
   };
 
-  const handleFeedbackComplete = (result: FeedbackResult) => {
-    setFeedbackResult(result);
-    // 개선된 콘텐츠로 최종 결과 생성
-    const enhancedFinalResult: GenerationResult = {
-      ...initialResult!,
-      content: result.revisedContent,
-      qualityScore: result.finalQualityScore,
-      suggestions: [`개선 점수: +${result.improvementScore}`, ...result.changesApplied],
-      downloadUrl: createDownloadUrl(result.revisedContent, initialResult!.format)
+  const handleFeedbackComplete = (result: GenerationResult) => {
+    // 자연어 편집 결과를 FeedbackResult 형태로 변환
+    const feedbackResult: FeedbackResult = {
+      revisedContent: result.content,
+      finalQualityScore: result.qualityScore,
+      improvementScore: result.qualityScore - (initialResult?.qualityScore || 85),
+      changesApplied: result.suggestions || []
     };
-    setFinalResult(enhancedFinalResult);
+    setFeedbackResult(feedbackResult);
+    setFinalResult(result);
     setCurrentStep('complete');
   };
 
@@ -134,7 +135,7 @@ const PortfolioWizard: React.FC = () => {
           ) / 200
         ),
         generatedAt: new Date(),
-        template: template
+        template: selectedTemplate || 'james'
       },
       downloadUrl: createDownloadUrl(document.sections[0]?.blocks[0]?.text || '', 'html'),
       qualityScore: 90,
@@ -162,7 +163,7 @@ const PortfolioWizard: React.FC = () => {
 
   const resetWizard = () => {
     setCurrentStep('template');
-    setTemplate('');
+    setSelectedTemplate(null);
     setOrganizedContent(null);
     setInitialResult(null);
     setFeedbackResult(null);
@@ -189,7 +190,14 @@ const PortfolioWizard: React.FC = () => {
   const renderStepContent = () => {
     switch (currentStep) {
       case 'template':
-        return <TemplateUpload onUpload={handleTemplateUpload} />;
+        return (
+          <div className="max-w-6xl mx-auto px-6">
+            <TemplateSelector 
+              onTemplateSelect={handleTemplateSelect}
+              selectedTemplate={selectedTemplate || undefined}
+            />
+          </div>
+        );
         
       case 'organize':
         return <AIOrganizer onComplete={handleOrganizeComplete} />;
@@ -199,6 +207,7 @@ const PortfolioWizard: React.FC = () => {
           <div className="max-w-full">
             <AutoFillPortfolioEditor
               userId={userId}
+              selectedTemplate={selectedTemplate || 'james'}
               initialInputs={{
                 profile: organizedContent.summary || '',
                 projects: organizedContent.projects.map(p => ({
@@ -234,7 +243,7 @@ const PortfolioWizard: React.FC = () => {
                       ) / 200
                     ),
                     generatedAt: new Date(),
-                    template: template
+                    template: selectedTemplate || 'james'
                   },
                   downloadUrl: '',
                   qualityScore: 85,
@@ -248,30 +257,42 @@ const PortfolioWizard: React.FC = () => {
         ) : null;
       
       case 'enhanced-edit':
-        return initialResult ? (
+        if (!initialResult) {
+          console.error('EnhancedPortfolioEditor: No initialResult available');
+          return null;
+        }
+        
+        console.log('PortfolioWizard - Passing to EnhancedPortfolioEditor:');
+        console.log('- initialResult:', initialResult);
+        console.log('- initialResult.content:', initialResult.content);
+        console.log('- selectedTemplate:', selectedTemplate);
+        
+        let parsedDocument;
+        try {
+          parsedDocument = JSON.parse(initialResult.content);
+          console.log('- Parsed document:', parsedDocument);
+        } catch (error) {
+          console.error('Failed to parse initialResult.content:', error);
+          return <div>문서 파싱 오류가 발생했습니다.</div>;
+        }
+        
+        return (
           <EnhancedPortfolioEditor
-            document={JSON.parse(initialResult.content)}
+            document={parsedDocument}
+            selectedTemplate={selectedTemplate || 'james'}
             onSave={handleEnhancedEditComplete}
             onBack={() => setCurrentStep('autofill')}
             onSkipToNaturalEdit={() => setCurrentStep('feedback')}
           />
-        ) : null;
+        );
       
       case 'feedback':
-        return initialResult && organizedContent ? (
-          <NaturalLanguagePortfolioEditor 
-            initialContent={initialResult}
-            organizedContent={organizedContent}
-            onComplete={(finalContent) => {
-              const result: FeedbackResult = {
-                revisedContent: finalContent,
-                changesApplied: ['자연어 편집 완료'],
-                improvementScore: 20,
-                finalQualityScore: 90
-              };
-              handleFeedbackComplete(result);
-            }}
-            onBack={handleSkipFeedback}
+        return initialResult ? (
+          <SimpleNaturalLanguageEditor
+            initialResult={initialResult}
+            selectedTemplate={selectedTemplate || 'james'}
+            onComplete={handleFeedbackComplete}
+            onBack={() => setCurrentStep('enhanced-edit')}
           />
         ) : null;
       
@@ -281,6 +302,7 @@ const PortfolioWizard: React.FC = () => {
             finalResult={finalResult}
             boostResult={undefined}
             feedbackResult={feedbackResult || undefined}
+            selectedTemplate={selectedTemplate || 'james'}
             onReset={resetWizard}
           />
         ) : null;

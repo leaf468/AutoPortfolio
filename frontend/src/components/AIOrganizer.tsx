@@ -5,7 +5,9 @@ import {
   DocumentTextIcon, 
   ClipboardDocumentListIcon,
   ArrowRightIcon,
-  CheckCircleIcon
+  CheckCircleIcon,
+  PencilSquareIcon,
+  XMarkIcon
 } from '@heroicons/react/24/outline';
 import { aiOrganizer, OrganizedContent } from '../services/aiOrganizer';
 
@@ -20,6 +22,8 @@ const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState<OrganizedContent | null>(null);
   const [showJobPosting, setShowJobPosting] = useState(false);
+  const [editingSection, setEditingSection] = useState<string | null>(null);
+  const [editedResult, setEditedResult] = useState<OrganizedContent | null>(null);
 
   const handleOrganize = async () => {
     if (!input.trim()) return;
@@ -42,10 +46,39 @@ const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
   };
 
   const handleComplete = () => {
-    if (result) {
-      onComplete(result);
+    if (editedResult || result) {
+      onComplete(editedResult || result!);
     }
   };
+
+  const handleEdit = (section: string) => {
+    setEditingSection(section);
+    if (!editedResult && result) {
+      setEditedResult({ ...result });
+    }
+  };
+
+  const handleSaveEdit = () => {
+    setEditingSection(null);
+  };
+
+  const handleCancelEdit = () => {
+    setEditingSection(null);
+    if (result) {
+      setEditedResult({ ...result });
+    }
+  };
+
+  const updateEditedResult = (field: string, value: any) => {
+    if (editedResult) {
+      setEditedResult({
+        ...editedResult,
+        [field]: value
+      });
+    }
+  };
+
+  const displayResult = editedResult || result;
 
   const inputTypes = [
     { value: 'freetext', label: '자유 텍스트', icon: DocumentTextIcon },
@@ -176,50 +209,165 @@ const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
 
             {/* 원라이너 피치 */}
             <div className="mb-6 p-4 bg-purple-50 border border-purple-200 rounded-lg">
-              <h4 className="font-medium text-purple-900 mb-2">💡 핵심 피치</h4>
-              <p className="text-purple-800 text-lg">{result.oneLinerPitch}</p>
+              <div className="flex justify-between items-center mb-2">
+                <h4 className="font-medium text-purple-900">💡 핵심 피치</h4>
+                <button
+                  onClick={() => handleEdit('oneLinerPitch')}
+                  className="text-purple-600 hover:text-purple-800 p-1"
+                >
+                  <PencilSquareIcon className="w-4 h-4" />
+                </button>
+              </div>
+              {editingSection === 'oneLinerPitch' ? (
+                <div className="space-y-3">
+                  <textarea
+                    value={displayResult?.oneLinerPitch || ''}
+                    onChange={(e) => updateEditedResult('oneLinerPitch', e.target.value)}
+                    className="w-full p-3 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                    rows={3}
+                  />
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={handleSaveEdit}
+                      className="px-3 py-1 bg-purple-600 text-white rounded text-sm hover:bg-purple-700"
+                    >
+                      저장
+                    </button>
+                    <button
+                      onClick={handleCancelEdit}
+                      className="px-3 py-1 bg-gray-300 text-gray-700 rounded text-sm hover:bg-gray-400"
+                    >
+                      취소
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-purple-800 text-lg">{displayResult?.oneLinerPitch}</p>
+              )}
             </div>
 
             {/* 요약 */}
             <div className="mb-6">
-              <h4 className="font-medium text-gray-900 mb-2">📝 전문적 요약</h4>
-              <p className="text-gray-700">{result.summary}</p>
+              <div className="flex justify-between items-center mb-2">
+                <h4 className="font-medium text-gray-900">📝 전문적 요약</h4>
+                <button
+                  onClick={() => handleEdit('summary')}
+                  className="text-gray-600 hover:text-gray-800 p-1"
+                >
+                  <PencilSquareIcon className="w-4 h-4" />
+                </button>
+              </div>
+              {editingSection === 'summary' ? (
+                <div className="space-y-3">
+                  <textarea
+                    value={displayResult?.summary || ''}
+                    onChange={(e) => updateEditedResult('summary', e.target.value)}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                    rows={4}
+                  />
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={handleSaveEdit}
+                      className="px-3 py-1 bg-purple-600 text-white rounded text-sm hover:bg-purple-700"
+                    >
+                      저장
+                    </button>
+                    <button
+                      onClick={handleCancelEdit}
+                      className="px-3 py-1 bg-gray-300 text-gray-700 rounded text-sm hover:bg-gray-400"
+                    >
+                      취소
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-gray-700">{displayResult?.summary}</p>
+              )}
             </div>
 
             {/* 키워드 */}
             <div className="mb-6">
-              <h4 className="font-medium text-gray-900 mb-3">🏷️ 추출된 키워드</h4>
-              <div className="space-y-3">
-                {Object.entries(result.keywords).map(([category, keywords]) => (
-                  keywords.length > 0 && (
+              <div className="flex justify-between items-center mb-3">
+                <h4 className="font-medium text-gray-900">🏷️ 추출된 키워드</h4>
+                <button
+                  onClick={() => handleEdit('keywords')}
+                  className="text-gray-600 hover:text-gray-800 p-1"
+                >
+                  <PencilSquareIcon className="w-4 h-4" />
+                </button>
+              </div>
+              {editingSection === 'keywords' ? (
+                <div className="space-y-4">
+                  {Object.entries(displayResult?.keywords || {}).map(([category, keywords]) => (
                     <div key={category}>
-                      <span className="text-sm font-medium text-gray-600 capitalize">
+                      <label className="text-sm font-medium text-gray-600 capitalize block mb-2">
                         {category === 'technical' ? '기술' : 
                          category === 'soft' ? '소프트 스킬' :
                          category === 'industry' ? '산업' : 'ATS'}:
-                      </span>
-                      <div className="flex flex-wrap gap-2 mt-1">
-                        {keywords.map((keyword, idx) => (
-                          <span
-                            key={idx}
-                            className="px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded-full"
-                          >
-                            {keyword}
-                          </span>
-                        ))}
-                      </div>
+                      </label>
+                      <input
+                        type="text"
+                        value={keywords.join(', ')}
+                        onChange={(e) => {
+                          const newKeywords = e.target.value.split(',').map(k => k.trim()).filter(k => k);
+                          updateEditedResult('keywords', {
+                            ...displayResult?.keywords,
+                            [category]: newKeywords
+                          });
+                        }}
+                        className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
+                        placeholder="키워드를 쉼표로 구분하여 입력하세요"
+                      />
                     </div>
-                  )
-                ))}
-              </div>
+                  ))}
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={handleSaveEdit}
+                      className="px-3 py-1 bg-purple-600 text-white rounded text-sm hover:bg-purple-700"
+                    >
+                      저장
+                    </button>
+                    <button
+                      onClick={handleCancelEdit}
+                      className="px-3 py-1 bg-gray-300 text-gray-700 rounded text-sm hover:bg-gray-400"
+                    >
+                      취소
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {Object.entries(displayResult?.keywords || {}).map(([category, keywords]) => (
+                    keywords.length > 0 && (
+                      <div key={category}>
+                        <span className="text-sm font-medium text-gray-600 capitalize">
+                          {category === 'technical' ? '기술' : 
+                           category === 'soft' ? '소프트 스킬' :
+                           category === 'industry' ? '산업' : 'ATS'}:
+                        </span>
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          {keywords.map((keyword, idx) => (
+                            <span
+                              key={idx}
+                              className="px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded-full"
+                            >
+                              {keyword}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* 개선 제안 */}
-            {result.improvementSuggestions.length > 0 && (
+            {(displayResult?.improvementSuggestions?.length || 0) > 0 && (
               <div className="mb-6">
                 <h4 className="font-medium text-gray-900 mb-2">💡 개선 제안</h4>
                 <ul className="list-disc list-inside space-y-1 text-gray-700">
-                  {result.improvementSuggestions.map((suggestion, idx) => (
+                  {displayResult?.improvementSuggestions?.map((suggestion, idx) => (
                     <li key={idx}>{suggestion}</li>
                   ))}
                 </ul>
@@ -229,22 +377,39 @@ const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
             {/* 통계 */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
               <div className="text-center p-3 bg-gray-50 rounded-lg">
-                <div className="text-2xl font-bold text-purple-600">{result.experiences.length}</div>
+                <div className="text-2xl font-bold text-purple-600">{displayResult?.experiences.length || 0}</div>
                 <div className="text-sm text-gray-600">경력</div>
               </div>
               <div className="text-center p-3 bg-gray-50 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">{result.projects.length}</div>
+                <div className="text-2xl font-bold text-blue-600">{displayResult?.projects.length || 0}</div>
                 <div className="text-sm text-gray-600">프로젝트</div>
               </div>
               <div className="text-center p-3 bg-gray-50 rounded-lg">
-                <div className="text-2xl font-bold text-green-600">{result.skills.length}</div>
+                <div className="text-2xl font-bold text-green-600">{displayResult?.skills.length || 0}</div>
                 <div className="text-sm text-gray-600">기술 분야</div>
               </div>
               <div className="text-center p-3 bg-gray-50 rounded-lg">
                 <div className="text-2xl font-bold text-orange-600">
-                  {Object.values(result.keywords).flat().length}
+                  {Object.values(displayResult?.keywords || {}).flat().length}
                 </div>
                 <div className="text-sm text-gray-600">키워드</div>
+              </div>
+            </div>
+
+            {/* 편집 안내 메시지 */}
+            <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-start">
+                <PencilSquareIcon className="w-5 h-5 text-blue-600 mr-2 mt-0.5" />
+                <div>
+                  <h4 className="font-medium text-blue-900 mb-1">편집 기능 안내</h4>
+                  <p className="text-blue-800 text-sm">
+                    각 섹션의 연필 아이콘을 클릭하여 내용을 수정할 수 있습니다. 
+                    AI가 정리한 내용이 적절한지 확인하고, 필요시 직접 편집해보세요.
+                  </p>
+                  <p className="text-blue-700 text-xs mt-2">
+                    💡 팁: 핵심 성과나 기술을 추가하거나, 표현을 더 구체적으로 다듬어보세요.
+                  </p>
+                </div>
               </div>
             </div>
           </motion.div>
@@ -254,8 +419,10 @@ const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
             <button
               onClick={() => {
                 setResult(null);
+                setEditedResult(null);
                 setInput('');
                 setJobPosting('');
+                setEditingSection(null);
               }}
               className="flex-1 bg-gray-100 text-gray-700 py-3 px-6 rounded-lg font-medium hover:bg-gray-200 transition-colors"
             >
@@ -265,7 +432,7 @@ const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
               onClick={handleComplete}
               className="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white py-3 px-6 rounded-lg font-medium hover:from-purple-700 hover:to-pink-700 transition-all duration-200 flex items-center justify-center"
             >
-              포트폴리오 생성하기
+              {editedResult ? '편집된 내용으로 생성하기' : '포트폴리오 생성하기'}
               <ArrowRightIcon className="w-5 h-5 ml-2" />
             </button>
           </div>

@@ -4,7 +4,6 @@ import {
     PencilIcon,
     SparklesIcon,
     CheckCircleIcon,
-    ExclamationTriangleIcon,
     InformationCircleIcon,
     ArrowPathIcon,
     DocumentDuplicateIcon,
@@ -15,14 +14,15 @@ import {
 import autoFillService, { 
     PortfolioDocument, 
     TextBlock, 
-    Section,
     GenerateRequest 
 } from '../services/autoFillService';
+type TemplateType = 'james' | 'geon' | 'eunseong' | 'iu';
 
 interface AutoFillPortfolioEditorProps {
     userId: string;
     initialInputs?: GenerateRequest['inputs'];
     targetJobKeywords?: string[];
+    selectedTemplate?: TemplateType;
     onSave?: (document: PortfolioDocument) => void;
     onEnhancedEdit?: (document: PortfolioDocument) => void;
 }
@@ -31,6 +31,7 @@ const AutoFillPortfolioEditor: React.FC<AutoFillPortfolioEditorProps> = ({
     userId,
     initialInputs,
     targetJobKeywords,
+    selectedTemplate = 'james',
     onSave,
     onEnhancedEdit
 }) => {
