@@ -15,6 +15,7 @@ import { PortfolioDocument, TextBlock } from '../services/autoFillService';
 import { portfolioTemplates } from '../templates/portfolioTemplates';
 import ContentRecommendationPanel from './ContentRecommendationPanel';
 import { ContentRecommendation } from '../services/contentRecommendationService';
+import { PortfolioRefinementService } from '../services/portfolioRefinementService';
 
 type TemplateType = 'james' | 'geon' | 'eunseong' | 'iu';
 
@@ -55,9 +56,26 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
     // HTML을 자연어로 변환하는 강력한 함수
     const htmlToNaturalLanguage = (html: string): string => {
         if (!html || typeof html !== 'string') return html;
-        
+
         let text = html;
-        
+
+        // 먼저 <style> 태그와 그 내용을 완전히 제거
+        text = text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+
+        // <script> 태그와 그 내용을 완전히 제거
+        text = text.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+
+        // HTML 문서 구조 태그들 제거 (head, body, html 등)
+        text = text.replace(/<html[^>]*>/gi, '');
+        text = text.replace(/<\/html>/gi, '');
+        text = text.replace(/<head[^>]*>[\s\S]*?<\/head>/gi, '');
+        text = text.replace(/<body[^>]*>/gi, '');
+        text = text.replace(/<\/body>/gi, '');
+        text = text.replace(/<!DOCTYPE[^>]*>/gi, '');
+        text = text.replace(/<meta[^>]*>/gi, '');
+        text = text.replace(/<title[^>]*>[\s\S]*?<\/title>/gi, '');
+        text = text.replace(/<link[^>]*>/gi, '');
+
         // HTML 엔티티 디코딩
         const entities: Record<string, string> = {
             '&amp;': '&',
@@ -70,56 +88,82 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
             '&reg;': '®',
             '&trade;': '™'
         };
-        
+
         Object.entries(entities).forEach(([entity, char]) => {
             text = text.replace(new RegExp(entity, 'g'), char);
         });
-        
+
         // 숫자 엔티티 디코딩 (&#123; 형태)
         text = text.replace(/&#(\d+);/g, (match, num) => {
             return String.fromCharCode(parseInt(num, 10));
         });
-        
+
         // 16진수 엔티티 디코딩 (&#x7B; 형태)
         text = text.replace(/&#x([0-9a-fA-F]+);/g, (match, hex) => {
             return String.fromCharCode(parseInt(hex, 16));
         });
-        
+
         // 블록 레벨 태그를 줄바꿈으로 변환
-        text = text.replace(/<\/(div|p|h[1-6]|section|article|header|footer|nav|main|aside|br)>/gi, '\n');
+        text = text.replace(/<\/(div|p|h[1-6]|section|article|header|footer|nav|main|aside)>/gi, '\n');
         text = text.replace(/<(div|p|h[1-6]|section|article|header|footer|nav|main|aside)[^>]*>/gi, '\n');
         text = text.replace(/<br\s*\/?>/gi, '\n');
-        
+        text = text.replace(/<hr\s*\/?>/gi, '\n---\n');
+
         // 리스트 아이템을 적절한 형태로 변환
-        text = text.replace(/<li[^>]*>/gi, '• ');
-        text = text.replace(/<\/li>/gi, '\n');
-        
+        text = text.replace(/<li[^>]*>/gi, '\n• ');
+        text = text.replace(/<\/li>/gi, '');
+        text = text.replace(/<ul[^>]*>/gi, '\n');
+        text = text.replace(/<\/ul>/gi, '\n');
+        text = text.replace(/<ol[^>]*>/gi, '\n');
+        text = text.replace(/<\/ol>/gi, '\n');
+
         // 테이블 구조를 텍스트로 변환
         text = text.replace(/<\/tr>/gi, '\n');
-        text = text.replace(/<td[^>]*>/gi, ' | ');
-        text = text.replace(/<th[^>]*>/gi, ' | ');
-        
+        text = text.replace(/<\/td>/gi, ' ');
+        text = text.replace(/<\/th>/gi, ' ');
+        text = text.replace(/<td[^>]*>/gi, '');
+        text = text.replace(/<th[^>]*>/gi, '');
+        text = text.replace(/<table[^>]*>/gi, '\n');
+        text = text.replace(/<\/table>/gi, '\n');
+        text = text.replace(/<thead[^>]*>/gi, '');
+        text = text.replace(/<\/thead>/gi, '');
+        text = text.replace(/<tbody[^>]*>/gi, '');
+        text = text.replace(/<\/tbody>/gi, '');
+        text = text.replace(/<tr[^>]*>/gi, '');
+
         // 나머지 모든 HTML 태그 제거
         text = text.replace(/<[^>]*>/g, '');
-        
+
         // 연속된 공백과 줄바꿈 정리
-        text = text.replace(/\s+/g, ' '); // 연속된 공백을 하나로
-        text = text.replace(/\n\s*\n/g, '\n'); // 연속된 줄바꿈을 하나로
+        text = text.replace(/[ \t]+/g, ' '); // 연속된 공백과 탭을 하나의 공백으로
+        text = text.replace(/\n\s*\n\s*\n/g, '\n\n'); // 3개 이상의 줄바꿈을 2개로
         text = text.replace(/^\s+|\s+$/gm, ''); // 각 줄의 시작과 끝 공백 제거
-        
+
         // 특수 패턴들을 자연어로 변환
         text = text.replace(/\[\s*\]/g, ''); // 빈 대괄호 제거
         text = text.replace(/\{\s*\}/g, ''); // 빈 중괄호 제거
         text = text.replace(/\(\s*\)/g, ''); // 빈 소괄호 제거
-        
+
         // URL을 더 자연스럽게 변환
         text = text.replace(/https?:\/\/[^\s]+/g, (url) => {
             if (url.includes('github')) return `GitHub: ${url}`;
             if (url.includes('linkedin')) return `LinkedIn: ${url}`;
             return url;
         });
-        
-        return text.trim();
+
+        // 최종 정리
+        text = text.trim();
+
+        // 만약 여전히 "포트폴리오"로 시작하고 CSS 같은 내용이 있다면 추가 처리
+        if (text.startsWith('포트폴리오') && text.includes('font-family')) {
+            // "포트폴리오" 이후 첫 번째 실제 콘텐츠까지 제거
+            const realContentStart = text.search(/(프론트엔드|백엔드|개발자|이름|성함)/);
+            if (realContentStart > 0) {
+                text = text.substring(realContentStart);
+            }
+        }
+
+        return text;
     };
 
     // 이전 버전과의 호환성을 위한 stripHtml 함수
@@ -328,7 +372,7 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
             console.log('Found experience:', result.experience);
             
             // 4단계: 프로젝트 블록 분류
-            const projectBlocks = allBlocks.filter(block => 
+            const projectBlocks = allBlocks.filter(block =>
                 !usedBlocks.has(block.block_id) &&
                 (
                     /(프로젝트|플랫폼|시스템|웹사이트|앱|서비스|개발|구현|제작)/.test(block.text) &&
@@ -340,25 +384,28 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                     skillKeywords.some(skill => block.text.toLowerCase().includes(skill.toLowerCase()))
                 )
             );
-            
+
             projectBlocks.forEach(block => {
-                const lines = block.text.split('\n').filter(l => l.trim());
-                const firstLine = lines[0] || block.text.substring(0, 50);
-                
+                // 원본 HTML이 있을 경우를 대비해 한 번 더 자연어로 변환
+                const cleanText = htmlToNaturalLanguage(block.originalText || block.text);
+                const lines = cleanText.split('\n').filter(l => l.trim());
+                const firstLine = lines[0] || cleanText.substring(0, 50);
+
                 let projectName = firstLine;
                 if (firstLine.includes('프로젝트')) {
                     projectName = firstLine;
                 } else if (firstLine.length > 50) {
                     projectName = firstLine.substring(0, 47) + '...';
                 }
-                
+
+                // 프로젝트 이름과 설명 모두 HTML 제거
                 result.projects.push({
-                    name: projectName,
-                    description: block.text,
+                    name: htmlToNaturalLanguage(projectName),
+                    description: cleanText,
                     tech: [],
                     role: '개발자'
                 });
-                
+
                 usedBlocks.add(block.block_id);
             });
             
@@ -410,7 +457,7 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
             if (result.projects.length === 0) {
                 result.projects = [
                     {
-                        name: '"함께해요" - 스터디 매칭 플랫폼',
+                        name: '함께해요 - 스터디 매칭 플랫폼',
                         description: 'Spring Boot와 MySQL을 활용해 스터디 그룹 매칭 서비스를 개발했습니다. REST API 설계부터 배포까지 전체 백엔드를 담당했으며, WebSocket으로 실시간 채팅 기능을 구현하고 Redis 캐싱으로 응답 속도를 40% 개선했습니다.',
                         tech: ['Spring Boot', 'MySQL', 'Redis', 'WebSocket'],
                         role: '백엔드 개발자'
@@ -513,7 +560,7 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
             setPortfolioData(data);
             setMissingInfo(detectMissingInfo(data));
         }
-    }, [document, extractPortfolioData, detectMissingInfo]);
+    }, [document]); // extractPortfolioData와 detectMissingInfo는 component 내부 함수이므로 dependency에서 제외
 
     // 템플릿 변경 핸들러
     const handleTemplateChange = (templateId: TemplateType) => {
@@ -586,11 +633,32 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
     // 자연어 입력을 구조화된 데이터로 파싱
     const parseNaturalLanguage = (field: string, value: string) => {
         console.log(`Parsing ${field}:`, value);
-        
+
+        // 빈 값 처리
+        if (!value || value.trim() === '') {
+            switch (field) {
+                case 'skills': return [];
+                case 'experience': return [];
+                case 'projects': return [];
+                case 'education': return [];
+                default: return '';
+            }
+        }
+
         switch (field) {
+            case 'name':
+            case 'title':
+            case 'email':
+            case 'phone':
+            case 'github':
+            case 'linkedin':
+            case 'about':
+                // 단순 문자열 필드는 그대로 반환
+                return value.trim();
+
             case 'skills':
-                // 쉼표, 줄바꿈, 공백으로 분리
-                const skills = value.split(/[,\n\s]+/).map(skill => skill.trim()).filter(skill => skill.length > 0);
+                // 쉼표, 줄바꿈, 공백으로 분리 - 더 유연하게
+                const skills = value.split(/[,\n;|]+/).map(skill => skill.trim()).filter(skill => skill.length > 0);
                 console.log('Parsed skills:', skills);
                 return skills;
                 
@@ -621,34 +689,227 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                 return experiences;
                 
             case 'projects':
-                // 프로젝트 정보를 더 유연하게 파싱
+                // 프로젝트 정보를 더 유연하게 파싱 - HTML 포함 가능성 처리
+                // 먼저 HTML을 자연어로 변환
+                const cleanProjectValue = htmlToNaturalLanguage(value);
+                console.log('Clean project value:', cleanProjectValue);
+
                 let projects = [];
-                if (value.includes('\n\n')) {
-                    // 이중 줄바꿈으로 구분된 경우
-                    const projectSections = value.split('\n\n').filter(section => section.trim());
-                    projects = projectSections.map(section => {
-                        const lines = section.split('\n').filter(l => l.trim());
-                        return {
-                            name: lines[0] || '프로젝트',
-                            description: lines.slice(1).join(' ') || section,
-                            tech: [],
-                            role: '개발자'
-                        };
-                    });
-                } else {
-                    // 단순한 텍스트인 경우 하나의 프로젝트로 처리
-                    const lines = value.split('\n').filter(l => l.trim());
-                    if (lines.length > 0) {
-                        projects = [{
-                            name: lines[0].substring(0, 50) + (lines[0].length > 50 ? '...' : ''),
-                            description: value,
-                            tech: [],
-                            role: '개발자'
-                        }];
+
+                // 스마트 프로젝트 분리 로직
+                const parseProjects = (text: string) => {
+                    // 1. 알려진 프로젝트명으로 분리 시도
+                    const knownProjects = ['모두의 레시피', 'Daily Planner', 'Quick Memo'];
+                    let foundProjects = [];
+
+                    for (const projectName of knownProjects) {
+                        const index = text.indexOf(projectName);
+                        if (index !== -1) {
+                            foundProjects.push({ name: projectName, index });
+                        }
                     }
-                }
-                console.log('Parsed projects:', projects);
-                return projects;
+
+                    if (foundProjects.length > 0) {
+                        // 인덱스 순으로 정렬
+                        foundProjects.sort((a, b) => a.index - b.index);
+
+                        return foundProjects.map((project, idx) => {
+                            const startIndex = project.index;
+                            const endIndex = idx < foundProjects.length - 1 ?
+                                foundProjects[idx + 1].index : text.length;
+
+                            const projectText = text.substring(startIndex, endIndex).trim();
+                            return parseIndividualProject(project.name, projectText);
+                        });
+                    }
+
+                    // 2. "핵심 프로젝트" 또는 "Projects" 섹션으로 분리
+                    if (text.includes('핵심 프로젝트') || text.includes('Projects')) {
+                        const projectSection = text.split(/핵심 프로젝트|Projects/)[1] || text;
+
+                        // 제목처럼 보이는 라인들로 분리
+                        const lines = projectSection.split('\n').filter(l => l.trim());
+                        const projectStarts = [];
+
+                        lines.forEach((line, idx) => {
+                            // 프로젝트 제목의 특징:
+                            // - 상대적으로 짧음 (100자 이하)
+                            // - 역할, 기간, 설명이 아님
+                            // - 특수문자나 URL이 없음
+                            if (line.length < 100 &&
+                                !line.includes('역할:') &&
+                                !line.includes('기간:') &&
+                                !line.includes('http') &&
+                                !line.includes('설명') &&
+                                line.trim().length > 5) {
+
+                                // 다음 몇 줄이 설명처럼 보이면 제목으로 판단
+                                const nextLines = lines.slice(idx + 1, idx + 4);
+                                if (nextLines.some(l => l.length > 50)) {
+                                    projectStarts.push({ title: line.trim(), startIdx: idx });
+                                }
+                            }
+                        });
+
+                        if (projectStarts.length > 0) {
+                            return projectStarts.map((project, idx) => {
+                                const startIdx = project.startIdx;
+                                const endIdx = idx < projectStarts.length - 1 ?
+                                    projectStarts[idx + 1].startIdx : lines.length;
+
+                                const projectLines = lines.slice(startIdx, endIdx);
+                                const projectText = projectLines.join('\n');
+
+                                return parseIndividualProject(project.title, projectText);
+                            });
+                        }
+                    }
+
+                    // 3. 이중 줄바꿈으로 분리 (더 엄격한 검증)
+                    const sections = text.split(/\n\s*\n/).filter(s => s.trim().length > 30);
+                    if (sections.length > 1) {
+                        return sections.map((section, idx) => {
+                            const lines = section.split('\n').filter(l => l.trim());
+                            let title = lines[0] || `프로젝트 ${idx + 1}`;
+
+                            // 제목이 너무 길면 줄임
+                            if (title.length > 50) {
+                                const words = title.split(' ');
+                                title = words.slice(0, 3).join(' ') || `프로젝트 ${idx + 1}`;
+                            }
+
+                            return parseIndividualProject(title, section);
+                        }).filter(project =>
+                            project.name &&
+                            project.description &&
+                            project.description.length > 15
+                        );
+                    }
+
+                    // 4. 단일 프로젝트로 처리
+                    const lines = text.split('\n').filter(l => l.trim());
+                    if (lines.length > 0) {
+                        const title = lines[0].length < 100 ? lines[0] : '주요 프로젝트';
+                        return [parseIndividualProject(title, text)];
+                    }
+
+                    return [];
+                };
+
+                // 개별 프로젝트 파싱 헬퍼 함수
+                const parseIndividualProject = (title: string, content: string) => {
+                    const lines = content.split('\n').filter(l => l.trim());
+
+                    let name = title.trim();
+                    let role = '';
+                    let period = '';
+                    let description = '';
+                    let tech = [];
+
+                    // 제목에서 불필요한 부분 제거
+                    name = name.replace(/^(프로젝트|Project)\s*:?\s*/i, '').trim();
+                    name = name.replace(/^\d+\.\s*/, '').trim(); // 번호 제거
+
+                    // 첫 번째 줄이 제목이 아닌 경우 (내용에서 추출)
+                    if (!name || name.length < 3) {
+                        const contentLines = lines.filter(l =>
+                            l.length > 5 &&
+                            l.length < 100 &&
+                            !l.includes('역할:') &&
+                            !l.includes('기간:') &&
+                            !l.includes('기술:')
+                        );
+                        if (contentLines.length > 0) {
+                            name = contentLines[0].trim();
+                        }
+                    }
+
+                    // 내용 분석
+                    const descriptionLines = [];
+
+                    lines.forEach(line => {
+                        const cleanLine = line.trim();
+
+                        if (cleanLine.includes('역할:') || cleanLine.includes('Role:') || cleanLine.includes('담당:')) {
+                            role = cleanLine.replace(/역할:|Role:|담당:/gi, '').trim();
+                        } else if (cleanLine.includes('기간:') || cleanLine.includes('Period:') || cleanLine.includes('개발 기간:')) {
+                            period = cleanLine.replace(/기간:|Period:|개발 기간:/gi, '').trim();
+                        } else if (cleanLine.includes('기술:') || cleanLine.includes('Tech:') || cleanLine.includes('기술 스택') || cleanLine.includes('사용 기술')) {
+                            const techLine = cleanLine.replace(/기술:|Tech:|기술 스택:|사용 기술:/gi, '').trim();
+                            // 더 다양한 구분자로 분리
+                            tech = techLine.split(/[,、，|·\s·]+/)
+                                .map(t => t.trim())
+                                .filter(t => t.length > 0 && t !== ',' && t !== '·' && t.length < 20);
+                        } else if (cleanLine !== name && cleanLine.length > 15) {
+                            // 설명에 해당하는 내용만 추가
+                            if (!cleanLine.includes('역할:') &&
+                                !cleanLine.includes('기간:') &&
+                                !cleanLine.includes('기술:') &&
+                                !cleanLine.includes('담당:') &&
+                                !cleanLine.includes('사용 기술:')) {
+                                descriptionLines.push(cleanLine);
+                            }
+                        }
+                    });
+
+                    // 설명 정리
+                    description = descriptionLines.join(' ').trim();
+
+                    // 설명이 없으면 전체 내용에서 추출 (이름 제외)
+                    if (!description) {
+                        description = content.replace(name, '').trim();
+                        // 메타 정보 제거
+                        description = description.replace(/역할:.*?\n/gi, '');
+                        description = description.replace(/기간:.*?\n/gi, '');
+                        description = description.replace(/기술:.*?\n/gi, '');
+                        description = description.trim();
+                    }
+
+                    return {
+                        name: name || '프로젝트',
+                        description: description.substring(0, 500) || '프로젝트 설명',
+                        tech: tech.slice(0, 10), // 최대 10개 기술
+                        role: role || '개발자',
+                        period: period || ''
+                    };
+                };
+
+                projects = parseProjects(cleanProjectValue);
+
+                // 중복 제거 및 유효성 검사
+                const uniqueProjects = [];
+                const seenNames = new Set();
+                const seenDescriptions = new Set();
+
+                projects.forEach(project => {
+                    // 유효한 프로젝트인지 확인
+                    const isValidName = project.name &&
+                        project.name.length > 2 &&
+                        project.name !== '프로젝트' &&
+                        !project.name.includes('핵심 프로젝트') &&
+                        !project.name.includes('주요 경험');
+
+                    const isValidDescription = project.description &&
+                        project.description.length > 10 &&
+                        !project.description.includes('프로젝트를 입력해주세요');
+
+                    // 이름이나 설명이 중복되지 않는지 확인
+                    const nameKey = project.name.toLowerCase().trim();
+                    const descKey = project.description.substring(0, 100).toLowerCase().trim();
+
+                    if (isValidName &&
+                        isValidDescription &&
+                        !seenNames.has(nameKey) &&
+                        !seenDescriptions.has(descKey)) {
+
+                        seenNames.add(nameKey);
+                        seenDescriptions.add(descKey);
+                        uniqueProjects.push(project);
+                    }
+                });
+
+                console.log('Parsed projects:', uniqueProjects);
+                return uniqueProjects;
                 
             case 'education':
                 // 학력 정보 파싱
@@ -784,51 +1045,51 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                     section_id: 'header',
                     section_title: '헤더',
                     blocks: [
-                        createTextBlock(portfolioData.name, 'header'),
-                        createTextBlock(portfolioData.title, 'header')
-                    ]
+                        createTextBlock(portfolioData.name || '', 'header'),
+                        createTextBlock(portfolioData.title || '', 'header')
+                    ].filter(block => block.text)
                 },
                 {
                     section_id: 'contact',
                     section_title: '연락처',
                     blocks: [
-                        createTextBlock(`이메일: ${portfolioData.email}`, 'contact'),
-                        createTextBlock(`전화: ${portfolioData.phone}`, 'contact'),
-                        createTextBlock(`GitHub: ${portfolioData.github}`, 'contact')
-                    ]
+                        portfolioData.email ? createTextBlock(`이메일: ${portfolioData.email}`, 'contact') : null,
+                        portfolioData.phone ? createTextBlock(`전화: ${portfolioData.phone}`, 'contact') : null,
+                        portfolioData.github ? createTextBlock(`GitHub: ${portfolioData.github}`, 'contact') : null
+                    ].filter(Boolean) as TextBlock[]
                 },
                 {
                     section_id: 'about',
                     section_title: '소개',
-                    blocks: [createTextBlock(portfolioData.about, 'about')]
+                    blocks: portfolioData.about ? [createTextBlock(portfolioData.about, 'about')] : []
                 },
                 {
                     section_id: 'skills',
                     section_title: '기술',
-                    blocks: portfolioData.skills.map((skill: string) => createTextBlock(skill, 'skills'))
+                    blocks: (portfolioData.skills || []).map((skill: string) => createTextBlock(skill, 'skills'))
                 },
                 {
                     section_id: 'experience',
                     section_title: '경험',
-                    blocks: portfolioData.experience.map((exp: any) => 
+                    blocks: (portfolioData.experience || []).map((exp: any) =>
                         createTextBlock(`${exp.position}\n${exp.company}\n${exp.duration}\n${exp.description}`, 'experience')
                     )
                 },
                 {
                     section_id: 'projects',
                     section_title: '프로젝트',
-                    blocks: portfolioData.projects.map((project: any) => 
+                    blocks: (portfolioData.projects || []).map((project: any) =>
                         createTextBlock(`${project.name}\n${project.description}`, 'projects')
                     )
                 },
                 {
                     section_id: 'education',
                     section_title: '교육',
-                    blocks: portfolioData.education.map((edu: any) => 
+                    blocks: (portfolioData.education || []).map((edu: any) =>
                         createTextBlock(`${edu.school}\n${edu.degree}\n${edu.year}`, 'education')
                     )
                 }
-            ]
+            ].filter(section => section.blocks.length > 0) // 빈 섹션 제거
         };
 
         onSave(updatedDocument);
@@ -869,6 +1130,18 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                                     자연어 편집으로
                                 </button>
                             )}
+                            <button
+                                onClick={async () => {
+                                    // 포트폴리오 데이터 다듬기
+                                    const refinedData = await PortfolioRefinementService.refinePortfolio(portfolioData);
+                                    setPortfolioData(refinedData);
+                                    setMissingInfo(detectMissingInfo(refinedData));
+                                }}
+                                className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors flex items-center"
+                            >
+                                <SparklesIcon className="w-4 h-4 mr-2" />
+                                포트폴리오 다듬기
+                            </button>
                             <button
                                 onClick={handleSave}
                                 className="px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-pink-700 transition-all duration-200"
@@ -1114,37 +1387,265 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                         <div className="bg-white rounded-xl border border-gray-200 p-6">
                             <div className="flex items-center justify-between mb-4">
                                 <h3 className="text-lg font-bold text-gray-900">프로젝트</h3>
-                                <button
-                                    onClick={() => handleSectionSelect('projects')}
-                                    className="flex items-center px-3 py-1 text-sm bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition-colors"
-                                >
-                                    <LightBulbIcon className="w-4 h-4 mr-1" />
-                                    작성 팁
-                                </button>
-                            </div>
-                            {editingField === 'projects' ? (
-                                <div className="space-y-2">
-                                    <textarea
-                                        value={editValue}
-                                        onChange={(e) => setEditValue(e.target.value)}
-                                        className="w-full h-32 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
-                                        placeholder="프로젝트를 자연어로 입력하세요.&#10;&#10;예시:&#10;함께해요 - 스터디 매칭 플랫폼&#10;Spring Boot와 MySQL을 활용해 스터디 그룹 매칭 서비스를 개발했습니다. WebSocket으로 실시간 채팅 기능을 구현했습니다."
-                                    />
-                                    <button onClick={saveEdit} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                                        저장
+                                <div className="flex space-x-2">
+                                    <button
+                                        onClick={() => {
+                                            const newProject = {
+                                                name: '새 프로젝트',
+                                                description: '프로젝트 설명을 입력하세요',
+                                                tech: [],
+                                                role: '개발자',
+                                                period: '기간'
+                                            };
+                                            const updatedProjects = [...(portfolioData.projects || []), newProject];
+                                            setPortfolioData({...portfolioData, projects: updatedProjects});
+                                        }}
+                                        className="flex items-center px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                                    >
+                                        <span className="text-lg mr-1">+</span>
+                                        프로젝트 추가
+                                    </button>
+                                    <button
+                                        onClick={() => handleSectionSelect('projects')}
+                                        className="flex items-center px-3 py-1 text-sm bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition-colors"
+                                    >
+                                        <LightBulbIcon className="w-4 h-4 mr-1" />
+                                        작성 팁
                                     </button>
                                 </div>
-                            ) : (
-                                <div 
-                                    className="p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors min-h-[100px]"
-                                    onClick={() => startEditing('projects', portfolioData.projects)}
-                                >
-                                    <p className="text-gray-900 whitespace-pre-wrap">
-                                        {formatDisplayValue('projects', portfolioData.projects)}
-                                    </p>
-                                    <PencilIcon className="w-4 h-4 text-gray-400 float-right mt-2" />
-                                </div>
-                            )}
+                            </div>
+
+                            {/* 프로젝트 목록 - 개별 편집 가능 */}
+                            <div className="space-y-4">
+                                {(portfolioData.projects || []).length === 0 ? (
+                                    <div className="text-center py-8 text-gray-500">
+                                        프로젝트를 추가해주세요
+                                    </div>
+                                ) : (
+                                    (portfolioData.projects || []).map((project: any, index: number) => (
+                                        <div key={index} className="border border-gray-200 rounded-lg p-4 space-y-3">
+                                            {/* 프로젝트명 */}
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">프로젝트명</label>
+                                                {editingField === `project-name-${index}` ? (
+                                                    <div className="flex space-x-2">
+                                                        <input
+                                                            type="text"
+                                                            value={editValue}
+                                                            onChange={(e) => setEditValue(e.target.value)}
+                                                            className="flex-1 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600"
+                                                        />
+                                                        <button
+                                                            onClick={() => {
+                                                                const updatedProjects = [...portfolioData.projects];
+                                                                updatedProjects[index] = {...updatedProjects[index], name: editValue};
+                                                                setPortfolioData({...portfolioData, projects: updatedProjects});
+                                                                setEditingField(null);
+                                                                setEditValue('');
+                                                            }}
+                                                            className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                                                        >
+                                                            <CheckCircleIcon className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <div
+                                                        className="flex items-center justify-between p-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50"
+                                                        onClick={() => {
+                                                            setEditingField(`project-name-${index}`);
+                                                            setEditValue(project.name || '');
+                                                        }}
+                                                    >
+                                                        <span className="font-medium">{project.name || '프로젝트명'}</span>
+                                                        <PencilIcon className="w-4 h-4 text-gray-400" />
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* 역할 & 기간 */}
+                                            <div className="grid grid-cols-2 gap-3">
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">역할</label>
+                                                    {editingField === `project-role-${index}` ? (
+                                                        <div className="flex space-x-2">
+                                                            <input
+                                                                type="text"
+                                                                value={editValue}
+                                                                onChange={(e) => setEditValue(e.target.value)}
+                                                                className="flex-1 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600"
+                                                            />
+                                                            <button
+                                                                onClick={() => {
+                                                                    const updatedProjects = [...portfolioData.projects];
+                                                                    updatedProjects[index] = {...updatedProjects[index], role: editValue};
+                                                                    setPortfolioData({...portfolioData, projects: updatedProjects});
+                                                                    setEditingField(null);
+                                                                    setEditValue('');
+                                                                }}
+                                                                className="px-2 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                                                            >
+                                                                <CheckCircleIcon className="w-4 h-4" />
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <div
+                                                            className="flex items-center justify-between p-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50"
+                                                            onClick={() => {
+                                                                setEditingField(`project-role-${index}`);
+                                                                setEditValue(project.role || '');
+                                                            }}
+                                                        >
+                                                            <span className="text-sm">{project.role || '역할'}</span>
+                                                            <PencilIcon className="w-3 h-3 text-gray-400" />
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700 mb-1">기간</label>
+                                                    {editingField === `project-period-${index}` ? (
+                                                        <div className="flex space-x-2">
+                                                            <input
+                                                                type="text"
+                                                                value={editValue}
+                                                                onChange={(e) => setEditValue(e.target.value)}
+                                                                className="flex-1 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600"
+                                                                placeholder="2023.01 - 2023.06"
+                                                            />
+                                                            <button
+                                                                onClick={() => {
+                                                                    const updatedProjects = [...portfolioData.projects];
+                                                                    updatedProjects[index] = {...updatedProjects[index], period: editValue};
+                                                                    setPortfolioData({...portfolioData, projects: updatedProjects});
+                                                                    setEditingField(null);
+                                                                    setEditValue('');
+                                                                }}
+                                                                className="px-2 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                                                            >
+                                                                <CheckCircleIcon className="w-4 h-4" />
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <div
+                                                            className="flex items-center justify-between p-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50"
+                                                            onClick={() => {
+                                                                setEditingField(`project-period-${index}`);
+                                                                setEditValue(project.period || '');
+                                                            }}
+                                                        >
+                                                            <span className="text-sm">{project.period || '기간'}</span>
+                                                            <PencilIcon className="w-3 h-3 text-gray-400" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* 설명 */}
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">프로젝트 설명</label>
+                                                {editingField === `project-desc-${index}` ? (
+                                                    <div className="space-y-2">
+                                                        <textarea
+                                                            value={editValue}
+                                                            onChange={(e) => setEditValue(e.target.value)}
+                                                            className="w-full h-24 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600"
+                                                            placeholder="프로젝트에 대한 상세 설명을 입력하세요"
+                                                        />
+                                                        <button
+                                                            onClick={() => {
+                                                                const updatedProjects = [...portfolioData.projects];
+                                                                updatedProjects[index] = {...updatedProjects[index], description: editValue};
+                                                                setPortfolioData({...portfolioData, projects: updatedProjects});
+                                                                setEditingField(null);
+                                                                setEditValue('');
+                                                            }}
+                                                            className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                                                        >
+                                                            저장
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <div
+                                                        className="p-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 min-h-[60px]"
+                                                        onClick={() => {
+                                                            setEditingField(`project-desc-${index}`);
+                                                            setEditValue(project.description || '');
+                                                        }}
+                                                    >
+                                                        <p className="text-sm text-gray-700">
+                                                            {project.description || '프로젝트 설명을 입력하세요'}
+                                                        </p>
+                                                        <PencilIcon className="w-3 h-3 text-gray-400 float-right mt-1" />
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* 기술 스택 */}
+                                            <div>
+                                                <label className="block text-sm font-medium text-gray-700 mb-1">사용 기술</label>
+                                                {editingField === `project-tech-${index}` ? (
+                                                    <div className="space-y-2">
+                                                        <input
+                                                            type="text"
+                                                            value={editValue}
+                                                            onChange={(e) => setEditValue(e.target.value)}
+                                                            className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600"
+                                                            placeholder="React, TypeScript, Node.js (쉼표로 구분)"
+                                                        />
+                                                        <button
+                                                            onClick={() => {
+                                                                const techArray = editValue.split(',').map(t => t.trim()).filter(t => t);
+                                                                const updatedProjects = [...portfolioData.projects];
+                                                                updatedProjects[index] = {...updatedProjects[index], tech: techArray};
+                                                                setPortfolioData({...portfolioData, projects: updatedProjects});
+                                                                setEditingField(null);
+                                                                setEditValue('');
+                                                            }}
+                                                            className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                                                        >
+                                                            저장
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <div
+                                                        className="p-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50"
+                                                        onClick={() => {
+                                                            setEditingField(`project-tech-${index}`);
+                                                            setEditValue((project.tech || []).join(', '));
+                                                        }}
+                                                    >
+                                                        <div className="flex flex-wrap gap-1">
+                                                            {(project.tech || []).length > 0 ? (
+                                                                project.tech.map((tech: string, idx: number) => (
+                                                                    <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">
+                                                                        {tech}
+                                                                    </span>
+                                                                ))
+                                                            ) : (
+                                                                <span className="text-sm text-gray-500">기술 스택을 추가하세요</span>
+                                                            )}
+                                                        </div>
+                                                        <PencilIcon className="w-3 h-3 text-gray-400 float-right mt-1" />
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* 삭제 버튼 */}
+                                            <div className="flex justify-end">
+                                                <button
+                                                    onClick={() => {
+                                                        const updatedProjects = portfolioData.projects.filter((_: any, i: number) => i !== index);
+                                                        setPortfolioData({...portfolioData, projects: updatedProjects});
+                                                    }}
+                                                    className="text-sm text-red-600 hover:text-red-800"
+                                                >
+                                                    프로젝트 삭제
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
                         </div>
 
                         {/* 기술 스킬 */}
