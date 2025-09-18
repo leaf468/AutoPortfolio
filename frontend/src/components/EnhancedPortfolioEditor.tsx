@@ -69,6 +69,7 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
             'h1, h2, h3, h4, h5, h6',    // 제목들
             'p',                          // 단락
             '.skill-tag',                 // 스킬 태그
+            'a',                          // 링크
             'title'                       // 페이지 제목
         ];
 
@@ -77,18 +78,60 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
             elements.forEach((element, index) => {
                 const textContent = element.textContent?.trim();
                 if (textContent && textContent.length > 0) {
-                    // 레이블 생성 로직
+                    // 레이블 생성 로직 - 더 구체적이고 의미있는 라벨 생성
                     let label = '';
+                    const text = textContent.toLowerCase();
+
                     if (element.tagName.toLowerCase().startsWith('h')) {
-                        label = `제목 (${element.tagName})`;
+                        // 헤더 태그의 경우 내용 기반으로 라벨 결정
+                        if (text.includes('이름') || element.tagName === 'H1') {
+                            label = '이름';
+                        } else if (text.includes('프로젝트') || text.includes('project')) {
+                            label = '프로젝트 제목';
+                        } else if (text.includes('경력') || text.includes('경험') || text.includes('experience')) {
+                            label = '경력 제목';
+                        } else if (text.includes('교육') || text.includes('학력') || text.includes('education')) {
+                            label = '교육 제목';
+                        } else if (text.includes('기술') || text.includes('스킬') || text.includes('skill')) {
+                            label = '기술 스택 제목';
+                        } else {
+                            label = `제목 (${element.tagName})`;
+                        }
                     } else if (element.tagName.toLowerCase() === 'p') {
+                        // 단락의 경우 위치와 내용으로 라벨 결정
                         const parentSection = element.closest('section');
-                        if (parentSection) {
+                        const parentHeader = element.closest('header');
+
+                        if (parentHeader) {
+                            // 헤더 내부의 p 태그들
+                            if (text.includes('@') || text.includes('email')) {
+                                label = '이메일';
+                            } else if (text.includes('010') || text.includes('+82') || text.includes('phone') || text.includes('tel')) {
+                                label = '연락처';
+                            } else if (text.includes('github') || text.includes('git')) {
+                                label = '깃허브';
+                            } else if (text.includes('linkedin')) {
+                                label = '링크드인';
+                            } else if (text.includes('blog') || text.includes('portfolio')) {
+                                label = '포트폴리오 링크';
+                            } else if (text.includes('개발자') || text.includes('developer') || text.includes('engineer')) {
+                                label = '직책/포지션';
+                            } else {
+                                label = '연락처 정보';
+                            }
+                        } else if (parentSection) {
                             const sectionClass = parentSection.className;
-                            if (sectionClass.includes('about')) label = '자기소개';
-                            else if (sectionClass.includes('project')) label = '프로젝트 설명';
-                            else if (sectionClass.includes('experience')) label = '경력 설명';
-                            else label = '내용';
+                            if (sectionClass.includes('about') || text.includes('소개')) {
+                                label = '자기소개';
+                            } else if (sectionClass.includes('project') || text.includes('프로젝트')) {
+                                label = '프로젝트 설명';
+                            } else if (sectionClass.includes('experience') || text.includes('경력')) {
+                                label = '경력 설명';
+                            } else if (sectionClass.includes('education') || text.includes('교육')) {
+                                label = '교육 설명';
+                            } else {
+                                label = '설명';
+                            }
                         } else {
                             label = '내용';
                         }
@@ -96,13 +139,28 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                         label = '기술 스킬';
                     } else if (element.tagName.toLowerCase() === 'title') {
                         label = '페이지 제목';
+                    } else if (element.tagName.toLowerCase() === 'a') {
+                        // 링크의 경우
+                        if (text.includes('github')) {
+                            label = '깃허브 링크';
+                        } else if (text.includes('linkedin')) {
+                            label = '링크드인 링크';
+                        } else if (text.includes('blog')) {
+                            label = '블로그 링크';
+                        } else {
+                            label = '링크';
+                        }
                     } else {
                         label = '텍스트';
                     }
 
+                    // 같은 라벨이 여러 개인 경우에만 번호 추가
+                    const existingLabels = textNodes.filter(node => node.label.startsWith(label));
+                    const finalLabel = existingLabels.length > 0 ? `${label} ${existingLabels.length + 1}` : label;
+
                     textNodes.push({
                         id: `${selector.replace(/[^a-zA-Z0-9]/g, '_')}_${index}`,
-                        label: `${label} ${index + 1}`,
+                        label: finalLabel,
                         value: textContent,
                         type: textContent.length > 50 ? 'textarea' : 'text',
                         path: `${selector}[${index}]`
