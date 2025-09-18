@@ -473,18 +473,117 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
         initializePortfolio();
     }, [document]);
 
+    // 편집된 필드들로부터 구조화된 데이터 생성
+    const buildPortfolioDataFromFields = () => {
+        const portfolioData = {
+            name: '',
+            title: '',
+            email: '',
+            phone: '',
+            github: '',
+            blog: '',
+            linkedin: '',
+            about: '',
+            skills: [] as string[],
+            projects: [] as any[],
+            experience: [] as any[],
+            education: [] as any[]
+        };
+
+        // 편집된 필드에서 데이터 추출
+        editableFields.forEach(field => {
+            const label = field.label.toLowerCase();
+            const value = field.value.trim();
+
+            if (!value || value.length === 0) return;
+
+            if (label.includes('이름')) {
+                portfolioData.name = value;
+            } else if (label.includes('직책') || label.includes('포지션')) {
+                portfolioData.title = value;
+            } else if (label.includes('이메일')) {
+                portfolioData.email = value;
+            } else if (label.includes('연락처')) {
+                portfolioData.phone = value;
+            } else if (label.includes('깃허브')) {
+                portfolioData.github = value;
+            } else if (label.includes('링크드인')) {
+                portfolioData.linkedin = value;
+            } else if (label.includes('블로그')) {
+                portfolioData.blog = value;
+            } else if (label.includes('자기소개')) {
+                portfolioData.about = value;
+            } else if (label.includes('기술') || label.includes('스킬')) {
+                // 스킬은 쉼표나 공백으로 분리
+                const skills = value.split(/[,\s]+/).filter(skill => skill.trim().length > 0);
+                portfolioData.skills.push(...skills);
+            } else if (label.includes('프로젝트')) {
+                // 프로젝트 정보 파싱
+                if (label.includes('제목') || label.includes('명')) {
+                    portfolioData.projects.push({
+                        name: value,
+                        description: '',
+                        tech: [],
+                        role: '',
+                        duration: '',
+                        link: ''
+                    });
+                } else if (label.includes('설명')) {
+                    // 마지막 프로젝트에 설명 추가
+                    if (portfolioData.projects.length > 0) {
+                        portfolioData.projects[portfolioData.projects.length - 1].description = value;
+                    }
+                }
+            } else if (label.includes('경력')) {
+                // 경력 정보 파싱
+                if (label.includes('제목') || label.includes('직책')) {
+                    portfolioData.experience.push({
+                        position: value,
+                        company: '',
+                        duration: '',
+                        description: ''
+                    });
+                } else if (label.includes('설명')) {
+                    // 마지막 경력에 설명 추가
+                    if (portfolioData.experience.length > 0) {
+                        portfolioData.experience[portfolioData.experience.length - 1].description = value;
+                    }
+                }
+            } else if (label.includes('교육')) {
+                // 교육 정보 파싱
+                if (label.includes('제목') || label.includes('학교')) {
+                    portfolioData.education.push({
+                        school: value,
+                        degree: '',
+                        period: ''
+                    });
+                } else if (label.includes('설명')) {
+                    // 마지막 교육에 설명 추가
+                    if (portfolioData.education.length > 0) {
+                        portfolioData.education[portfolioData.education.length - 1].degree = value;
+                    }
+                }
+            }
+        });
+
+        // 중복 제거
+        portfolioData.skills = Array.from(new Set(portfolioData.skills));
+
+        return portfolioData;
+    };
+
     const handleSave = () => {
         if (!portfolioData) return;
 
-        // 현재 편집된 HTML에서 최신 데이터 추출
-        const updatedPortfolioData = extractRealPortfolioData(currentHtml) || portfolioData;
+        // 편집된 필드에서 직접 구조화된 데이터 생성
+        const updatedPortfolioData = buildPortfolioDataFromFields();
 
-        console.log('저장할 포트폴리오 데이터:', updatedPortfolioData);
+        console.log('편집된 필드에서 생성된 포트폴리오 데이터:', updatedPortfolioData);
 
         // 편집된 텍스트와 구조화된 데이터를 모두 포함하여 문서 업데이트
         const updatedDocument = {
             ...document,
-            // 구조화된 데이터를 추가 섹션으로 저장
+            // 구조화된 데이터를 메타데이터로 저장
             metadata: {
                 extractedData: updatedPortfolioData,
                 lastUpdated: new Date().toISOString()
@@ -494,7 +593,7 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                 blocks: section.blocks?.map(block => ({
                     ...block,
                     text: currentHtml,
-                    // 추출된 데이터도 블록에 저장
+                    // 편집된 데이터를 블록에도 저장
                     extractedData: updatedPortfolioData
                 }))
             }))
