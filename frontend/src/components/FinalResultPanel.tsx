@@ -63,6 +63,7 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
     try {
       // finalResult.content가 PortfolioDocument JSON이라면 파싱해서 사용
       let portfolioData;
+      let htmlContent = '';
 
       try {
         portfolioData = JSON.parse(finalResult.content);
@@ -72,20 +73,32 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
         const editedHTML = portfolioData.sections?.[0]?.blocks?.[0]?.text;
         if (editedHTML && editedHTML.trim().length > 0) {
           console.log('편집된 HTML 사용:', editedHTML);
-          return editedHTML;
+          htmlContent = editedHTML;
+        } else {
+          // 2순위: fallback으로만 사용하며, 대부분의 경우 원본 HTML 반환
+          console.log('편집된 HTML이 없어서 원본 반환');
+          htmlContent = finalResult.content;
         }
-
-        // 2순위: fallback으로만 사용하며, 대부분의 경우 원본 HTML 반환
-        console.log('편집된 HTML이 없어서 원본 반환');
-        return finalResult.content;
 
       } catch (parseError) {
         console.error('JSON 파싱 실패:', parseError);
         console.log('원본 HTML 내용을 그대로 반환:', finalResult.content);
 
         // JSON 파싱에 실패하면 원본 HTML 내용을 그대로 반환
-        return finalResult.content;
+        htmlContent = finalResult.content;
       }
+
+      // HTML 콘텐츠를 정리하고 기본 구조 추가
+      if (htmlContent && !htmlContent.includes('<html')) {
+        // HTML 문서가 아닌 경우 기본 구조 추가
+        return `
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; line-height: 1.6; color: #333;">
+            ${htmlContent}
+          </div>
+        `;
+      }
+
+      return htmlContent;
     } catch (error) {
       console.error('템플릿 HTML 생성 실패:', error);
       return finalResult.content;
@@ -514,11 +527,88 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                 </div>
                 
                 <div className="p-8 bg-white overflow-auto max-h-[calc(90vh-140px)]">
+                  <style>{`
+                    .portfolio-preview {
+                      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+                      line-height: 1.6;
+                      color: #333;
+                    }
+                    .portfolio-preview h1 {
+                      font-size: 2.5rem;
+                      font-weight: bold;
+                      color: #fff;
+                      margin-bottom: 0.5rem;
+                    }
+                    .portfolio-preview h2 {
+                      font-size: 1.875rem;
+                      font-weight: bold;
+                      margin: 2rem 0 1rem 0;
+                      color: #1f2937;
+                      border-bottom: 2px solid #e5e7eb;
+                      padding-bottom: 0.5rem;
+                    }
+                    .portfolio-preview h3 {
+                      font-size: 1.5rem;
+                      font-weight: bold;
+                      margin: 1.5rem 0 0.75rem 0;
+                      color: #374151;
+                    }
+                    .portfolio-preview p {
+                      margin-bottom: 1rem;
+                      text-align: justify;
+                      color: #4b5563;
+                    }
+                    .portfolio-preview header {
+                      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                      color: white;
+                      padding: 3rem 2rem;
+                      text-align: center;
+                      margin-bottom: 3rem;
+                      border-radius: 0;
+                    }
+                    .portfolio-preview .skill-tag {
+                      display: inline-block;
+                      background: #e0e7ff;
+                      color: #3730a3;
+                      padding: 0.5rem 1rem;
+                      margin: 0.25rem;
+                      border-radius: 1rem;
+                      font-size: 0.875rem;
+                      font-weight: 500;
+                    }
+                    .portfolio-preview section {
+                      margin-bottom: 3rem;
+                      padding: 0 2rem;
+                    }
+                    .portfolio-preview .project-card {
+                      background: #f9fafb;
+                      border: 1px solid #e5e7eb;
+                      border-radius: 0.5rem;
+                      padding: 1.5rem;
+                      margin-bottom: 1.5rem;
+                    }
+                    .portfolio-preview ul {
+                      list-style-type: disc;
+                      margin-left: 1.5rem;
+                      margin-bottom: 1rem;
+                    }
+                    .portfolio-preview li {
+                      margin-bottom: 0.5rem;
+                    }
+                    .portfolio-preview strong {
+                      font-weight: 600;
+                      color: #1f2937;
+                    }
+                    .portfolio-preview em {
+                      font-style: italic;
+                      color: #6b7280;
+                    }
+                  `}</style>
                   <div
                     ref={portfolioRef}
                     dangerouslySetInnerHTML={{ __html: generateTemplatedHTML() }}
-                    className="portfolio-preview mx-auto"
-                    style={{ maxWidth: '900px' }}
+                    className="portfolio-preview mx-auto bg-white"
+                    style={{ maxWidth: '900px', minHeight: '800px' }}
                   />
                 </div>
                 
