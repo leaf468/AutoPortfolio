@@ -15,7 +15,6 @@ import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
 import { GenerationResult } from '../services/oneClickGenerator';
 import { BoostResult } from '../services/interactiveBooster';
 import { FeedbackResult } from '../services/userFeedbackService';
-import { portfolioTemplates } from '../templates/portfolioTemplates';
 
 type TemplateType = 'james' | 'geon' | 'eunseong' | 'iu';
 
@@ -54,353 +53,35 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
     }
   }, [finalResult.id]);
 
-  // HTML에서 직접 포트폴리오 데이터 추출
-  const extractDataFromHTML = (htmlContent: string) => {
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(htmlContent, 'text/html');
-
-    const extractedData = {
-      name: '',
-      title: '',
-      email: '',
-      phone: '',
-      github: '',
-      blog: '',
-      linkedin: '',
-      about: '',
-      skills: [] as string[],
-      projects: [] as any[],
-      experience: [] as any[],
-      education: [] as any[]
-    };
-
-    // 이름 추출
-    const nameElement = doc.querySelector('h1');
-    if (nameElement) {
-      extractedData.name = nameElement.textContent?.trim() || '';
-    }
-
-    // 연락처 정보 추출
-    const textElements = doc.querySelectorAll('p, span, div, a');
-    textElements.forEach(el => {
-      const text = el.textContent || '';
-      if (text.includes('@') && !extractedData.email) {
-        const emailMatch = text.match(/\S+@\S+\.\S+/);
-        if (emailMatch) extractedData.email = emailMatch[0];
-      }
-      if ((text.includes('010') || text.includes('Phone:')) && !extractedData.phone) {
-        const phoneMatch = text.match(/(?:010|Phone:)?\s*[\d\-\+\s()]+/);
-        if (phoneMatch) extractedData.phone = phoneMatch[0].replace(/Phone:/, '').trim();
-      }
-      if (text.includes('github') && !extractedData.github) {
-        const githubMatch = text.match(/github\.com\/[\w\-\.]+/);
-        if (githubMatch) extractedData.github = githubMatch[0];
-      }
-    });
-
-    // 자기소개 추출
-    const aboutSection = doc.querySelector('.about, section[class*="about"]');
-    if (aboutSection) {
-      const aboutTexts = Array.from(aboutSection.querySelectorAll('p'))
-        .map(p => p.textContent?.trim())
-        .filter(text => text && text.length > 0);
-      extractedData.about = aboutTexts.join('\n\n');
-    }
-
-    // 스킬 추출
-    const skillElements = doc.querySelectorAll('.skill-tag, .skill, [class*="skill"]');
-    extractedData.skills = Array.from(skillElements)
-      .map(el => el.textContent?.trim())
-      .filter(skill => skill && skill.length > 0) as string[];
-
-    // 전체 텍스트에서 더 정확한 정보 추출
-    const bodyText = doc.body?.textContent || '';
-    const textLines = bodyText.split('\n').filter(line => line.trim());
-
-    // 프로젝트 정보를 더 상세하게 추출
-    const projects: any[] = [];
-    let currentProject: any = null;
-
-    textLines.forEach(line => {
-      const cleanLine = line.trim();
-
-      // 프로젝트 시작을 감지
-      if (cleanLine.includes('프로젝트') || cleanLine.includes('project')) {
-        if (currentProject) {
-          projects.push(currentProject);
-        }
-        currentProject = {
-          name: cleanLine.replace(/프로젝트|project/gi, '').replace(/[:\-]/g, '').trim(),
-          description: '',
-          tech: [],
-          role: '',
-          duration: '',
-          link: ''
-        };
-      }
-      // 기간 정보 감지
-      else if (cleanLine.match(/\d{4}[\.\-/]\d{1,2}/) && currentProject) {
-        currentProject.duration = cleanLine;
-      }
-      // 프로젝트 설명 추가
-      else if (currentProject && cleanLine.length > 10) {
-        if (currentProject.description) {
-          currentProject.description += ' ' + cleanLine;
-        } else {
-          currentProject.description = cleanLine;
-        }
-      }
-    });
-
-    if (currentProject) {
-      projects.push(currentProject);
-    }
-
-    // 경력 정보를 더 상세하게 추출
-    const experience: any[] = [];
-    let currentExperience: any = null;
-
-    textLines.forEach(line => {
-      const cleanLine = line.trim();
-
-      // 경력/활동 시작을 감지
-      if (cleanLine.includes('경력') || cleanLine.includes('활동') || cleanLine.includes('experience') ||
-          cleanLine.includes('교육') || cleanLine.includes('대학') || cleanLine.includes('코스')) {
-        if (currentExperience) {
-          experience.push(currentExperience);
-        }
-        currentExperience = {
-          position: cleanLine.replace(/경력|활동|experience|교육/gi, '').replace(/[:\-]/g, '').trim(),
-          company: '',
-          duration: '',
-          description: ''
-        };
-      }
-      // 기간 정보 감지
-      else if (cleanLine.match(/\d{4}[\.\-/]\d{1,2}/) && currentExperience) {
-        currentExperience.duration = cleanLine;
-      }
-      // 경력 설명 추가
-      else if (currentExperience && cleanLine.length > 10) {
-        if (currentExperience.description) {
-          currentExperience.description += ' ' + cleanLine;
-        } else {
-          currentExperience.description = cleanLine;
-        }
-      }
-    });
-
-    if (currentExperience) {
-      experience.push(currentExperience);
-    }
-
-    // 필터링하여 의미있는 데이터만 포함
-    const filteredProjects = projects.filter(p => p.name && p.name.length > 2);
-    const filteredExperience = experience.filter(e => e.position && e.position.length > 2);
-
-    if (filteredProjects.length > 0) extractedData.projects = filteredProjects;
-    if (filteredExperience.length > 0) extractedData.experience = filteredExperience;
-
-    return extractedData;
-  };
 
   // 선택한 템플릿을 사용해서 실제 HTML 생성
   const generateTemplatedHTML = () => {
     try {
-      const template = portfolioTemplates[selectedTemplate];
-      if (template?.generateHTML) {
-        // finalResult.content가 PortfolioDocument JSON이라면 파싱해서 사용
-        let portfolioData;
-        let extractedData = null;
+      // finalResult.content가 PortfolioDocument JSON이라면 파싱해서 사용
+      let portfolioData;
 
-        try {
-          portfolioData = JSON.parse(finalResult.content);
-          console.log('파싱된 포트폴리오 데이터:', portfolioData);
+      try {
+        portfolioData = JSON.parse(finalResult.content);
+        console.log('파싱된 포트폴리오 데이터:', portfolioData);
 
-          // metadata에서 extractedData 확인
-          if (portfolioData.metadata?.extractedData) {
-            extractedData = portfolioData.metadata.extractedData;
-            console.log('메타데이터에서 추출된 데이터 사용:', extractedData);
-          }
-
-          // 블록에서 extractedData 확인
-          if (!extractedData && portfolioData.sections?.[0]?.blocks?.[0]?.extractedData) {
-            extractedData = portfolioData.sections[0].blocks[0].extractedData;
-            console.log('블록에서 추출된 데이터 사용:', extractedData);
-          }
-
-          let templateData;
-
-          if (extractedData) {
-            // 사용자 편집 데이터를 최우선으로 사용, 템플릿 데이터는 마지막 대안으로만 사용
-            templateData = {
-              name: extractedData.name || '포트폴리오',
-              title: extractedData.title || '개발자',
-              contact: {
-                email: extractedData.email || 'contact@example.com',
-                phone: extractedData.phone || '',
-                github: extractedData.github || '',
-                blog: extractedData.blog || '',
-                linkedin: extractedData.linkedin || ''
-              },
-              about: extractedData.about || '자기소개를 입력해주세요',
-              skills: extractedData.skills?.length > 0 ? extractedData.skills : ['기술 스택을 입력해주세요'],
-              projects: extractedData.projects?.length > 0 ? extractedData.projects : [{
-                name: '프로젝트명을 입력해주세요',
-                description: '프로젝트 설명을 입력해주세요',
-                tech: ['사용 기술'],
-                role: '역할',
-                results: [],
-                duration: '기간',
-                link: ''
-              }],
-              experience: extractedData.experience?.length > 0 ? extractedData.experience : [{
-                position: '직책을 입력해주세요',
-                company: '회사명을 입력해주세요',
-                duration: '기간을 입력해주세요',
-                description: '경력 설명을 입력해주세요'
-              }],
-              education: extractedData.education?.length > 0 ? extractedData.education : [{
-                school: '학교명을 입력해주세요',
-                degree: '학위를 입력해주세요',
-                period: '기간을 입력해주세요'
-              }]
-            };
-          } else {
-            // 기존 방식으로 섹션별 데이터 추출
-            const headerSection = portfolioData.sections?.find((s: any) => s.type === 'header');
-            const aboutSection = portfolioData.sections?.find((s: any) => s.type === 'about');
-            const skillsSection = portfolioData.sections?.find((s: any) => s.type === 'skills');
-            const experienceSection = portfolioData.sections?.find((s: any) => s.type === 'experience');
-            const projectsSection = portfolioData.sections?.find((s: any) => s.type === 'projects');
-            const educationSection = portfolioData.sections?.find((s: any) => s.type === 'education');
-
-            templateData = {
-              name: headerSection?.blocks?.[0]?.text || '포트폴리오',
-              title: headerSection?.blocks?.[1]?.text || '개발자',
-              contact: {
-                email: 'contact@example.com',
-                github: '',
-                phone: '',
-                blog: '',
-                linkedin: ''
-              },
-              about: aboutSection?.blocks?.[0]?.text || '자기소개를 입력해주세요',
-              skills: skillsSection?.blocks?.map((b: any) => b.text) || ['기술 스택을 입력해주세요'],
-              skillCategories: [
-                {
-                  category: '프론트엔드',
-                  skills: skillsSection?.blocks?.slice(0, 3)?.map((b: any) => b.text) || ['기술을 입력해주세요']
-                },
-                {
-                  category: '백엔드',
-                  skills: skillsSection?.blocks?.slice(3, 6)?.map((b: any) => b.text) || ['기술을 입력해주세요']
-                }
-              ],
-              experience: experienceSection?.blocks?.map((b: any) => {
-                const lines = b.text.split('\n');
-                return {
-                  position: lines[0] || '직책을 입력해주세요',
-                  company: lines[1] || '회사명을 입력해주세요',
-                  duration: lines[2] || '기간을 입력해주세요',
-                  description: lines.slice(3).join('\n') || b.text || '경력 설명을 입력해주세요'
-                };
-              }) || [{
-                position: '직책을 입력해주세요',
-                company: '회사명을 입력해주세요',
-                duration: '기간을 입력해주세요',
-                description: '경력 설명을 입력해주세요'
-              }],
-              projects: projectsSection?.blocks?.map((b: any) => {
-                const lines = b.text.split('\n');
-                return {
-                  name: lines[0] || '프로젝트명을 입력해주세요',
-                  description: lines.slice(1).join('\n') || b.text || '프로젝트 설명을 입력해주세요',
-                  tech: ['사용 기술'],
-                  role: '역할',
-                  results: [],
-                  duration: '기간',
-                  link: ''
-                };
-              }) || [{
-                name: '프로젝트명을 입력해주세요',
-                description: '프로젝트 설명을 입력해주세요',
-                tech: ['사용 기술'],
-                role: '역할',
-                results: [],
-                duration: '기간',
-                link: ''
-              }],
-              education: educationSection?.blocks?.map((b: any) => {
-                const lines = b.text.split('\n');
-                return {
-                  school: lines[0] || '학교명을 입력해주세요',
-                  degree: lines[1] || '학위를 입력해주세요',
-                  period: lines[2] || '기간을 입력해주세요'
-                };
-              }) || [{
-                school: '학교명을 입력해주세요',
-                degree: '학위를 입력해주세요',
-                period: '기간을 입력해주세요'
-              }]
-            };
-          }
-
-          console.log('Using template:', selectedTemplate, 'with data:', templateData);
-          return template.generateHTML(templateData);
-          
-        } catch (parseError) {
-          console.error('JSON 파싱 실패:', parseError);
-          console.log('HTML에서 직접 데이터 추출 시도...');
-
-          // JSON 파싱에 실패하면 HTML에서 직접 데이터 추출
-          extractedData = extractDataFromHTML(finalResult.content);
-          console.log('HTML에서 추출된 데이터:', extractedData);
-
-          if (extractedData && (extractedData.name || extractedData.email || extractedData.about)) {
-            const templateData = {
-              name: extractedData.name || '포트폴리오',
-              title: extractedData.title || '개발자',
-              contact: {
-                email: extractedData.email || 'contact@example.com',
-                phone: extractedData.phone || '',
-                github: extractedData.github || '',
-                blog: extractedData.blog || '',
-                linkedin: extractedData.linkedin || ''
-              },
-              about: extractedData.about || '자기소개를 입력해주세요',
-              skills: extractedData.skills?.length > 0 ? extractedData.skills : ['기술 스택을 입력해주세요'],
-              projects: extractedData.projects?.length > 0 ? extractedData.projects : [{
-                name: '프로젝트명을 입력해주세요',
-                description: '프로젝트 설명을 입력해주세요',
-                tech: ['사용 기술'],
-                role: '역할',
-                results: [],
-                duration: '기간',
-                link: ''
-              }],
-              experience: extractedData.experience?.length > 0 ? extractedData.experience : [{
-                position: '직책을 입력해주세요',
-                company: '회사명을 입력해주세요',
-                duration: '기간을 입력해주세요',
-                description: '경력 설명을 입력해주세요'
-              }],
-              education: extractedData.education?.length > 0 ? extractedData.education : [{
-                school: '학교명을 입력해주세요',
-                degree: '학위를 입력해주세요',
-                period: '기간을 입력해주세요'
-              }]
-            };
-
-            console.log('HTML에서 추출된 데이터로 템플릿 생성:', templateData);
-            return template.generateHTML(templateData);
-          }
-
-          // HTML에서도 데이터 추출에 실패하면 원본 HTML 반환
-          return finalResult.content;
+        // 1순위: 사용자가 편집한 HTML을 그대로 사용
+        const editedHTML = portfolioData.sections?.[0]?.blocks?.[0]?.text;
+        if (editedHTML && editedHTML.trim().length > 0) {
+          console.log('편집된 HTML 사용:', editedHTML);
+          return editedHTML;
         }
+
+        // 2순위: fallback으로만 사용하며, 대부분의 경우 원본 HTML 반환
+        console.log('편집된 HTML이 없어서 원본 반환');
+        return finalResult.content;
+
+      } catch (parseError) {
+        console.error('JSON 파싱 실패:', parseError);
+        console.log('원본 HTML 내용을 그대로 반환:', finalResult.content);
+
+        // JSON 파싱에 실패하면 원본 HTML 내용을 그대로 반환
+        return finalResult.content;
       }
-      return finalResult.content;
     } catch (error) {
       console.error('템플릿 HTML 생성 실패:', error);
       return finalResult.content;
