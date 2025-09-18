@@ -212,6 +212,9 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
             title: '',
             email: '',
             phone: '',
+            github: '',
+            blog: '',
+            linkedin: '',
             about: '',
             skills: [] as string[],
             projects: [] as any[],
@@ -231,15 +234,33 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
             extractedData.title = titleElement.textContent?.trim() || '';
         }
 
-        // 연락처 추출
-        const contactElements = doc.querySelectorAll('header p');
-        contactElements.forEach(el => {
+        // 연락처 추출 - 더 광범위하게 검색
+        const allTextElements = doc.querySelectorAll('p, span, div, a, header');
+        allTextElements.forEach(el => {
             const text = el.textContent || '';
-            if (text.includes('@')) {
-                extractedData.email = text.match(/\S+@\S+/)?.[0] || '';
+
+            // 이메일 추출
+            if (text.includes('@') && !extractedData.email) {
+                const emailMatch = text.match(/\S+@\S+\.\S+/);
+                if (emailMatch) {
+                    extractedData.email = emailMatch[0];
+                }
             }
-            if (text.includes('010') || text.includes('+82')) {
-                extractedData.phone = text.match(/[\d\-\+\s()]+/)?.[0]?.trim() || '';
+
+            // 전화번호 추출
+            if ((text.includes('010') || text.includes('+82') || text.includes('Phone:') || text.includes('Tel:')) && !extractedData.phone) {
+                const phoneMatch = text.match(/(?:010|Phone:|Tel:)?\s*[\d\-\+\s()]+/);
+                if (phoneMatch) {
+                    extractedData.phone = phoneMatch[0].replace(/Phone:|Tel:/, '').trim();
+                }
+            }
+
+            // GitHub 링크 추출
+            if ((text.includes('github') || text.includes('GitHub')) && !extractedData.github) {
+                const githubMatch = text.match(/github\.com\/[\w\-\.]+/);
+                if (githubMatch) {
+                    extractedData.github = githubMatch[0];
+                }
             }
         });
 
@@ -253,29 +274,88 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                 .join('\n\n');
         }
 
-        // 기술 스킬 추출
-        const skillTags = doc.querySelectorAll('.skill-tag');
-        extractedData.skills = Array.from(skillTags)
-            .map(tag => tag.textContent?.trim())
-            .filter(skill => skill && skill.length > 0) as string[];
-
-        // 프로젝트 추출
-        const projectCards = doc.querySelectorAll('.project-card');
-        extractedData.projects = Array.from(projectCards).map(card => {
-            const name = card.querySelector('h3')?.textContent?.trim() || '';
-            const description = Array.from(card.querySelectorAll('p'))
-                .map(p => p.textContent?.trim())
-                .join(' ');
-
-            return {
-                name,
-                description,
-                tech: [], // 필요시 추가 파싱
-                role: '',
-                period: ''
-            };
+        // 기술 스킬 추출 - 다양한 선택자 사용
+        const skillSelectors = ['.skill-tag', '.skill', '.tech-stack span', '.technology'];
+        skillSelectors.forEach(selector => {
+            const elements = doc.querySelectorAll(selector);
+            if (elements.length > 0 && extractedData.skills.length === 0) {
+                extractedData.skills = Array.from(elements)
+                    .map(el => el.textContent?.trim())
+                    .filter(skill => skill && skill.length > 0) as string[];
+            }
         });
 
+        // 모든 텍스트에서 프로젝트 관련 정보 추출
+        const bodyText = doc.body?.textContent || '';
+        const projects: any[] = [];
+        const experience: any[] = [];
+        const education: any[] = [];
+
+        // 프로젝트 섹션 파싱 - 실제 입력 내용 기반
+        const projectSections = bodyText.split(/프로젝트|project/i);
+        if (projectSections.length > 1) {
+            projectSections.slice(1).forEach(section => {
+                const lines = section.split('\n').filter(line => line.trim());
+                if (lines.length > 0) {
+                    // 프로젝트명과 설명 추출
+                    const name = lines[0]?.replace(/[^가-힣a-zA-Z0-9\s\-]/g, '').trim();
+                    if (name && name.length > 0) {
+                        projects.push({
+                            name: name,
+                            description: lines.slice(1).join(' '),
+                            tech: [],
+                            role: '',
+                            period: '',
+                            link: ''
+                        });
+                    }
+                }
+            });
+        }
+
+        // 경력 섹션 파싱
+        const experienceSections = bodyText.split(/경력|experience|활동/i);
+        if (experienceSections.length > 1) {
+            experienceSections.slice(1).forEach(section => {
+                const lines = section.split('\n').filter(line => line.trim());
+                if (lines.length > 0) {
+                    const firstLine = lines[0]?.trim();
+                    if (firstLine && firstLine.length > 0) {
+                        experience.push({
+                            position: firstLine,
+                            company: '',
+                            duration: '',
+                            description: lines.slice(1).join(' ')
+                        });
+                    }
+                }
+            });
+        }
+
+        // 교육 섹션 파싱
+        const educationSections = bodyText.split(/교육|education|학력/i);
+        if (educationSections.length > 1) {
+            educationSections.slice(1).forEach(section => {
+                const lines = section.split('\n').filter(line => line.trim());
+                if (lines.length > 0) {
+                    const firstLine = lines[0]?.trim();
+                    if (firstLine && firstLine.length > 0) {
+                        education.push({
+                            school: firstLine,
+                            degree: '',
+                            period: ''
+                        });
+                    }
+                }
+            });
+        }
+
+        // 추출된 데이터가 있으면 사용
+        if (projects.length > 0) extractedData.projects = projects;
+        if (experience.length > 0) extractedData.experience = experience;
+        if (education.length > 0) extractedData.education = education;
+
+        console.log('HTML에서 추출된 포트폴리오 데이터:', extractedData);
         return extractedData;
     };
 

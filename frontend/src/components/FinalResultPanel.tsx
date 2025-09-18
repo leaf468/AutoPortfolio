@@ -83,22 +83,39 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
           let templateData;
 
           if (extractedData) {
-            // 사용자 편집 데이터가 있으면 우선 사용
+            // 사용자 편집 데이터를 최우선으로 사용, 템플릿 데이터는 마지막 대안으로만 사용
             templateData = {
-              name: extractedData.name || template.sampleData?.name || '포트폴리오',
-              title: extractedData.title || template.sampleData?.title || '개발자',
+              name: extractedData.name || '포트폴리오',
+              title: extractedData.title || '개발자',
               contact: {
-                email: extractedData.email || template.sampleData?.contact?.email || 'contact@example.com',
-                phone: extractedData.phone || template.sampleData?.contact?.phone,
-                github: template.sampleData?.contact?.github || 'github.com/user',
-                blog: template.sampleData?.contact?.blog,
-                linkedin: template.sampleData?.contact?.linkedin
+                email: extractedData.email || 'contact@example.com',
+                phone: extractedData.phone || '',
+                github: extractedData.github || '',
+                blog: extractedData.blog || '',
+                linkedin: extractedData.linkedin || ''
               },
-              about: extractedData.about || template.sampleData?.about || '안녕하세요',
-              skills: extractedData.skills?.length > 0 ? extractedData.skills : template.sampleData?.skills || ['React', 'TypeScript'],
-              projects: extractedData.projects?.length > 0 ? extractedData.projects : template.sampleData?.projects || [],
-              experience: extractedData.experience?.length > 0 ? extractedData.experience : template.sampleData?.experience || [],
-              education: extractedData.education?.length > 0 ? extractedData.education : template.sampleData?.education || []
+              about: extractedData.about || '자기소개를 입력해주세요',
+              skills: extractedData.skills?.length > 0 ? extractedData.skills : ['기술 스택을 입력해주세요'],
+              projects: extractedData.projects?.length > 0 ? extractedData.projects : [{
+                name: '프로젝트명을 입력해주세요',
+                description: '프로젝트 설명을 입력해주세요',
+                tech: ['사용 기술'],
+                role: '역할',
+                results: [],
+                duration: '기간',
+                link: ''
+              }],
+              experience: extractedData.experience?.length > 0 ? extractedData.experience : [{
+                position: '직책을 입력해주세요',
+                company: '회사명을 입력해주세요',
+                duration: '기간을 입력해주세요',
+                description: '경력 설명을 입력해주세요'
+              }],
+              education: extractedData.education?.length > 0 ? extractedData.education : [{
+                school: '학교명을 입력해주세요',
+                degree: '학위를 입력해주세요',
+                period: '기간을 입력해주세요'
+              }]
             };
           } else {
             // 기존 방식으로 섹션별 데이터 추출
@@ -110,56 +127,73 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
             const educationSection = portfolioData.sections?.find((s: any) => s.type === 'education');
 
             templateData = {
-              name: headerSection?.blocks?.[0]?.text || template.sampleData?.name || '포트폴리오',
-              title: headerSection?.blocks?.[1]?.text || template.sampleData?.title || '개발자',
+              name: headerSection?.blocks?.[0]?.text || '포트폴리오',
+              title: headerSection?.blocks?.[1]?.text || '개발자',
               contact: {
-                email: template.sampleData?.contact?.email || 'contact@example.com',
-                github: template.sampleData?.contact?.github || 'github.com/user',
-                phone: template.sampleData?.contact?.phone,
-                blog: template.sampleData?.contact?.blog,
-                linkedin: template.sampleData?.contact?.linkedin
+                email: 'contact@example.com',
+                github: '',
+                phone: '',
+                blog: '',
+                linkedin: ''
               },
-              about: aboutSection?.blocks?.[0]?.text || template.sampleData?.about || '안녕하세요',
-              skills: skillsSection?.blocks?.map((b: any) => b.text) || template.sampleData?.skills || ['React', 'TypeScript'],
-              skillCategories: template.sampleData?.skillCategories || [
-              {
-                category: '프론트엔드',
-                skills: skillsSection?.blocks?.slice(0, 3)?.map((b: any) => b.text) || ['React', 'TypeScript', 'JavaScript']
-              },
-              {
-                category: '백엔드',
-                skills: skillsSection?.blocks?.slice(3, 6)?.map((b: any) => b.text) || ['Node.js', 'Python', 'MySQL']
-              }
-            ],
-            experience: experienceSection?.blocks?.map((b: any) => {
-              const lines = b.text.split('\n');
-              return {
-                position: lines[0] || '개발자',
-                company: lines[1] || '회사명',
-                duration: lines[2] || '2023 - 현재',
-                description: lines.slice(3).join('\n') || b.text
-              };
-            }) || template.sampleData?.experience || [],
-            projects: projectsSection?.blocks?.map((b: any) => {
-              const lines = b.text.split('\n');
-              return {
-                name: lines[0] || '프로젝트명',
-                description: lines.slice(1).join('\n') || b.text,
-                tech: ['React', 'TypeScript'],
-                role: '개발자',
+              about: aboutSection?.blocks?.[0]?.text || '자기소개를 입력해주세요',
+              skills: skillsSection?.blocks?.map((b: any) => b.text) || ['기술 스택을 입력해주세요'],
+              skillCategories: [
+                {
+                  category: '프론트엔드',
+                  skills: skillsSection?.blocks?.slice(0, 3)?.map((b: any) => b.text) || ['기술을 입력해주세요']
+                },
+                {
+                  category: '백엔드',
+                  skills: skillsSection?.blocks?.slice(3, 6)?.map((b: any) => b.text) || ['기술을 입력해주세요']
+                }
+              ],
+              experience: experienceSection?.blocks?.map((b: any) => {
+                const lines = b.text.split('\n');
+                return {
+                  position: lines[0] || '직책을 입력해주세요',
+                  company: lines[1] || '회사명을 입력해주세요',
+                  duration: lines[2] || '기간을 입력해주세요',
+                  description: lines.slice(3).join('\n') || b.text || '경력 설명을 입력해주세요'
+                };
+              }) || [{
+                position: '직책을 입력해주세요',
+                company: '회사명을 입력해주세요',
+                duration: '기간을 입력해주세요',
+                description: '경력 설명을 입력해주세요'
+              }],
+              projects: projectsSection?.blocks?.map((b: any) => {
+                const lines = b.text.split('\n');
+                return {
+                  name: lines[0] || '프로젝트명을 입력해주세요',
+                  description: lines.slice(1).join('\n') || b.text || '프로젝트 설명을 입력해주세요',
+                  tech: ['사용 기술'],
+                  role: '역할',
+                  results: [],
+                  duration: '기간',
+                  link: ''
+                };
+              }) || [{
+                name: '프로젝트명을 입력해주세요',
+                description: '프로젝트 설명을 입력해주세요',
+                tech: ['사용 기술'],
+                role: '역할',
                 results: [],
-                duration: '2023',
+                duration: '기간',
                 link: ''
-              };
-            }) || template.sampleData?.projects || [],
-            education: educationSection?.blocks?.map((b: any) => {
-              const lines = b.text.split('\n');
-              return {
-                school: lines[0] || '대학교',
-                degree: lines[1] || '학사',
-                period: lines[2] || '2020 - 2024'
-              };
-            }) || template.sampleData?.education || []
+              }],
+              education: educationSection?.blocks?.map((b: any) => {
+                const lines = b.text.split('\n');
+                return {
+                  school: lines[0] || '학교명을 입력해주세요',
+                  degree: lines[1] || '학위를 입력해주세요',
+                  period: lines[2] || '기간을 입력해주세요'
+                };
+              }) || [{
+                school: '학교명을 입력해주세요',
+                degree: '학위를 입력해주세요',
+                period: '기간을 입력해주세요'
+              }]
             };
           }
 
@@ -168,10 +202,7 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
           
         } catch (parseError) {
           console.error('JSON 파싱 실패:', parseError);
-          // JSON 파싱에 실패하면 템플릿의 샘플 데이터 사용
-          if (template.sampleData) {
-            return template.generateHTML(template.sampleData);
-          }
+          // JSON 파싱에 실패하면 원본 HTML 내용을 그대로 반환
           return finalResult.content;
         }
       }
