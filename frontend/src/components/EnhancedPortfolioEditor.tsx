@@ -141,6 +141,86 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
         }
     };
 
+    // HTML에서 실제 포트폴리오 데이터 추출
+    const extractRealPortfolioData = (html: string) => {
+        if (!html) return null;
+
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+
+        // 실제 데이터 추출
+        const extractedData = {
+            name: '',
+            title: '',
+            email: '',
+            phone: '',
+            about: '',
+            skills: [] as string[],
+            projects: [] as any[],
+            experience: [] as any[],
+            education: [] as any[]
+        };
+
+        // 이름 추출 (h1 태그에서)
+        const nameElement = doc.querySelector('h1');
+        if (nameElement) {
+            extractedData.name = nameElement.textContent?.trim().replace('[이름]', '').replace('|', '').trim() || '';
+        }
+
+        // 직책 추출 (header 내 p 태그에서)
+        const titleElement = doc.querySelector('header p');
+        if (titleElement) {
+            extractedData.title = titleElement.textContent?.trim() || '';
+        }
+
+        // 연락처 추출
+        const contactElements = doc.querySelectorAll('header p');
+        contactElements.forEach(el => {
+            const text = el.textContent || '';
+            if (text.includes('@')) {
+                extractedData.email = text.match(/\S+@\S+/)?.[0] || '';
+            }
+            if (text.includes('010') || text.includes('+82')) {
+                extractedData.phone = text.match(/[\d\-\+\s()]+/)?.[0]?.trim() || '';
+            }
+        });
+
+        // About Me 섹션 추출
+        const aboutSection = doc.querySelector('.about, section.about');
+        if (aboutSection) {
+            const aboutParagraphs = aboutSection.querySelectorAll('p');
+            extractedData.about = Array.from(aboutParagraphs)
+                .map(p => p.textContent?.trim())
+                .filter(text => text && text.length > 0)
+                .join('\n\n');
+        }
+
+        // 기술 스킬 추출
+        const skillTags = doc.querySelectorAll('.skill-tag');
+        extractedData.skills = Array.from(skillTags)
+            .map(tag => tag.textContent?.trim())
+            .filter(skill => skill && skill.length > 0) as string[];
+
+        // 프로젝트 추출
+        const projectCards = doc.querySelectorAll('.project-card');
+        extractedData.projects = Array.from(projectCards).map(card => {
+            const name = card.querySelector('h3')?.textContent?.trim() || '';
+            const description = Array.from(card.querySelectorAll('p'))
+                .map(p => p.textContent?.trim())
+                .join(' ');
+
+            return {
+                name,
+                description,
+                tech: [], // 필요시 추가 파싱
+                role: '',
+                period: ''
+            };
+        });
+
+        return extractedData;
+    };
+
     // 포트폴리오 문서에서 데이터 추출
     const extractPortfolioData = (doc: PortfolioDocument) => {
         console.log('=== extractPortfolioData START ===');
@@ -156,8 +236,11 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
             const textNodes = extractEditableTextNodes(html);
             setEditableFields(textNodes);
 
-            // 기본 포트폴리오 데이터 생성
-            const portfolioDataFromHtml = {
+            // 실제 HTML에서 포트폴리오 데이터 추출
+            const portfolioDataFromHtml = extractRealPortfolioData(html);
+
+            // 추출된 데이터가 있으면 사용, 없으면 기본값
+            const finalData = portfolioDataFromHtml || {
                 name: '포트폴리오 소유자',
                 title: '직책',
                 email: 'email@example.com',
@@ -169,7 +252,8 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                 education: []
             };
 
-            return portfolioDataFromHtml;
+            console.log('추출된 포트폴리오 데이터:', finalData);
+            return finalData;
         }
 
         return null;
@@ -254,18 +338,31 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
     const handleSave = () => {
         if (!portfolioData) return;
 
-        // 편집된 텍스트를 반영하여 문서 업데이트
+        // 현재 편집된 HTML에서 최신 데이터 추출
+        const updatedPortfolioData = extractRealPortfolioData(currentHtml) || portfolioData;
+
+        console.log('저장할 포트폴리오 데이터:', updatedPortfolioData);
+
+        // 편집된 텍스트와 구조화된 데이터를 모두 포함하여 문서 업데이트
         const updatedDocument = {
             ...document,
+            // 구조화된 데이터를 추가 섹션으로 저장
+            metadata: {
+                extractedData: updatedPortfolioData,
+                lastUpdated: new Date().toISOString()
+            },
             sections: document.sections?.map(section => ({
                 ...section,
                 blocks: section.blocks?.map(block => ({
                     ...block,
-                    text: currentHtml
+                    text: currentHtml,
+                    // 추출된 데이터도 블록에 저장
+                    extractedData: updatedPortfolioData
                 }))
             }))
         };
 
+        console.log('저장할 문서:', updatedDocument);
         onSave(updatedDocument);
     };
 

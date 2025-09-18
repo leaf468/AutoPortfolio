@@ -45,28 +45,65 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
         let portfolioData;
         try {
           portfolioData = JSON.parse(finalResult.content);
-          
-          // PortfolioDocument 형태의 데이터를 템플릿에 맞는 형태로 변환
-          const headerSection = portfolioData.sections?.find((s: any) => s.type === 'header');
-          const aboutSection = portfolioData.sections?.find((s: any) => s.type === 'about');
-          const skillsSection = portfolioData.sections?.find((s: any) => s.type === 'skills');
-          const experienceSection = portfolioData.sections?.find((s: any) => s.type === 'experience');
-          const projectsSection = portfolioData.sections?.find((s: any) => s.type === 'projects');
-          const educationSection = portfolioData.sections?.find((s: any) => s.type === 'education');
+          console.log('파싱된 포트폴리오 데이터:', portfolioData);
 
-          const templateData = {
-            name: headerSection?.blocks?.[0]?.text || template.sampleData?.name || '포트폴리오',
-            title: headerSection?.blocks?.[1]?.text || template.sampleData?.title || '개발자',
-            contact: {
-              email: template.sampleData?.contact?.email || 'contact@example.com',
-              github: template.sampleData?.contact?.github || 'github.com/user',
-              phone: template.sampleData?.contact?.phone,
-              blog: template.sampleData?.contact?.blog,
-              linkedin: template.sampleData?.contact?.linkedin
-            },
-            about: aboutSection?.blocks?.[0]?.text || template.sampleData?.about || '안녕하세요',
-            skills: skillsSection?.blocks?.map((b: any) => b.text) || template.sampleData?.skills || ['React', 'TypeScript'],
-            skillCategories: template.sampleData?.skillCategories || [
+          // 1순위: 사용자가 편집한 extractedData 사용
+          let extractedData = null;
+
+          // metadata에서 extractedData 확인
+          if (portfolioData.metadata?.extractedData) {
+            extractedData = portfolioData.metadata.extractedData;
+            console.log('메타데이터에서 추출된 데이터 사용:', extractedData);
+          }
+
+          // 블록에서 extractedData 확인
+          if (!extractedData && portfolioData.sections?.[0]?.blocks?.[0]?.extractedData) {
+            extractedData = portfolioData.sections[0].blocks[0].extractedData;
+            console.log('블록에서 추출된 데이터 사용:', extractedData);
+          }
+
+          let templateData;
+
+          if (extractedData) {
+            // 사용자 편집 데이터가 있으면 우선 사용
+            templateData = {
+              name: extractedData.name || template.sampleData?.name || '포트폴리오',
+              title: extractedData.title || template.sampleData?.title || '개발자',
+              contact: {
+                email: extractedData.email || template.sampleData?.contact?.email || 'contact@example.com',
+                phone: extractedData.phone || template.sampleData?.contact?.phone,
+                github: template.sampleData?.contact?.github || 'github.com/user',
+                blog: template.sampleData?.contact?.blog,
+                linkedin: template.sampleData?.contact?.linkedin
+              },
+              about: extractedData.about || template.sampleData?.about || '안녕하세요',
+              skills: extractedData.skills?.length > 0 ? extractedData.skills : template.sampleData?.skills || ['React', 'TypeScript'],
+              projects: extractedData.projects?.length > 0 ? extractedData.projects : template.sampleData?.projects || [],
+              experience: extractedData.experience?.length > 0 ? extractedData.experience : template.sampleData?.experience || [],
+              education: extractedData.education?.length > 0 ? extractedData.education : template.sampleData?.education || []
+            };
+          } else {
+            // 기존 방식으로 섹션별 데이터 추출
+            const headerSection = portfolioData.sections?.find((s: any) => s.type === 'header');
+            const aboutSection = portfolioData.sections?.find((s: any) => s.type === 'about');
+            const skillsSection = portfolioData.sections?.find((s: any) => s.type === 'skills');
+            const experienceSection = portfolioData.sections?.find((s: any) => s.type === 'experience');
+            const projectsSection = portfolioData.sections?.find((s: any) => s.type === 'projects');
+            const educationSection = portfolioData.sections?.find((s: any) => s.type === 'education');
+
+            templateData = {
+              name: headerSection?.blocks?.[0]?.text || template.sampleData?.name || '포트폴리오',
+              title: headerSection?.blocks?.[1]?.text || template.sampleData?.title || '개발자',
+              contact: {
+                email: template.sampleData?.contact?.email || 'contact@example.com',
+                github: template.sampleData?.contact?.github || 'github.com/user',
+                phone: template.sampleData?.contact?.phone,
+                blog: template.sampleData?.contact?.blog,
+                linkedin: template.sampleData?.contact?.linkedin
+              },
+              about: aboutSection?.blocks?.[0]?.text || template.sampleData?.about || '안녕하세요',
+              skills: skillsSection?.blocks?.map((b: any) => b.text) || template.sampleData?.skills || ['React', 'TypeScript'],
+              skillCategories: template.sampleData?.skillCategories || [
               {
                 category: '프론트엔드',
                 skills: skillsSection?.blocks?.slice(0, 3)?.map((b: any) => b.text) || ['React', 'TypeScript', 'JavaScript']
@@ -105,8 +142,9 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                 period: lines[2] || '2020 - 2024'
               };
             }) || template.sampleData?.education || []
-          };
-          
+            };
+          }
+
           console.log('Using template:', selectedTemplate, 'with data:', templateData);
           return template.generateHTML(templateData);
           
