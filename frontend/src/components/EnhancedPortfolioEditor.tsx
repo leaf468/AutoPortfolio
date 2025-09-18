@@ -432,29 +432,88 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
         }
     };
 
+    // 필드들을 논리적 섹션으로 그룹화
+    const groupEditableFields = () => {
+        const groups = {
+            header: { title: '👤 기본 정보', fields: [] as EditableTextNode[] },
+            about: { title: '💬 자기소개', fields: [] as EditableTextNode[] },
+            projects: { title: '🚀 프로젝트', fields: [] as EditableTextNode[] },
+            skills: { title: '🛠️ 기술 스택', fields: [] as EditableTextNode[] },
+            experience: { title: '💼 경력', fields: [] as EditableTextNode[] },
+            education: { title: '🎓 교육', fields: [] as EditableTextNode[] },
+            etc: { title: '📝 기타', fields: [] as EditableTextNode[] }
+        };
+
+        // 필드들을 적절한 그룹에 분류
+        editableFields.forEach(field => {
+            const label = field.label.toLowerCase();
+
+            if (label.includes('이름') || label.includes('이메일') || label.includes('연락처') ||
+                label.includes('깃허브') || label.includes('링크드인') || label.includes('직책') ||
+                label.includes('포지션') || label.includes('페이지 제목')) {
+                groups.header.fields.push(field);
+            } else if (label.includes('자기소개') || label.includes('about')) {
+                groups.about.fields.push(field);
+            } else if (label.includes('프로젝트')) {
+                groups.projects.fields.push(field);
+            } else if (label.includes('기술') || label.includes('스킬')) {
+                groups.skills.fields.push(field);
+            } else if (label.includes('경력') || label.includes('experience')) {
+                groups.experience.fields.push(field);
+            } else if (label.includes('교육') || label.includes('education')) {
+                groups.education.fields.push(field);
+            } else {
+                groups.etc.fields.push(field);
+            }
+        });
+
+        return groups;
+    };
+
+    const renderFieldInput = (field: EditableTextNode) => (
+        <div key={field.id} className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">
+                {field.label}
+            </label>
+            {field.type === 'textarea' ? (
+                <textarea
+                    value={field.value}
+                    onChange={(e) => handleFieldEdit(field.id, e.target.value)}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors resize-vertical min-h-[100px]"
+                    rows={4}
+                    placeholder={`${field.label}을(를) 입력해주세요`}
+                />
+            ) : (
+                <input
+                    type="text"
+                    value={field.value}
+                    onChange={(e) => handleFieldEdit(field.id, e.target.value)}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors"
+                    placeholder={`${field.label}을(를) 입력해주세요`}
+                />
+            )}
+        </div>
+    );
+
     const renderEditableFields = () => {
-        return editableFields.map((field) => (
-            <div key={field.id} className="bg-white rounded-lg border border-gray-200 p-4 hover:border-gray-300 transition-colors">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {field.label}
-                </label>
-                {field.type === 'textarea' ? (
-                    <textarea
-                        value={field.value}
-                        onChange={(e) => handleFieldEdit(field.id, e.target.value)}
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors resize-vertical min-h-[100px]"
-                        rows={4}
-                    />
-                ) : (
-                    <input
-                        type="text"
-                        value={field.value}
-                        onChange={(e) => handleFieldEdit(field.id, e.target.value)}
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors"
-                    />
-                )}
-            </div>
-        ));
+        const groups = groupEditableFields();
+        const orderedGroupKeys = ['header', 'about', 'projects', 'skills', 'experience', 'education', 'etc'];
+
+        return orderedGroupKeys.map(groupKey => {
+            const group = groups[groupKey as keyof typeof groups];
+            if (group.fields.length === 0) return null;
+
+            return (
+                <div key={groupKey} className="bg-white rounded-xl border border-gray-200 p-6 hover:border-gray-300 transition-colors">
+                    <h4 className="text-md font-semibold text-gray-800 mb-4 flex items-center">
+                        {group.title}
+                    </h4>
+                    <div className="space-y-4">
+                        {group.fields.map(renderFieldInput)}
+                    </div>
+                </div>
+            );
+        }).filter(Boolean);
     };
 
     if (!portfolioData) {
@@ -508,24 +567,27 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* 왼쪽: 편집 인터페이스 */}
                     <div className="space-y-6">
-                        <div className="bg-white rounded-xl border border-gray-200 p-6">
-                            <h3 className="text-lg font-bold text-gray-900 flex items-center mb-6">
+                        <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl border border-purple-200 p-6">
+                            <h3 className="text-lg font-bold text-gray-900 flex items-center mb-2">
                                 <PencilIcon className="w-5 h-5 mr-2 text-purple-600" />
                                 포트폴리오 편집
                             </h3>
+                            <p className="text-sm text-gray-600 mb-6">각 섹션별로 정보를 입력하고 수정하세요</p>
+                        </div>
 
-                            <div className="space-y-4">
+                        {editableFields.length > 0 ? (
+                            <div className="space-y-6">
                                 {renderEditableFields()}
                             </div>
-
-                            {editableFields.length === 0 && (
-                                <div className="text-center py-8">
+                        ) : (
+                            <div className="bg-white rounded-xl border border-gray-200 p-8">
+                                <div className="text-center">
                                     <ExclamationTriangleIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                                     <p className="text-gray-500">편집 가능한 콘텐츠를 찾을 수 없습니다.</p>
                                     <p className="text-sm text-gray-400 mt-1">HTML 데이터를 확인해주세요.</p>
                                 </div>
-                            )}
-                        </div>
+                            </div>
+                        )}
 
                         {/* 누락된 정보 알림 */}
                         {missingInfo.length > 0 && (
