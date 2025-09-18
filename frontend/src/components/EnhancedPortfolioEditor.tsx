@@ -5,17 +5,14 @@ import {
     EyeIcon,
     CheckCircleIcon,
     ArrowLeftIcon,
-    SparklesIcon,
     ExclamationTriangleIcon,
     InformationCircleIcon,
-    LightBulbIcon,
     SwatchIcon
 } from '@heroicons/react/24/outline';
-import { PortfolioDocument, TextBlock } from '../services/autoFillService';
+import { PortfolioDocument } from '../services/autoFillService';
 import { portfolioTemplates } from '../templates/portfolioTemplates';
 import ContentRecommendationPanel from './ContentRecommendationPanel';
 import { ContentRecommendation } from '../services/contentRecommendationService';
-import { PortfolioRefinementService } from '../services/portfolioRefinementService';
 
 type TemplateType = 'james' | 'geon' | 'eunseong' | 'iu';
 
@@ -35,6 +32,14 @@ interface MissingInfo {
     placeholder: string;
 }
 
+interface EditableTextNode {
+    id: string;
+    label: string;
+    value: string;
+    type: 'text' | 'textarea';
+    path: string; // HTML 내 경로 (예: "header.h1", "section.about.p")
+}
+
 const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
     document,
     selectedTemplate = 'james',
@@ -44,525 +49,226 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
     onTemplateChange
 }) => {
     const [portfolioData, setPortfolioData] = useState<any>(null);
+    const [editableFields, setEditableFields] = useState<EditableTextNode[]>([]);
+    const [currentHtml, setCurrentHtml] = useState<string>('');
     const [missingInfo, setMissingInfo] = useState<MissingInfo[]>([]);
-    const [editingField, setEditingField] = useState<string | null>(null);
-    const [editValue, setEditValue] = useState('');
-    const [showNaturalEditPrompt, setShowNaturalEditPrompt] = useState(false);
     const [showRecommendations, setShowRecommendations] = useState(false);
-    const [currentSection, setCurrentSection] = useState<string>('about');
     const [currentTemplate, setCurrentTemplate] = useState<TemplateType>(selectedTemplate);
     const [showTemplateSelector, setShowTemplateSelector] = useState(false);
 
-    // HTML을 자연어로 변환하는 강력한 함수
-    const htmlToNaturalLanguage = (html: string): string => {
-        if (!html || typeof html !== 'string') return html;
+    // HTML에서 편집 가능한 텍스트 노드 추출
+    const extractEditableTextNodes = (html: string): EditableTextNode[] => {
+        if (!html || typeof html !== 'string') return [];
 
-        let text = html;
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+        const textNodes: EditableTextNode[] = [];
 
-        // 먼저 <style> 태그와 그 내용을 완전히 제거
-        text = text.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '');
+        // 편집 가능한 요소들의 셀렉터 정의
+        const editableSelectors = [
+            'h1, h2, h3, h4, h5, h6',    // 제목들
+            'p',                          // 단락
+            '.skill-tag',                 // 스킬 태그
+            'title'                       // 페이지 제목
+        ];
 
-        // <script> 태그와 그 내용을 완전히 제거
-        text = text.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '');
+        editableSelectors.forEach(selector => {
+            const elements = doc.querySelectorAll(selector);
+            elements.forEach((element, index) => {
+                const textContent = element.textContent?.trim();
+                if (textContent && textContent.length > 0) {
+                    // 레이블 생성 로직
+                    let label = '';
+                    if (element.tagName.toLowerCase().startsWith('h')) {
+                        label = `제목 (${element.tagName})`;
+                    } else if (element.tagName.toLowerCase() === 'p') {
+                        const parentSection = element.closest('section');
+                        if (parentSection) {
+                            const sectionClass = parentSection.className;
+                            if (sectionClass.includes('about')) label = '자기소개';
+                            else if (sectionClass.includes('project')) label = '프로젝트 설명';
+                            else if (sectionClass.includes('experience')) label = '경력 설명';
+                            else label = '내용';
+                        } else {
+                            label = '내용';
+                        }
+                    } else if (element.classList.contains('skill-tag')) {
+                        label = '기술 스킬';
+                    } else if (element.tagName.toLowerCase() === 'title') {
+                        label = '페이지 제목';
+                    } else {
+                        label = '텍스트';
+                    }
 
-        // HTML 문서 구조 태그들 제거 (head, body, html 등)
-        text = text.replace(/<html[^>]*>/gi, '');
-        text = text.replace(/<\/html>/gi, '');
-        text = text.replace(/<head[^>]*>[\s\S]*?<\/head>/gi, '');
-        text = text.replace(/<body[^>]*>/gi, '');
-        text = text.replace(/<\/body>/gi, '');
-        text = text.replace(/<!DOCTYPE[^>]*>/gi, '');
-        text = text.replace(/<meta[^>]*>/gi, '');
-        text = text.replace(/<title[^>]*>[\s\S]*?<\/title>/gi, '');
-        text = text.replace(/<link[^>]*>/gi, '');
-
-        // HTML 엔티티 디코딩
-        const entities: Record<string, string> = {
-            '&amp;': '&',
-            '&lt;': '<',
-            '&gt;': '>',
-            '&quot;': '"',
-            '&#39;': "'",
-            '&nbsp;': ' ',
-            '&copy;': '©',
-            '&reg;': '®',
-            '&trade;': '™'
-        };
-
-        Object.entries(entities).forEach(([entity, char]) => {
-            text = text.replace(new RegExp(entity, 'g'), char);
+                    textNodes.push({
+                        id: `${selector.replace(/[^a-zA-Z0-9]/g, '_')}_${index}`,
+                        label: `${label} ${index + 1}`,
+                        value: textContent,
+                        type: textContent.length > 50 ? 'textarea' : 'text',
+                        path: `${selector}[${index}]`
+                    });
+                }
+            });
         });
 
-        // 숫자 엔티티 디코딩 (&#123; 형태)
-        text = text.replace(/&#(\d+);/g, (match, num) => {
-            return String.fromCharCode(parseInt(num, 10));
-        });
-
-        // 16진수 엔티티 디코딩 (&#x7B; 형태)
-        text = text.replace(/&#x([0-9a-fA-F]+);/g, (match, hex) => {
-            return String.fromCharCode(parseInt(hex, 16));
-        });
-
-        // 블록 레벨 태그를 줄바꿈으로 변환
-        text = text.replace(/<\/(div|p|h[1-6]|section|article|header|footer|nav|main|aside)>/gi, '\n');
-        text = text.replace(/<(div|p|h[1-6]|section|article|header|footer|nav|main|aside)[^>]*>/gi, '\n');
-        text = text.replace(/<br\s*\/?>/gi, '\n');
-        text = text.replace(/<hr\s*\/?>/gi, '\n---\n');
-
-        // 리스트 아이템을 적절한 형태로 변환
-        text = text.replace(/<li[^>]*>/gi, '\n• ');
-        text = text.replace(/<\/li>/gi, '');
-        text = text.replace(/<ul[^>]*>/gi, '\n');
-        text = text.replace(/<\/ul>/gi, '\n');
-        text = text.replace(/<ol[^>]*>/gi, '\n');
-        text = text.replace(/<\/ol>/gi, '\n');
-
-        // 테이블 구조를 텍스트로 변환
-        text = text.replace(/<\/tr>/gi, '\n');
-        text = text.replace(/<\/td>/gi, ' ');
-        text = text.replace(/<\/th>/gi, ' ');
-        text = text.replace(/<td[^>]*>/gi, '');
-        text = text.replace(/<th[^>]*>/gi, '');
-        text = text.replace(/<table[^>]*>/gi, '\n');
-        text = text.replace(/<\/table>/gi, '\n');
-        text = text.replace(/<thead[^>]*>/gi, '');
-        text = text.replace(/<\/thead>/gi, '');
-        text = text.replace(/<tbody[^>]*>/gi, '');
-        text = text.replace(/<\/tbody>/gi, '');
-        text = text.replace(/<tr[^>]*>/gi, '');
-
-        // 나머지 모든 HTML 태그 제거
-        text = text.replace(/<[^>]*>/g, '');
-
-        // 연속된 공백과 줄바꿈 정리
-        text = text.replace(/[ \t]+/g, ' '); // 연속된 공백과 탭을 하나의 공백으로
-        text = text.replace(/\n\s*\n\s*\n/g, '\n\n'); // 3개 이상의 줄바꿈을 2개로
-        text = text.replace(/^\s+|\s+$/gm, ''); // 각 줄의 시작과 끝 공백 제거
-
-        // 특수 패턴들을 자연어로 변환
-        text = text.replace(/\[\s*\]/g, ''); // 빈 대괄호 제거
-        text = text.replace(/\{\s*\}/g, ''); // 빈 중괄호 제거
-        text = text.replace(/\(\s*\)/g, ''); // 빈 소괄호 제거
-
-        // URL을 더 자연스럽게 변환
-        text = text.replace(/https?:\/\/[^\s]+/g, (url) => {
-            if (url.includes('github')) return `GitHub: ${url}`;
-            if (url.includes('linkedin')) return `LinkedIn: ${url}`;
-            return url;
-        });
-
-        // 최종 정리
-        text = text.trim();
-
-        // 만약 여전히 "포트폴리오"로 시작하고 CSS 같은 내용이 있다면 추가 처리
-        if (text.startsWith('포트폴리오') && text.includes('font-family')) {
-            // "포트폴리오" 이후 첫 번째 실제 콘텐츠까지 제거
-            const realContentStart = text.search(/(프론트엔드|백엔드|개발자|이름|성함)/);
-            if (realContentStart > 0) {
-                text = text.substring(realContentStart);
-            }
-        }
-
-        return text;
+        return textNodes;
     };
 
-    // 이전 버전과의 호환성을 위한 stripHtml 함수
-    const stripHtml = (html: string) => htmlToNaturalLanguage(html);
+    // HTML 내 특정 텍스트 노드 업데이트
+    const updateHtmlTextNode = (html: string, path: string, newValue: string): string => {
+        if (!html || !path || newValue === undefined) return html;
 
-    // 포트폴리오 문서에서 데이터 추출 - 스마트 콘텐츠 분류 시스템
+        try {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+
+            // path 파싱 (예: "h1[0]", "p[1]")
+            const match = path.match(/^(.+)\[(\d+)\]$/);
+            if (!match) return html;
+
+            const [, selector, indexStr] = match;
+            const index = parseInt(indexStr, 10);
+
+            const elements = doc.querySelectorAll(selector);
+            if (elements[index]) {
+                elements[index].textContent = newValue;
+            }
+
+            return doc.documentElement.outerHTML;
+        } catch (error) {
+            console.error('HTML 업데이트 실패:', error);
+            return html;
+        }
+    };
+
+    // 포트폴리오 문서에서 데이터 추출
     const extractPortfolioData = (doc: PortfolioDocument) => {
         console.log('=== extractPortfolioData START ===');
         console.log('Document structure:', doc);
-        console.log('Document sections:', doc.sections);
-        console.log('Sections count:', doc.sections?.length || 0);
-        
-        // 각 섹션의 상세 구조 확인
-        if (doc.sections && doc.sections.length > 0) {
-            doc.sections.forEach((section, index) => {
-                console.log(`Section ${index}:`, section);
-                console.log(`- section_id: ${section.section_id}`);
-                console.log(`- section_title: ${section.section_title}`);
-                console.log(`- blocks:`, section.blocks);
-            });
-        }
-        
-        // 모든 섹션의 블록들을 수집하고 HTML을 자연어로 변환
-        const allBlocks = (doc.sections || []).flatMap(section => 
-            (section.blocks || []).map((block: any) => ({
-                ...block,
-                originalText: block.text,
-                text: htmlToNaturalLanguage(block.text),
-                section_id: section.section_id
-            }))
-        ).filter(block => block.text && block.text.length > 0);
-        
-        console.log('All blocks (HTML converted to natural language):', allBlocks);
-        
-        // 사용된 블록들을 추적하여 중복 방지
-        const usedBlocks = new Set<string>();
-        
-        // 스마트 콘텐츠 분류 시스템
-        const classifyBlocks = () => {
-            const result = {
-                name: '',
-                title: '',
-                email: '',
-                phone: '',
-                github: '',
-                linkedin: '',
-                about: '',
-                skills: [] as string[],
-                experience: [] as any[],
-                projects: [] as any[],
-                education: [] as any[]
+
+        // 첫 번째 섹션의 첫 번째 블록에서 HTML 추출
+        const firstBlock = doc.sections?.[0]?.blocks?.[0];
+        if (firstBlock && firstBlock.text) {
+            const html = firstBlock.text;
+            setCurrentHtml(html);
+
+            // HTML에서 편집 가능한 텍스트 노드 추출
+            const textNodes = extractEditableTextNodes(html);
+            setEditableFields(textNodes);
+
+            // 기본 포트폴리오 데이터 생성
+            const portfolioDataFromHtml = {
+                name: '포트폴리오 소유자',
+                title: '직책',
+                email: 'email@example.com',
+                phone: '010-0000-0000',
+                about: '자기소개를 작성해주세요',
+                skills: ['React', 'TypeScript', 'JavaScript'],
+                projects: [],
+                experience: [],
+                education: []
             };
-            
-            // 1단계: 명확한 식별자가 있는 블록들부터 분류
-            
-            // 이름 찾기 - 짧고 사람 이름 같은 패턴
-            const nameBlock = allBlocks.find(block => 
-                !usedBlocks.has(block.block_id) &&
-                block.text.length < 30 &&
-                !block.text.includes('개발자') &&
-                !block.text.includes('풀스택') &&
-                !block.text.includes('@') &&
-                !block.text.includes('http') &&
-                /^[가-힣a-zA-Z\s]{2,20}$/.test(block.text.trim()) &&
-                !/(React|JavaScript|TypeScript|Python|Java|HTML|CSS|Node|Spring|SQL|AWS|GitHub)/i.test(block.text)
-            );
-            
-            if (nameBlock) {
-                result.name = nameBlock.text.trim();
-                usedBlocks.add(nameBlock.block_id);
-                console.log('Found name:', result.name);
-            }
-            
-            // 직책/타이틀 찾기
-            const titleBlock = allBlocks.find(block => 
-                !usedBlocks.has(block.block_id) &&
-                block.text.length < 100 &&
-                (block.text.includes('개발자') ||
-                 block.text.includes('엔지니어') ||
-                 block.text.includes('풀스택') ||
-                 block.text.includes('백엔드') ||
-                 block.text.includes('프론트엔드') ||
-                 block.text.includes('Developer') ||
-                 block.text.includes('Engineer'))
-            );
-            
-            if (titleBlock) {
-                result.title = titleBlock.text.trim();
-                usedBlocks.add(titleBlock.block_id);
-                console.log('Found title:', result.title);
-            }
-            
-            // 연락처 정보 추출
-            const emailMatch = allBlocks.find(block => 
-                !usedBlocks.has(block.block_id) && 
-                /[\w.-]+@[\w.-]+\.\w+/.test(block.text)
-            );
-            if (emailMatch) {
-                result.email = emailMatch.text.match(/[\w.-]+@[\w.-]+\.\w+/)?.[0] || '';
-                usedBlocks.add(emailMatch.block_id);
-            }
-            
-            const phoneMatch = allBlocks.find(block => 
-                !usedBlocks.has(block.block_id) && 
-                /\b\d{2,3}[.-]?\d{3,4}[.-]?\d{4}\b/.test(block.text)
-            );
-            if (phoneMatch) {
-                result.phone = phoneMatch.text.match(/\b\d{2,3}[.-]?\d{3,4}[.-]?\d{4}\b/)?.[0] || '';
-                usedBlocks.add(phoneMatch.block_id);
-            }
-            
-            const githubMatch = allBlocks.find(block => 
-                !usedBlocks.has(block.block_id) && 
-                /github\.com\/[^\s]+/i.test(block.text)
-            );
-            if (githubMatch) {
-                result.github = githubMatch.text.match(/https?:\/\/github\.com\/[^\s]+/i)?.[0] || 
-                               'https://github.com/' + githubMatch.text.match(/github\.com\/([^\s]+)/i)?.[1] || '';
-                usedBlocks.add(githubMatch.block_id);
-            }
-            
-            // 2단계: 스킬/기술 블록 분류
-            const skillKeywords = ['React', 'JavaScript', 'TypeScript', 'Python', 'Java', 'HTML', 'CSS', 
-                                'Node.js', 'Express', 'Spring', 'Boot', 'MySQL', 'MongoDB', 'Redis', 
-                                'AWS', 'Docker', 'Git', 'GitHub', 'Vue', 'Angular', 'PHP', 'C++', 'C#'];
-            
-            const skillBlocks = allBlocks.filter(block => 
-                !usedBlocks.has(block.block_id) &&
-                block.text.length < 300 &&
-                skillKeywords.some(skill => 
-                    block.text.toLowerCase().includes(skill.toLowerCase())
-                ) &&
-                // 기술 단어의 밀도가 높은 블록
-                (block.text.match(new RegExp(skillKeywords.join('|'), 'gi')) || []).length >= 2
-            );
-            
-            skillBlocks.forEach(block => {
-                // 기술 스택 추출
-                const skills = block.text
-                    .split(/[,\n\s|•]+/)
-                    .map(s => s.trim())
-                    .filter(s => 
-                        s.length > 1 && 
-                        s.length < 30 &&
-                        /^[a-zA-Z0-9.\s-]+$/.test(s) &&
-                        skillKeywords.some(keyword => 
-                            s.toLowerCase().includes(keyword.toLowerCase())
-                        )
-                    );
-                    
-                const combinedSkills = result.skills.concat(skills);
-                result.skills = Array.from(new Set(combinedSkills));
-                usedBlocks.add(block.block_id);
-            });
-            
-            console.log('Found skills:', result.skills);
-            
-            // 3단계: 경력 블록 분류
-            const experienceBlocks = allBlocks.filter(block => 
-                !usedBlocks.has(block.block_id) &&
-                (
-                    /\d{4}[\s-]*(~|-)\s*\d{4}|\d{4}[\s-]*(~|-)\s*현재/.test(block.text) ||
-                    /(경력|회사|개발팀|팀장|대리|과장|부장|차장|사원|인턴|수료|부스트캠프)/.test(block.text) ||
-                    /\b\d+년\s*(차|경험)|\b\d+개월/.test(block.text)
-                ) &&
-                block.text.length > 20
-            );
-            
-            experienceBlocks.forEach(block => {
-                // 경력 정보 파싱
-                const lines = block.text.split('\n').filter(l => l.trim());
-                const text = block.text;
-                
-                let position = '';
-                let company = '';
-                let duration = '';
-                
-                // 기간 패턴 찾기
-                const durationMatch = text.match(/\d{4}[\s-]*(~|-)\s*(\d{4}|현재)|\b\d+년\s*차|\b\d+개월/);
-                if (durationMatch) {
-                    duration = durationMatch[0];
-                }
-                
-                // 회사명 찾기
-                const companyMatch = text.match(/(\S+)\s*(회사|기업|코퍼레이션|Corporation|Inc|Ltd|부스트캠프|아카데미)/);
-                if (companyMatch) {
-                    company = companyMatch[0];
-                }
-                
-                // 직책 찾기
-                const positionMatch = text.match(/(개발자|엔지니어|인턴|사원|대리|과장|팀장|수료생|연구원)/);
-                if (positionMatch) {
-                    position = lines[0]?.includes(positionMatch[0]) ? lines[0] : positionMatch[0];
-                }
-                
-                result.experience.push({
-                    position: position || '개발자',
-                    company: company || '회사명',
-                    duration: duration || '기간',
-                    description: text
-                });
-                
-                usedBlocks.add(block.block_id);
-            });
-            
-            console.log('Found experience:', result.experience);
-            
-            // 4단계: 프로젝트 블록 분류
-            const projectBlocks = allBlocks.filter(block =>
-                !usedBlocks.has(block.block_id) &&
-                (
-                    /(프로젝트|플랫폼|시스템|웹사이트|앱|서비스|개발|구현|제작)/.test(block.text) &&
-                    block.text.length > 30
-                ) ||
-                // 기술 스택과 함께 설명이 있는 긴 블록
-                (
-                    block.text.length > 50 &&
-                    skillKeywords.some(skill => block.text.toLowerCase().includes(skill.toLowerCase()))
-                )
-            );
 
-            projectBlocks.forEach(block => {
-                // 원본 HTML이 있을 경우를 대비해 한 번 더 자연어로 변환
-                const cleanText = htmlToNaturalLanguage(block.originalText || block.text);
-                const lines = cleanText.split('\n').filter(l => l.trim());
-                const firstLine = lines[0] || cleanText.substring(0, 50);
+            return portfolioDataFromHtml;
+        }
 
-                let projectName = firstLine;
-                if (firstLine.includes('프로젝트')) {
-                    projectName = firstLine;
-                } else if (firstLine.length > 50) {
-                    projectName = firstLine.substring(0, 47) + '...';
-                }
-
-                // 프로젝트 이름과 설명 모두 HTML 제거
-                result.projects.push({
-                    name: htmlToNaturalLanguage(projectName),
-                    description: cleanText,
-                    tech: [],
-                    role: '개발자'
-                });
-
-                usedBlocks.add(block.block_id);
-            });
-            
-            console.log('Found projects:', result.projects);
-            
-            // 5단계: 자기소개 블록 분류 (남은 긴 텍스트)
-            const aboutBlocks = allBlocks.filter(block => 
-                !usedBlocks.has(block.block_id) &&
-                block.text.length > 50 &&
-                (
-                    /(안녕하세요|소개|저는|입니다|합니다|관심|경험|학습|성장|목표|꿈|비전)/.test(block.text) ||
-                    (block.text.length > 100 && 
-                     !/(React|JavaScript|TypeScript|Python|Java|HTML|CSS|프로젝트|회사|경력)/.test(block.text))
-                )
-            );
-            
-            if (aboutBlocks.length > 0) {
-                result.about = aboutBlocks.map(block => block.text).join('\n\n');
-                aboutBlocks.forEach(block => usedBlocks.add(block.block_id));
-            }
-            
-            console.log('Found about:', result.about);
-            
-            // 기본값 설정
-            if (!result.name) result.name = '김개발';
-            if (!result.title) result.title = '백엔드 개발자';
-            if (!result.email) result.email = 'dev.kim@example.com';
-            if (!result.phone) result.phone = '010-1234-5678';
-            if (!result.github) result.github = 'https://github.com/dev-kim';
-            if (!result.linkedin) result.linkedin = 'https://linkedin.com/in/dev-kim';
-            
-            if (!result.about) {
-                result.about = `컴퓨터공학을 전공한 백엔드 개발자 지망생입니다. Spring Boot와 MySQL을 활용한 웹 서비스 개발 경험이 있으며, 실시간 통신과 성능 최적화에 관심이 많습니다. 네이버 부스트캠프를 수료하며 협업과 코드 품질의 중요성을 깨달았고, 지속적인 학습을 통해 성장하고 있습니다.`;
-            }
-            
-            if (result.skills.length === 0) {
-                result.skills = ['Spring Boot', 'Java', 'MySQL', 'Redis', 'JavaScript', 'Node.js', 'Express', 'MongoDB', 'WebSocket', 'GitHub Actions', 'AWS'];
-            }
-            
-            if (result.experience.length === 0) {
-                result.experience = [{
-                    position: '부스트캠프 수료생',
-                    company: '네이버 부스트캠프',
-                    duration: '2023.07 - 2023.12',
-                    description: '6개월간의 집중 부트캠프에서 JavaScript 기초부터 React, Node.js를 활용한 풀스택 개발까지 학습했습니다. 최종 프로젝트에서 우수상을 수상했습니다.'
-                }];
-            }
-            
-            if (result.projects.length === 0) {
-                result.projects = [
-                    {
-                        name: '함께해요 - 스터디 매칭 플랫폼',
-                        description: 'Spring Boot와 MySQL을 활용해 스터디 그룹 매칭 서비스를 개발했습니다. REST API 설계부터 배포까지 전체 백엔드를 담당했으며, WebSocket으로 실시간 채팅 기능을 구현하고 Redis 캐싱으로 응답 속도를 40% 개선했습니다.',
-                        tech: ['Spring Boot', 'MySQL', 'Redis', 'WebSocket'],
-                        role: '백엔드 개발자'
-                    },
-                    {
-                        name: '날씨 기반 옷차림 추천 앱',
-                        description: '기상청 API와 연동하여 현재 날씨와 체감온도를 분석하고 적절한 옷차림을 추천하는 서비스입니다. Node.js와 Express로 서버를 구축하고, MongoDB로 사용자 선호도 데이터를 저장했습니다.',
-                        tech: ['Node.js', 'Express', 'MongoDB', 'GitHub Actions'],
-                        role: '풀스택 개발자'
-                    }
-                ];
-            }
-            
-            if (result.education.length === 0) {
-                result.education = [{
-                    school: 'OO대학교',
-                    degree: '컴퓨터공학 전공',
-                    year: '2020 - 2024'
-                }];
-            }
-            
-            return result;
-        };
-        
-        const result = classifyBlocks();
-        
-        console.log('=== extractPortfolioData RESULT ===');
-        console.log('Final extracted data:', result);
-        console.log('=== extractPortfolioData END ===');
-        return result;
+        return null;
     };
 
-    // 누락된 정보 감지
-    const detectMissingInfo = (data: any): MissingInfo[] => {
-        const missing: MissingInfo[] = [];
+    // 편집 필드 값 변경 핸들러
+    const handleFieldEdit = (fieldId: string, newValue: string) => {
+        // 편집 가능한 필드 업데이트
+        setEditableFields(prev =>
+            prev.map(field =>
+                field.id === fieldId
+                    ? { ...field, value: newValue }
+                    : field
+            )
+        );
 
-        if (!data.name || data.name.includes('홍길동') || data.name.includes('포트폴리오')) {
-            missing.push({
-                section: 'header',
-                field: 'name',
-                description: '실제 이름을 입력해주세요',
-                placeholder: '홍길동'
-            });
+        // HTML 업데이트
+        const field = editableFields.find(f => f.id === fieldId);
+        if (field) {
+            const updatedHtml = updateHtmlTextNode(currentHtml, field.path, newValue);
+            setCurrentHtml(updatedHtml);
         }
-
-        if (!data.email) {
-            missing.push({
-                section: 'contact',
-                field: 'email',
-                description: '이메일 주소를 추가해주세요',
-                placeholder: 'example@email.com'
-            });
-        }
-
-        if (!data.phone) {
-            missing.push({
-                section: 'contact',
-                field: 'phone',
-                description: '전화번호를 추가해주세요',
-                placeholder: '010-1234-5678'
-            });
-        }
-
-        if (!data.github) {
-            missing.push({
-                section: 'contact',
-                field: 'github',
-                description: 'GitHub 주소를 추가해주세요',
-                placeholder: 'https://github.com/username'
-            });
-        }
-
-        if (data.experience.length === 0) {
-            missing.push({
-                section: 'experience',
-                field: 'experience',
-                description: '경력 사항을 추가해주세요',
-                placeholder: '개발자 | 회사명 | 2022-2024'
-            });
-        }
-
-        if (data.projects.length === 0) {
-            missing.push({
-                section: 'projects',
-                field: 'projects',
-                description: '프로젝트를 추가해주세요',
-                placeholder: '프로젝트명과 설명'
-            });
-        }
-
-        return missing;
     };
 
-    // 포트폴리오 데이터 초기화 및 누락된 정보 감지
+    const findMissingInformation = async (data: any) => {
+        try {
+            // 기본적인 누락 정보 체크
+            const missing: MissingInfo[] = [];
+
+            if (!data.name || data.name === '포트폴리오 소유자') {
+                missing.push({
+                    section: 'header',
+                    field: 'name',
+                    description: '실제 이름을 입력해주세요',
+                    placeholder: '홍길동'
+                });
+            }
+
+            if (!data.title || data.title === '직책') {
+                missing.push({
+                    section: 'header',
+                    field: 'title',
+                    description: '직책/포지션을 입력해주세요',
+                    placeholder: '프론트엔드 개발자'
+                });
+            }
+
+            if (!data.about || data.about === '자기소개를 작성해주세요') {
+                missing.push({
+                    section: 'about',
+                    field: 'about',
+                    description: '자기소개를 작성해주세요',
+                    placeholder: '개발자로서의 경험과 목표를 설명해주세요'
+                });
+            }
+
+            setMissingInfo(missing);
+        } catch (error) {
+            console.error('누락 정보 분석 실패:', error);
+            setMissingInfo([]);
+        }
+    };
+
+    const initializePortfolio = () => {
+        if (!document) return;
+
+        try {
+            const extractedData = extractPortfolioData(document);
+            if (extractedData) {
+                setPortfolioData(extractedData);
+                findMissingInformation(extractedData);
+            }
+        } catch (error) {
+            console.error('포트폴리오 초기화 실패:', error);
+        }
+    };
+
     useEffect(() => {
-        if (document) {
-            console.log('EnhancedPortfolioEditor - Received document:', document);
-            const data = extractPortfolioData(document);
-            console.log('EnhancedPortfolioEditor - Extracted data:', data);
-            setPortfolioData(data);
-            setMissingInfo(detectMissingInfo(data));
-        }
-    }, [document]); // extractPortfolioData와 detectMissingInfo는 component 내부 함수이므로 dependency에서 제외
+        initializePortfolio();
+    }, [document]);
 
-    // 템플릿 변경 핸들러
+    const handleSave = () => {
+        if (!portfolioData) return;
+
+        // 편집된 텍스트를 반영하여 문서 업데이트
+        const updatedDocument = {
+            ...document,
+            sections: document.sections?.map(section => ({
+                ...section,
+                blocks: section.blocks?.map(block => ({
+                    ...block,
+                    text: currentHtml
+                }))
+            }))
+        };
+
+        onSave(updatedDocument);
+    };
+
     const handleTemplateChange = (templateId: TemplateType) => {
         setCurrentTemplate(templateId);
         setShowTemplateSelector(false);
@@ -571,1159 +277,123 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
         }
     };
 
-    // 값을 자연어 형태로 표시 - 강화된 HTML 처리
-    const formatDisplayValue = (field: string, value: any) => {
-        switch (field) {
-            case 'name':
-            case 'title':
-                // 강력한 HTML-to-자연어 변환
-                const cleanValue = htmlToNaturalLanguage(value);
-                return cleanValue || (field === 'name' ? '이름을 입력해주세요' : '직책을 입력해주세요');
-            
-            case 'skills':
-                if (Array.isArray(value) && value.length > 0) {
-                    // 스킬 배열에서 HTML을 자연어로 변환
-                    const cleanSkills = value.map(skill => htmlToNaturalLanguage(skill))
-                        .filter(skill => skill && skill.length > 0);
-                    return cleanSkills.join(', ');
-                }
-                return '기술 스택을 입력해주세요';
-            
-            case 'experience':
-                if (Array.isArray(value) && value.length > 0) {
-                    return value.map(exp => 
-                        `${htmlToNaturalLanguage(exp.position)} · ${htmlToNaturalLanguage(exp.company)} (${htmlToNaturalLanguage(exp.duration)})`
-                    ).join('\n');
-                }
-                return '경력 사항을 입력해주세요';
-            
-            case 'projects':
-                if (Array.isArray(value) && value.length > 0) {
-                    return value.map(proj => 
-                        `${htmlToNaturalLanguage(proj.name)}\n${htmlToNaturalLanguage(proj.description)}`
-                    ).join('\n\n');
-                }
-                return '프로젝트 경험을 입력해주세요';
-            
-            case 'education':
-                if (Array.isArray(value) && value.length > 0) {
-                    return value.map(edu => 
-                        `${htmlToNaturalLanguage(edu.school)} · ${htmlToNaturalLanguage(edu.degree)} (${htmlToNaturalLanguage(edu.year)})`
-                    ).join('\n');
-                }
-                return '학력 정보를 입력해주세요';
-            
-            case 'about':
-                const cleanAbout = htmlToNaturalLanguage(value);
-                return cleanAbout || '자기소개를 작성해주세요';
-                
-            default:
-                const cleanDefault = htmlToNaturalLanguage(value);
-                return cleanDefault || `${field}을(를) 입력해주세요`;
-        }
-    };
-
-    // 필드 편집 시작
-    const startEditing = (field: string, currentValue: any) => {
-        setEditingField(field);
-        // 편집을 위해 자연어 형태의 값으로 변환
-        setEditValue(formatDisplayValue(field, currentValue));
-    };
-
-    // 자연어 입력을 구조화된 데이터로 파싱
-    const parseNaturalLanguage = (field: string, value: string) => {
-        console.log(`Parsing ${field}:`, value);
-
-        // 빈 값 처리
-        if (!value || value.trim() === '') {
-            switch (field) {
-                case 'skills': return [];
-                case 'experience': return [];
-                case 'projects': return [];
-                case 'education': return [];
-                default: return '';
-            }
-        }
-
-        switch (field) {
-            case 'name':
-            case 'title':
-            case 'email':
-            case 'phone':
-            case 'github':
-            case 'linkedin':
-            case 'about':
-                // 단순 문자열 필드는 그대로 반환
-                return value.trim();
-
-            case 'skills':
-                // 쉼표, 줄바꿈, 공백으로 분리 - 더 유연하게
-                const skills = value.split(/[,\n;|]+/).map(skill => skill.trim()).filter(skill => skill.length > 0);
-                console.log('Parsed skills:', skills);
-                return skills;
-                
-            case 'experience':
-                // 자연어 경력 정보를 구조화
-                const lines = value.split('\n').filter(line => line.trim());
-                const experiences = lines.map(line => {
-                    // "포지션 · 회사 (기간)" 패턴 파싱
-                    const match = line.match(/(.+?)\s*·\s*(.+?)\s*\((.+?)\)/);
-                    if (match) {
-                        return {
-                            position: match[1].trim(),
-                            company: match[2].trim(),  
-                            duration: match[3].trim(),
-                            description: line
-                        };
-                    }
-                    // 더 유연한 파싱 - 첫 줄은 직책, 나머지는 설명
-                    const words = line.split(' ');
-                    return {
-                        position: words.slice(0, 2).join(' ') || '개발자',
-                        company: '회사명',
-                        duration: '기간',
-                        description: line
-                    };
-                });
-                console.log('Parsed experience:', experiences);
-                return experiences;
-                
-            case 'projects':
-                // 프로젝트 정보를 더 유연하게 파싱 - HTML 포함 가능성 처리
-                // 먼저 HTML을 자연어로 변환
-                const cleanProjectValue = htmlToNaturalLanguage(value);
-                console.log('Clean project value:', cleanProjectValue);
-
-                let projects = [];
-
-                // 스마트 프로젝트 분리 로직
-                const parseProjects = (text: string) => {
-                    // 1. 알려진 프로젝트명으로 분리 시도
-                    const knownProjects = ['모두의 레시피', 'Daily Planner', 'Quick Memo'];
-                    let foundProjects = [];
-
-                    for (const projectName of knownProjects) {
-                        const index = text.indexOf(projectName);
-                        if (index !== -1) {
-                            foundProjects.push({ name: projectName, index });
-                        }
-                    }
-
-                    if (foundProjects.length > 0) {
-                        // 인덱스 순으로 정렬
-                        foundProjects.sort((a, b) => a.index - b.index);
-
-                        return foundProjects.map((project, idx) => {
-                            const startIndex = project.index;
-                            const endIndex = idx < foundProjects.length - 1 ?
-                                foundProjects[idx + 1].index : text.length;
-
-                            const projectText = text.substring(startIndex, endIndex).trim();
-                            return parseIndividualProject(project.name, projectText);
-                        });
-                    }
-
-                    // 2. "핵심 프로젝트" 또는 "Projects" 섹션으로 분리
-                    if (text.includes('핵심 프로젝트') || text.includes('Projects')) {
-                        const projectSection = text.split(/핵심 프로젝트|Projects/)[1] || text;
-
-                        // 제목처럼 보이는 라인들로 분리
-                        const lines = projectSection.split('\n').filter(l => l.trim());
-                        const projectStarts = [];
-
-                        lines.forEach((line, idx) => {
-                            // 프로젝트 제목의 특징:
-                            // - 상대적으로 짧음 (100자 이하)
-                            // - 역할, 기간, 설명이 아님
-                            // - 특수문자나 URL이 없음
-                            if (line.length < 100 &&
-                                !line.includes('역할:') &&
-                                !line.includes('기간:') &&
-                                !line.includes('http') &&
-                                !line.includes('설명') &&
-                                line.trim().length > 5) {
-
-                                // 다음 몇 줄이 설명처럼 보이면 제목으로 판단
-                                const nextLines = lines.slice(idx + 1, idx + 4);
-                                if (nextLines.some(l => l.length > 50)) {
-                                    projectStarts.push({ title: line.trim(), startIdx: idx });
-                                }
-                            }
-                        });
-
-                        if (projectStarts.length > 0) {
-                            return projectStarts.map((project, idx) => {
-                                const startIdx = project.startIdx;
-                                const endIdx = idx < projectStarts.length - 1 ?
-                                    projectStarts[idx + 1].startIdx : lines.length;
-
-                                const projectLines = lines.slice(startIdx, endIdx);
-                                const projectText = projectLines.join('\n');
-
-                                return parseIndividualProject(project.title, projectText);
-                            });
-                        }
-                    }
-
-                    // 3. 이중 줄바꿈으로 분리 (더 엄격한 검증)
-                    const sections = text.split(/\n\s*\n/).filter(s => s.trim().length > 30);
-                    if (sections.length > 1) {
-                        return sections.map((section, idx) => {
-                            const lines = section.split('\n').filter(l => l.trim());
-                            let title = lines[0] || `프로젝트 ${idx + 1}`;
-
-                            // 제목이 너무 길면 줄임
-                            if (title.length > 50) {
-                                const words = title.split(' ');
-                                title = words.slice(0, 3).join(' ') || `프로젝트 ${idx + 1}`;
-                            }
-
-                            return parseIndividualProject(title, section);
-                        }).filter(project =>
-                            project.name &&
-                            project.description &&
-                            project.description.length > 15
-                        );
-                    }
-
-                    // 4. 단일 프로젝트로 처리
-                    const lines = text.split('\n').filter(l => l.trim());
-                    if (lines.length > 0) {
-                        const title = lines[0].length < 100 ? lines[0] : '주요 프로젝트';
-                        return [parseIndividualProject(title, text)];
-                    }
-
-                    return [];
-                };
-
-                // 개별 프로젝트 파싱 헬퍼 함수
-                const parseIndividualProject = (title: string, content: string) => {
-                    const lines = content.split('\n').filter(l => l.trim());
-
-                    let name = title.trim();
-                    let role = '';
-                    let period = '';
-                    let description = '';
-                    let tech = [];
-
-                    // 제목에서 불필요한 부분 제거
-                    name = name.replace(/^(프로젝트|Project)\s*:?\s*/i, '').trim();
-                    name = name.replace(/^\d+\.\s*/, '').trim(); // 번호 제거
-
-                    // 첫 번째 줄이 제목이 아닌 경우 (내용에서 추출)
-                    if (!name || name.length < 3) {
-                        const contentLines = lines.filter(l =>
-                            l.length > 5 &&
-                            l.length < 100 &&
-                            !l.includes('역할:') &&
-                            !l.includes('기간:') &&
-                            !l.includes('기술:')
-                        );
-                        if (contentLines.length > 0) {
-                            name = contentLines[0].trim();
-                        }
-                    }
-
-                    // 내용 분석
-                    const descriptionLines = [];
-
-                    lines.forEach(line => {
-                        const cleanLine = line.trim();
-
-                        if (cleanLine.includes('역할:') || cleanLine.includes('Role:') || cleanLine.includes('담당:')) {
-                            role = cleanLine.replace(/역할:|Role:|담당:/gi, '').trim();
-                        } else if (cleanLine.includes('기간:') || cleanLine.includes('Period:') || cleanLine.includes('개발 기간:')) {
-                            period = cleanLine.replace(/기간:|Period:|개발 기간:/gi, '').trim();
-                        } else if (cleanLine.includes('기술:') || cleanLine.includes('Tech:') || cleanLine.includes('기술 스택') || cleanLine.includes('사용 기술')) {
-                            const techLine = cleanLine.replace(/기술:|Tech:|기술 스택:|사용 기술:/gi, '').trim();
-                            // 더 다양한 구분자로 분리
-                            tech = techLine.split(/[,、，|·\s·]+/)
-                                .map(t => t.trim())
-                                .filter(t => t.length > 0 && t !== ',' && t !== '·' && t.length < 20);
-                        } else if (cleanLine !== name && cleanLine.length > 15) {
-                            // 설명에 해당하는 내용만 추가
-                            if (!cleanLine.includes('역할:') &&
-                                !cleanLine.includes('기간:') &&
-                                !cleanLine.includes('기술:') &&
-                                !cleanLine.includes('담당:') &&
-                                !cleanLine.includes('사용 기술:')) {
-                                descriptionLines.push(cleanLine);
-                            }
-                        }
-                    });
-
-                    // 설명 정리
-                    description = descriptionLines.join(' ').trim();
-
-                    // 설명이 없으면 전체 내용에서 추출 (이름 제외)
-                    if (!description) {
-                        description = content.replace(name, '').trim();
-                        // 메타 정보 제거
-                        description = description.replace(/역할:.*?\n/gi, '');
-                        description = description.replace(/기간:.*?\n/gi, '');
-                        description = description.replace(/기술:.*?\n/gi, '');
-                        description = description.trim();
-                    }
-
-                    return {
-                        name: name || '프로젝트',
-                        description: description.substring(0, 500) || '프로젝트 설명',
-                        tech: tech.slice(0, 10), // 최대 10개 기술
-                        role: role || '개발자',
-                        period: period || ''
-                    };
-                };
-
-                projects = parseProjects(cleanProjectValue);
-
-                // 중복 제거 및 유효성 검사
-                const uniqueProjects = [];
-                const seenNames = new Set();
-                const seenDescriptions = new Set();
-
-                projects.forEach(project => {
-                    // 유효한 프로젝트인지 확인
-                    const isValidName = project.name &&
-                        project.name.length > 2 &&
-                        project.name !== '프로젝트' &&
-                        !project.name.includes('핵심 프로젝트') &&
-                        !project.name.includes('주요 경험');
-
-                    const isValidDescription = project.description &&
-                        project.description.length > 10 &&
-                        !project.description.includes('프로젝트를 입력해주세요');
-
-                    // 이름이나 설명이 중복되지 않는지 확인
-                    const nameKey = project.name.toLowerCase().trim();
-                    const descKey = project.description.substring(0, 100).toLowerCase().trim();
-
-                    if (isValidName &&
-                        isValidDescription &&
-                        !seenNames.has(nameKey) &&
-                        !seenDescriptions.has(descKey)) {
-
-                        seenNames.add(nameKey);
-                        seenDescriptions.add(descKey);
-                        uniqueProjects.push(project);
-                    }
-                });
-
-                console.log('Parsed projects:', uniqueProjects);
-                return uniqueProjects;
-                
-            case 'education':
-                // 학력 정보 파싱
-                const eduLines = value.split('\n').filter(line => line.trim());
-                const education = eduLines.map(line => {
-                    const match = line.match(/(.+?)\s*·\s*(.+?)\s*\((.+?)\)/);
-                    if (match) {
-                        return {
-                            school: match[1].trim(),
-                            degree: match[2].trim(),
-                            year: match[3].trim()
-                        };
-                    }
-                    return {
-                        school: line.split(' ')[0] || line,
-                        degree: '전공',
-                        year: '기간'
-                    };
-                });
-                console.log('Parsed education:', education);
-                return education;
-                
-            default:
-                return value;
-        }
-    };
-
-    // 편집 저장
-    const saveEdit = () => {
-        if (!editingField) return;
-
-        const updatedData = { ...portfolioData };
-        const parsedValue = parseNaturalLanguage(editingField, editValue);
-        
-        // 파싱된 값을 저장
-        updatedData[editingField] = parsedValue;
-
-        setPortfolioData(updatedData);
-        setMissingInfo(detectMissingInfo(updatedData));
-        setEditingField(null);
-        setEditValue('');
-    };
-
-    // TextBlock 생성 헬퍼 함수
-    const createTextBlock = (text: string, sectionId: string): TextBlock => ({
-        block_id: `block_${Date.now()}_${Math.random()}`,
-        section_id: sectionId,
-        text,
-        origin: 'user_edited' as const,
-        confidence: 1.0,
-        created_at: new Date().toISOString(),
-        created_by: 'user',
-        edit_history: []
-    });
-
-    // 추천 적용 핸들러
-    const handleApplyRecommendation = (recommendation: ContentRecommendation) => {
-        // 현재 편집 중인 섹션에 따라 추천을 적용
-        const updatedData = { ...portfolioData };
-        
-        switch (currentSection) {
-            case 'about':
-                updatedData.about = recommendation.example;
-                break;
-            case 'experience':
-                // 경험 섹션에 추천 예시를 첫 번째 항목으로 추가
-                const newExperience = {
-                    position: '시니어 개발자', // 예시에서 추출하거나 기본값
-                    company: '테크 회사',
-                    duration: '2021-현재',
-                    description: recommendation.example
-                };
-                if (!updatedData.experience || updatedData.experience.length === 0) {
-                    updatedData.experience = [newExperience];
-                } else {
-                    updatedData.experience[0] = { ...updatedData.experience[0], description: recommendation.example };
-                }
-                break;
-            case 'projects':
-                // 프로젝트 섹션에 추천 예시를 첫 번째 항목으로 추가
-                const newProject = {
-                    name: '추천 프로젝트',
-                    description: recommendation.example,
-                    tech: ['React', 'TypeScript'],
-                    role: '개발자'
-                };
-                if (!updatedData.projects || updatedData.projects.length === 0) {
-                    updatedData.projects = [newProject];
-                } else {
-                    updatedData.projects[0] = { ...updatedData.projects[0], description: recommendation.example };
-                }
-                break;
-            case 'skills':
-                // 스킬은 추천 예시에서 기술들을 추출
-                if (recommendation.example.includes(',')) {
-                    updatedData.skills = recommendation.example.split(',').map(s => s.trim());
-                } else {
-                    updatedData.skills = [recommendation.example];
-                }
-                break;
-            case 'education':
-                // 학력은 추천 예시를 그대로 사용
-                const newEducation = {
-                    year: '2015-2019',
-                    school: '대학교',
-                    degree: recommendation.example
-                };
-                if (!updatedData.education || updatedData.education.length === 0) {
-                    updatedData.education = [newEducation];
-                } else {
-                    updatedData.education[0] = { ...updatedData.education[0], degree: recommendation.example };
-                }
-                break;
-        }
-        
-        setPortfolioData(updatedData);
-        setMissingInfo(detectMissingInfo(updatedData));
-    };
-
-    // 섹션 선택 핸들러
-    const handleSectionSelect = (section: string) => {
-        setCurrentSection(section);
-        setShowRecommendations(true);
-    };
-
-    // 최종 저장
-    const handleSave = () => {
-        // portfolioData를 PortfolioDocument 형식으로 변환
-        const updatedDocument: PortfolioDocument = {
-            ...document,
-            sections: [
-                {
-                    section_id: 'header',
-                    section_title: '헤더',
-                    blocks: [
-                        createTextBlock(portfolioData.name || '', 'header'),
-                        createTextBlock(portfolioData.title || '', 'header')
-                    ].filter(block => block.text)
-                },
-                {
-                    section_id: 'contact',
-                    section_title: '연락처',
-                    blocks: [
-                        portfolioData.email ? createTextBlock(`이메일: ${portfolioData.email}`, 'contact') : null,
-                        portfolioData.phone ? createTextBlock(`전화: ${portfolioData.phone}`, 'contact') : null,
-                        portfolioData.github ? createTextBlock(`GitHub: ${portfolioData.github}`, 'contact') : null
-                    ].filter(Boolean) as TextBlock[]
-                },
-                {
-                    section_id: 'about',
-                    section_title: '소개',
-                    blocks: portfolioData.about ? [createTextBlock(portfolioData.about, 'about')] : []
-                },
-                {
-                    section_id: 'skills',
-                    section_title: '기술',
-                    blocks: (portfolioData.skills || []).map((skill: string) => createTextBlock(skill, 'skills'))
-                },
-                {
-                    section_id: 'experience',
-                    section_title: '경험',
-                    blocks: (portfolioData.experience || []).map((exp: any) =>
-                        createTextBlock(`${exp.position}\n${exp.company}\n${exp.duration}\n${exp.description}`, 'experience')
-                    )
-                },
-                {
-                    section_id: 'projects',
-                    section_title: '프로젝트',
-                    blocks: (portfolioData.projects || []).map((project: any) =>
-                        createTextBlock(`${project.name}\n${project.description}`, 'projects')
-                    )
-                },
-                {
-                    section_id: 'education',
-                    section_title: '교육',
-                    blocks: (portfolioData.education || []).map((edu: any) =>
-                        createTextBlock(`${edu.school}\n${edu.degree}\n${edu.year}`, 'education')
-                    )
-                }
-            ].filter(section => section.blocks.length > 0) // 빈 섹션 제거
-        };
-
-        onSave(updatedDocument);
-    };
-
-    const isMissingField = (field: string) => {
-        return missingInfo.some(info => `${info.section}.${info.field}` === field || info.field === field);
+    const renderEditableFields = () => {
+        return editableFields.map((field) => (
+            <div key={field.id} className="bg-white rounded-lg border border-gray-200 p-4 hover:border-gray-300 transition-colors">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {field.label}
+                </label>
+                {field.type === 'textarea' ? (
+                    <textarea
+                        value={field.value}
+                        onChange={(e) => handleFieldEdit(field.id, e.target.value)}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors resize-vertical min-h-[100px]"
+                        rows={4}
+                    />
+                ) : (
+                    <input
+                        type="text"
+                        value={field.value}
+                        onChange={(e) => handleFieldEdit(field.id, e.target.value)}
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors"
+                    />
+                )}
+            </div>
+        ));
     };
 
     if (!portfolioData) {
-        return <div className="flex justify-center items-center h-64">로딩 중...</div>;
+        return (
+            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+                    <p className="text-gray-600">포트폴리오를 분석하고 있습니다...</p>
+                </div>
+            </div>
+        );
     }
 
     return (
         <div className="min-h-screen bg-gray-50">
-            <div className="max-w-7xl mx-auto p-6">
-                {/* 헤더 */}
-                <div className="mb-8">
-                    <div className="flex items-center justify-between mb-4">
+            {/* 헤더 */}
+            <div className="bg-white border-b border-gray-200">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div className="flex items-center justify-between h-16">
                         <div className="flex items-center">
                             <button
                                 onClick={onBack}
-                                className="mr-4 p-2 hover:bg-gray-200 rounded-lg transition-colors"
+                                className="mr-4 p-2 text-gray-400 hover:text-gray-600 transition-colors"
                             >
                                 <ArrowLeftIcon className="w-5 h-5" />
                             </button>
-                            <div>
-                                <h2 className="text-3xl font-bold text-gray-900">상세 편집</h2>
-                                <p className="text-gray-600">포트폴리오의 세부 내용을 수정하고 누락된 정보를 추가하세요</p>
-                            </div>
+                            <h1 className="text-xl font-semibold text-gray-900">포트폴리오 편집</h1>
                         </div>
-                        <div className="flex space-x-3">
+                        <div className="flex items-center space-x-3">
                             {onSkipToNaturalEdit && (
                                 <button
-                                    onClick={() => setShowNaturalEditPrompt(true)}
-                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                    onClick={onSkipToNaturalEdit}
+                                    className="px-4 py-2 text-sm font-medium text-purple-600 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 transition-colors"
                                 >
-                                    자연어 편집으로
+                                    자연어 편집으로 건너뛰기
                                 </button>
                             )}
-                            <button
-                                onClick={async () => {
-                                    // 포트폴리오 데이터 다듬기
-                                    const refinedData = await PortfolioRefinementService.refinePortfolio(portfolioData);
-                                    setPortfolioData(refinedData);
-                                    setMissingInfo(detectMissingInfo(refinedData));
-                                }}
-                                className="px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors flex items-center"
-                            >
-                                <SparklesIcon className="w-4 h-4 mr-2" />
-                                포트폴리오 다듬기
-                            </button>
                             <button
                                 onClick={handleSave}
-                                className="px-6 py-2 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg font-medium hover:from-purple-700 hover:to-pink-700 transition-all duration-200"
+                                className="px-4 py-2 text-sm font-medium text-white bg-purple-600 border border-transparent rounded-lg hover:bg-purple-700 transition-colors flex items-center"
                             >
-                                저장하고 완료
+                                <CheckCircleIcon className="w-4 h-4 mr-2" />
+                                저장
                             </button>
                         </div>
                     </div>
-
-                    {/* 누락 정보 안내 */}
-                    {missingInfo.length > 0 && (
-                        <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 mb-6">
-                            <div className="flex items-start">
-                                <ExclamationTriangleIcon className="w-5 h-5 text-orange-600 mr-2 mt-0.5" />
-                                <div>
-                                    <h3 className="font-medium text-orange-900 mb-1">추가 정보가 필요합니다</h3>
-                                    <p className="text-orange-800 text-sm mb-2">
-                                        아래 정보들을 추가하면 더 완성도 높은 포트폴리오를 만들 수 있습니다:
-                                    </p>
-                                    <ul className="list-disc list-inside text-orange-700 text-sm">
-                                        {missingInfo.map((info, idx) => (
-                                            <li key={idx}>{info.description}</li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    )}
                 </div>
+            </div>
 
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* 왼쪽: 편집 패널 */}
+                    {/* 왼쪽: 편집 인터페이스 */}
                     <div className="space-y-6">
-                        {/* 기본 정보 */}
                         <div className="bg-white rounded-xl border border-gray-200 p-6">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-lg font-bold text-gray-900 flex items-center">
-                                    <InformationCircleIcon className="w-5 h-5 mr-2 text-blue-600" />
-                                    기본 정보
-                                </h3>
-                                <button
-                                    onClick={() => handleSectionSelect('about')}
-                                    className="flex items-center px-3 py-1 text-sm bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition-colors"
-                                >
-                                    <LightBulbIcon className="w-4 h-4 mr-1" />
-                                    작성 팁
-                                </button>
-                            </div>
+                            <h3 className="text-lg font-bold text-gray-900 flex items-center mb-6">
+                                <PencilIcon className="w-5 h-5 mr-2 text-purple-600" />
+                                포트폴리오 편집
+                            </h3>
+
                             <div className="space-y-4">
-                                {/* 이름 */}
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">이름</label>
-                                    {editingField === 'name' ? (
-                                        <div className="flex space-x-2">
-                                            <input
-                                                type="text"
-                                                value={editValue}
-                                                onChange={(e) => setEditValue(e.target.value)}
-                                                className="flex-1 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
-                                            />
-                                            <button onClick={saveEdit} className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                                                <CheckCircleIcon className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <div 
-                                            className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors ${
-                                                isMissingField('name') ? 'border-orange-300 bg-orange-50' : 'border-gray-300'
-                                            }`}
-                                            onClick={() => startEditing('name', portfolioData.name)}
-                                        >
-                                            <span className={isMissingField('name') ? 'text-orange-700' : 'text-gray-900'}>
-                                                {portfolioData?.name && portfolioData.name !== '이름을 입력하세요' ? portfolioData.name : '이름을 입력하세요'}
-                                            </span>
-                                            <PencilIcon className="w-4 h-4 text-gray-400" />
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* 직책 */}
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">직책</label>
-                                    {editingField === 'title' ? (
-                                        <div className="flex space-x-2">
-                                            <input
-                                                type="text"
-                                                value={editValue}
-                                                onChange={(e) => setEditValue(e.target.value)}
-                                                className="flex-1 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
-                                            />
-                                            <button onClick={saveEdit} className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                                                <CheckCircleIcon className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <div 
-                                            className="flex items-center justify-between p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
-                                            onClick={() => startEditing('title', portfolioData.title)}
-                                        >
-                                            <span className="text-gray-900">{portfolioData?.title && portfolioData.title !== '직책을 입력하세요' ? portfolioData.title : '직책을 입력하세요'}</span>
-                                            <PencilIcon className="w-4 h-4 text-gray-400" />
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* 이메일 */}
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">이메일</label>
-                                    {editingField === 'email' ? (
-                                        <div className="flex space-x-2">
-                                            <input
-                                                type="email"
-                                                value={editValue}
-                                                onChange={(e) => setEditValue(e.target.value)}
-                                                className="flex-1 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
-                                            />
-                                            <button onClick={saveEdit} className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                                                <CheckCircleIcon className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <div 
-                                            className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors ${
-                                                isMissingField('email') ? 'border-orange-300 bg-orange-50' : 'border-gray-300'
-                                            }`}
-                                            onClick={() => startEditing('email', portfolioData.email)}
-                                        >
-                                            <span className={isMissingField('email') ? 'text-orange-700' : 'text-gray-900'}>
-                                                {portfolioData.email || '이메일을 입력하세요'}
-                                            </span>
-                                            <PencilIcon className="w-4 h-4 text-gray-400" />
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* GitHub */}
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">GitHub</label>
-                                    {editingField === 'github' ? (
-                                        <div className="flex space-x-2">
-                                            <input
-                                                type="url"
-                                                value={editValue}
-                                                onChange={(e) => setEditValue(e.target.value)}
-                                                className="flex-1 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
-                                            />
-                                            <button onClick={saveEdit} className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                                                <CheckCircleIcon className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <div 
-                                            className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition-colors ${
-                                                isMissingField('github') ? 'border-orange-300 bg-orange-50' : 'border-gray-300'
-                                            }`}
-                                            onClick={() => startEditing('github', portfolioData.github)}
-                                        >
-                                            <span className={isMissingField('github') ? 'text-orange-700' : 'text-gray-900'}>
-                                                {portfolioData.github || 'GitHub 주소를 입력하세요'}
-                                            </span>
-                                            <PencilIcon className="w-4 h-4 text-gray-400" />
-                                        </div>
-                                    )}
-                                </div>
+                                {renderEditableFields()}
                             </div>
-                        </div>
 
-                        {/* 자기소개 */}
-                        <div className="bg-white rounded-xl border border-gray-200 p-6">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-lg font-bold text-gray-900">자기소개</h3>
-                                <button
-                                    onClick={() => handleSectionSelect('about')}
-                                    className="flex items-center px-3 py-1 text-sm bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition-colors"
-                                >
-                                    <LightBulbIcon className="w-4 h-4 mr-1" />
-                                    작성 팁
-                                </button>
-                            </div>
-                            {editingField === 'about' ? (
-                                <div className="space-y-2">
-                                    <textarea
-                                        value={editValue}
-                                        onChange={(e) => setEditValue(e.target.value)}
-                                        className="w-full h-32 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
-                                        placeholder="자신을 소개하는 글을 작성하세요..."
-                                    />
-                                    <button onClick={saveEdit} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                                        저장
-                                    </button>
-                                </div>
-                            ) : (
-                                <div 
-                                    className="p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors min-h-[100px]"
-                                    onClick={() => startEditing('about', portfolioData.about)}
-                                >
-                                    <p className="text-gray-900 whitespace-pre-wrap">
-                                        {formatDisplayValue('about', portfolioData.about)}
-                                    </p>
-                                    <PencilIcon className="w-4 h-4 text-gray-400 float-right mt-2" />
+                            {editableFields.length === 0 && (
+                                <div className="text-center py-8">
+                                    <ExclamationTriangleIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                                    <p className="text-gray-500">편집 가능한 콘텐츠를 찾을 수 없습니다.</p>
+                                    <p className="text-sm text-gray-400 mt-1">HTML 데이터를 확인해주세요.</p>
                                 </div>
                             )}
                         </div>
 
-                        {/* 경력 */}
-                        <div className="bg-white rounded-xl border border-gray-200 p-6">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-lg font-bold text-gray-900">경력</h3>
-                                <button
-                                    onClick={() => handleSectionSelect('experience')}
-                                    className="flex items-center px-3 py-1 text-sm bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition-colors"
-                                >
-                                    <LightBulbIcon className="w-4 h-4 mr-1" />
-                                    작성 팁
-                                </button>
-                            </div>
-                            {editingField === 'experience' ? (
-                                <div className="space-y-2">
-                                    <textarea
-                                        value={editValue}
-                                        onChange={(e) => setEditValue(e.target.value)}
-                                        className="w-full h-32 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
-                                        placeholder="경력을 자연어로 입력하세요.&#10;예시: 백엔드 개발자 · 네이버 (2022-2024)&#10;Spring Boot와 MySQL을 활용한 웹 서비스 개발"
-                                    />
-                                    <button onClick={saveEdit} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                                        저장
-                                    </button>
-                                </div>
-                            ) : (
-                                <div 
-                                    className="p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors min-h-[100px]"
-                                    onClick={() => startEditing('experience', portfolioData.experience)}
-                                >
-                                    <p className="text-gray-900 whitespace-pre-wrap">
-                                        {formatDisplayValue('experience', portfolioData.experience)}
-                                    </p>
-                                    <PencilIcon className="w-4 h-4 text-gray-400 float-right mt-2" />
-                                </div>
-                            )}
-                        </div>
-
-                        {/* 프로젝트 */}
-                        <div className="bg-white rounded-xl border border-gray-200 p-6">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-lg font-bold text-gray-900">프로젝트</h3>
-                                <div className="flex space-x-2">
-                                    <button
-                                        onClick={() => {
-                                            const newProject = {
-                                                name: '새 프로젝트',
-                                                description: '프로젝트 설명을 입력하세요',
-                                                tech: [],
-                                                role: '개발자',
-                                                period: '기간'
-                                            };
-                                            const updatedProjects = [...(portfolioData.projects || []), newProject];
-                                            setPortfolioData({...portfolioData, projects: updatedProjects});
-                                        }}
-                                        className="flex items-center px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
-                                    >
-                                        <span className="text-lg mr-1">+</span>
-                                        프로젝트 추가
-                                    </button>
-                                    <button
-                                        onClick={() => handleSectionSelect('projects')}
-                                        className="flex items-center px-3 py-1 text-sm bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition-colors"
-                                    >
-                                        <LightBulbIcon className="w-4 h-4 mr-1" />
-                                        작성 팁
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* 프로젝트 목록 - 개별 편집 가능 */}
-                            <div className="space-y-4">
-                                {(portfolioData.projects || []).length === 0 ? (
-                                    <div className="text-center py-8 text-gray-500">
-                                        프로젝트를 추가해주세요
+                        {/* 누락된 정보 알림 */}
+                        {missingInfo.length > 0 && (
+                            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                                <div className="flex items-start">
+                                    <InformationCircleIcon className="w-5 h-5 text-amber-600 mt-0.5 mr-3 flex-shrink-0" />
+                                    <div>
+                                        <h4 className="text-sm font-medium text-amber-800 mb-2">완성도를 높이기 위한 제안</h4>
+                                        <ul className="text-sm text-amber-700 space-y-1">
+                                            {missingInfo.slice(0, 3).map((info, idx) => (
+                                                <li key={idx} className="flex items-start">
+                                                    <span className="mr-2">•</span>
+                                                    <span>{info.description}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
                                     </div>
-                                ) : (
-                                    (portfolioData.projects || []).map((project: any, index: number) => (
-                                        <div key={index} className="border border-gray-200 rounded-lg p-4 space-y-3">
-                                            {/* 프로젝트명 */}
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">프로젝트명</label>
-                                                {editingField === `project-name-${index}` ? (
-                                                    <div className="flex space-x-2">
-                                                        <input
-                                                            type="text"
-                                                            value={editValue}
-                                                            onChange={(e) => setEditValue(e.target.value)}
-                                                            className="flex-1 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600"
-                                                        />
-                                                        <button
-                                                            onClick={() => {
-                                                                const updatedProjects = [...portfolioData.projects];
-                                                                updatedProjects[index] = {...updatedProjects[index], name: editValue};
-                                                                setPortfolioData({...portfolioData, projects: updatedProjects});
-                                                                setEditingField(null);
-                                                                setEditValue('');
-                                                            }}
-                                                            className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                                                        >
-                                                            <CheckCircleIcon className="w-4 h-4" />
-                                                        </button>
-                                                    </div>
-                                                ) : (
-                                                    <div
-                                                        className="flex items-center justify-between p-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50"
-                                                        onClick={() => {
-                                                            setEditingField(`project-name-${index}`);
-                                                            setEditValue(project.name || '');
-                                                        }}
-                                                    >
-                                                        <span className="font-medium">{project.name || '프로젝트명'}</span>
-                                                        <PencilIcon className="w-4 h-4 text-gray-400" />
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {/* 역할 & 기간 */}
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-1">역할</label>
-                                                    {editingField === `project-role-${index}` ? (
-                                                        <div className="flex space-x-2">
-                                                            <input
-                                                                type="text"
-                                                                value={editValue}
-                                                                onChange={(e) => setEditValue(e.target.value)}
-                                                                className="flex-1 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600"
-                                                            />
-                                                            <button
-                                                                onClick={() => {
-                                                                    const updatedProjects = [...portfolioData.projects];
-                                                                    updatedProjects[index] = {...updatedProjects[index], role: editValue};
-                                                                    setPortfolioData({...portfolioData, projects: updatedProjects});
-                                                                    setEditingField(null);
-                                                                    setEditValue('');
-                                                                }}
-                                                                className="px-2 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                                                            >
-                                                                <CheckCircleIcon className="w-4 h-4" />
-                                                            </button>
-                                                        </div>
-                                                    ) : (
-                                                        <div
-                                                            className="flex items-center justify-between p-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50"
-                                                            onClick={() => {
-                                                                setEditingField(`project-role-${index}`);
-                                                                setEditValue(project.role || '');
-                                                            }}
-                                                        >
-                                                            <span className="text-sm">{project.role || '역할'}</span>
-                                                            <PencilIcon className="w-3 h-3 text-gray-400" />
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-1">기간</label>
-                                                    {editingField === `project-period-${index}` ? (
-                                                        <div className="flex space-x-2">
-                                                            <input
-                                                                type="text"
-                                                                value={editValue}
-                                                                onChange={(e) => setEditValue(e.target.value)}
-                                                                className="flex-1 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600"
-                                                                placeholder="2023.01 - 2023.06"
-                                                            />
-                                                            <button
-                                                                onClick={() => {
-                                                                    const updatedProjects = [...portfolioData.projects];
-                                                                    updatedProjects[index] = {...updatedProjects[index], period: editValue};
-                                                                    setPortfolioData({...portfolioData, projects: updatedProjects});
-                                                                    setEditingField(null);
-                                                                    setEditValue('');
-                                                                }}
-                                                                className="px-2 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                                                            >
-                                                                <CheckCircleIcon className="w-4 h-4" />
-                                                            </button>
-                                                        </div>
-                                                    ) : (
-                                                        <div
-                                                            className="flex items-center justify-between p-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50"
-                                                            onClick={() => {
-                                                                setEditingField(`project-period-${index}`);
-                                                                setEditValue(project.period || '');
-                                                            }}
-                                                        >
-                                                            <span className="text-sm">{project.period || '기간'}</span>
-                                                            <PencilIcon className="w-3 h-3 text-gray-400" />
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            {/* 설명 */}
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">프로젝트 설명</label>
-                                                {editingField === `project-desc-${index}` ? (
-                                                    <div className="space-y-2">
-                                                        <textarea
-                                                            value={editValue}
-                                                            onChange={(e) => setEditValue(e.target.value)}
-                                                            className="w-full h-24 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600"
-                                                            placeholder="프로젝트에 대한 상세 설명을 입력하세요"
-                                                        />
-                                                        <button
-                                                            onClick={() => {
-                                                                const updatedProjects = [...portfolioData.projects];
-                                                                updatedProjects[index] = {...updatedProjects[index], description: editValue};
-                                                                setPortfolioData({...portfolioData, projects: updatedProjects});
-                                                                setEditingField(null);
-                                                                setEditValue('');
-                                                            }}
-                                                            className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                                                        >
-                                                            저장
-                                                        </button>
-                                                    </div>
-                                                ) : (
-                                                    <div
-                                                        className="p-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 min-h-[60px]"
-                                                        onClick={() => {
-                                                            setEditingField(`project-desc-${index}`);
-                                                            setEditValue(project.description || '');
-                                                        }}
-                                                    >
-                                                        <p className="text-sm text-gray-700">
-                                                            {project.description || '프로젝트 설명을 입력하세요'}
-                                                        </p>
-                                                        <PencilIcon className="w-3 h-3 text-gray-400 float-right mt-1" />
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {/* 기술 스택 */}
-                                            <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-1">사용 기술</label>
-                                                {editingField === `project-tech-${index}` ? (
-                                                    <div className="space-y-2">
-                                                        <input
-                                                            type="text"
-                                                            value={editValue}
-                                                            onChange={(e) => setEditValue(e.target.value)}
-                                                            className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600"
-                                                            placeholder="React, TypeScript, Node.js (쉼표로 구분)"
-                                                        />
-                                                        <button
-                                                            onClick={() => {
-                                                                const techArray = editValue.split(',').map(t => t.trim()).filter(t => t);
-                                                                const updatedProjects = [...portfolioData.projects];
-                                                                updatedProjects[index] = {...updatedProjects[index], tech: techArray};
-                                                                setPortfolioData({...portfolioData, projects: updatedProjects});
-                                                                setEditingField(null);
-                                                                setEditValue('');
-                                                            }}
-                                                            className="px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-                                                        >
-                                                            저장
-                                                        </button>
-                                                    </div>
-                                                ) : (
-                                                    <div
-                                                        className="p-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50"
-                                                        onClick={() => {
-                                                            setEditingField(`project-tech-${index}`);
-                                                            setEditValue((project.tech || []).join(', '));
-                                                        }}
-                                                    >
-                                                        <div className="flex flex-wrap gap-1">
-                                                            {(project.tech || []).length > 0 ? (
-                                                                project.tech.map((tech: string, idx: number) => (
-                                                                    <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">
-                                                                        {tech}
-                                                                    </span>
-                                                                ))
-                                                            ) : (
-                                                                <span className="text-sm text-gray-500">기술 스택을 추가하세요</span>
-                                                            )}
-                                                        </div>
-                                                        <PencilIcon className="w-3 h-3 text-gray-400 float-right mt-1" />
-                                                    </div>
-                                                )}
-                                            </div>
-
-                                            {/* 삭제 버튼 */}
-                                            <div className="flex justify-end">
-                                                <button
-                                                    onClick={() => {
-                                                        const updatedProjects = portfolioData.projects.filter((_: any, i: number) => i !== index);
-                                                        setPortfolioData({...portfolioData, projects: updatedProjects});
-                                                    }}
-                                                    className="text-sm text-red-600 hover:text-red-800"
-                                                >
-                                                    프로젝트 삭제
-                                                </button>
-                                            </div>
-                                        </div>
-                                    ))
-                                )}
+                                </div>
                             </div>
-                        </div>
-
-                        {/* 기술 스킬 */}
-                        <div className="bg-white rounded-xl border border-gray-200 p-6">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-lg font-bold text-gray-900">기술 스킬</h3>
-                                <button
-                                    onClick={() => handleSectionSelect('skills')}
-                                    className="flex items-center px-3 py-1 text-sm bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition-colors"
-                                >
-                                    <LightBulbIcon className="w-4 h-4 mr-1" />
-                                    작성 팁
-                                </button>
-                            </div>
-                            {editingField === 'skills' ? (
-                                <div className="space-y-2">
-                                    <textarea
-                                        value={editValue}
-                                        onChange={(e) => setEditValue(e.target.value)}
-                                        className="w-full h-32 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
-                                        placeholder="보유 기술을 입력하세요.&#10;예시: Spring Boot, Java, MySQL, Redis, JavaScript, Node.js, Express, MongoDB, WebSocket, GitHub Actions, AWS"
-                                    />
-                                    <button onClick={saveEdit} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                                        저장
-                                    </button>
-                                </div>
-                            ) : (
-                                <div 
-                                    className="p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors min-h-[100px]"
-                                    onClick={() => startEditing('skills', portfolioData.skills)}
-                                >
-                                    <p className="text-gray-900 whitespace-pre-wrap">
-                                        {formatDisplayValue('skills', portfolioData.skills)}
-                                    </p>
-                                    <PencilIcon className="w-4 h-4 text-gray-400 float-right mt-2" />
-                                </div>
-                            )}
-                        </div>
-
-                        {/* 학력 */}
-                        <div className="bg-white rounded-xl border border-gray-200 p-6">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-lg font-bold text-gray-900">학력</h3>
-                                <button
-                                    onClick={() => handleSectionSelect('education')}
-                                    className="flex items-center px-3 py-1 text-sm bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition-colors"
-                                >
-                                    <LightBulbIcon className="w-4 h-4 mr-1" />
-                                    작성 팁
-                                </button>
-                            </div>
-                            {editingField === 'education' ? (
-                                <div className="space-y-2">
-                                    <textarea
-                                        value={editValue}
-                                        onChange={(e) => setEditValue(e.target.value)}
-                                        className="w-full h-32 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent"
-                                        placeholder="학력을 입력하세요.&#10;예시: OO대학교 · 컴퓨터공학 전공 (2020-2024)"
-                                    />
-                                    <button onClick={saveEdit} className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
-                                        저장
-                                    </button>
-                                </div>
-                            ) : (
-                                <div 
-                                    className="p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors min-h-[100px]"
-                                    onClick={() => startEditing('education', portfolioData.education)}
-                                >
-                                    <p className="text-gray-900 whitespace-pre-wrap">
-                                        {formatDisplayValue('education', portfolioData.education)}
-                                    </p>
-                                    <PencilIcon className="w-4 h-4 text-gray-400 float-right mt-2" />
-                                </div>
-                            )}
-                        </div>
+                        )}
                     </div>
 
-                    {/* 오른쪽: 미리보기 */}
+                    {/* 오른쪽: HTML 미리보기 */}
                     <div className="bg-white rounded-xl border border-gray-200 p-6">
                         <div className="flex items-center justify-between mb-4">
                             <h3 className="text-lg font-bold text-gray-900 flex items-center">
@@ -1771,189 +441,32 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                                 </motion.div>
                             )}
                         </AnimatePresence>
-                        
+
+                        {/* HTML 미리보기 */}
                         <div className="border border-gray-200 rounded-lg overflow-auto max-h-[600px] bg-white">
-                            {portfolioTemplates[currentTemplate] ? (
-                                <iframe 
-                                    srcDoc={portfolioTemplates[currentTemplate].generateHTML(portfolioData)}
-                                    className="w-full h-[600px] border-0"
-                                    title="Portfolio Preview"
-                                    style={{ transform: 'scale(0.8)', transformOrigin: 'top left', width: '125%', height: '750px' }}
-                                />
-                            ) : (
-                                <div className="p-6 min-h-[400px]">
-                                    <div className="space-y-6">
-                                        {/* 헤더 정보 */}
-                                        <div className="text-center border-b pb-4">
-                                            <h1 className="text-2xl font-bold text-gray-900">{htmlToNaturalLanguage(portfolioData?.name) || '이름'}</h1>
-                                            <p className="text-lg text-gray-600 mt-1">{htmlToNaturalLanguage(portfolioData?.title) || '직책'}</p>
-                                            <div className="flex justify-center gap-4 mt-2 text-sm text-gray-500">
-                                                {portfolioData?.email && <span>{htmlToNaturalLanguage(portfolioData.email)}</span>}
-                                                {portfolioData?.phone && <span>{htmlToNaturalLanguage(portfolioData.phone)}</span>}
-                                            </div>
-                                        </div>
-                                        
-                                        {/* 자기소개 */}
-                                        <div>
-                                            <h2 className="text-xl font-semibold text-gray-900 mb-3">소개</h2>
-                                            <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                                                {htmlToNaturalLanguage(portfolioData?.about) || '자기소개를 작성해주세요'}
-                                            </p>
-                                        </div>
-                                        
-                                        {/* 기술 스킬 */}
-                                        <div>
-                                            <h2 className="text-xl font-semibold text-gray-900 mb-3">기술 스킬</h2>
-                                            <div className="flex flex-wrap gap-2">
-                                                {(portfolioData?.skills || []).map((skill: string, idx: number) => (
-                                                    <span key={idx} className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
-                                                        {htmlToNaturalLanguage(skill)}
-                                                    </span>
-                                                ))}
-                                            </div>
-                                        </div>
-                                        
-                                        {/* 프로젝트 */}
-                                        <div>
-                                            <h2 className="text-xl font-semibold text-gray-900 mb-3">프로젝트</h2>
-                                            <div className="space-y-4">
-                                                {(portfolioData?.projects || []).map((project: any, idx: number) => (
-                                                    <div key={idx} className="border-l-4 border-blue-500 pl-4">
-                                                        <h3 className="font-semibold text-gray-900">{htmlToNaturalLanguage(project.name)}</h3>
-                                                        <p className="text-gray-600 mt-1 whitespace-pre-wrap">{htmlToNaturalLanguage(project.description)}</p>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                        
-                                        {/* 경력 */}
-                                        <div>
-                                            <h2 className="text-xl font-semibold text-gray-900 mb-3">경력</h2>
-                                            <div className="space-y-4">
-                                                {(portfolioData?.experience || []).map((exp: any, idx: number) => (
-                                                    <div key={idx} className="border-l-4 border-green-500 pl-4">
-                                                        <h3 className="font-semibold text-gray-900">{htmlToNaturalLanguage(exp.position)}</h3>
-                                                        <p className="text-gray-600">{htmlToNaturalLanguage(exp.company)} • {htmlToNaturalLanguage(exp.duration)}</p>
-                                                        <p className="text-gray-700 mt-1 whitespace-pre-wrap">{htmlToNaturalLanguage(exp.description)}</p>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                        
-                                        {/* 교육 */}
-                                        <div>
-                                            <h2 className="text-xl font-semibold text-gray-900 mb-3">교육</h2>
-                                            <div className="space-y-3">
-                                                {(portfolioData?.education || []).map((edu: any, idx: number) => (
-                                                    <div key={idx}>
-                                                        <h3 className="font-semibold text-gray-900">{htmlToNaturalLanguage(edu.school)}</h3>
-                                                        <p className="text-gray-600">{htmlToNaturalLanguage(edu.degree)} • {htmlToNaturalLanguage(edu.year)}</p>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
+                            <iframe
+                                srcDoc={currentHtml}
+                                className="w-full h-[600px] border-0"
+                                title="Portfolio Preview"
+                                style={{ transform: 'scale(0.8)', transformOrigin: 'top left', width: '125%', height: '750px' }}
+                            />
                         </div>
                     </div>
                 </div>
-
-                {/* 콘텐츠 추천 패널 */}
-                <AnimatePresence>
-                    {showRecommendations && (
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-                            onClick={() => setShowRecommendations(false)}
-                        >
-                            <motion.div
-                                initial={{ scale: 0.9, opacity: 0 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                                exit={{ scale: 0.9, opacity: 0 }}
-                                className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden"
-                                onClick={(e) => e.stopPropagation()}
-                            >
-                                <div className="p-6 border-b border-gray-200 flex items-center justify-between">
-                                    <h2 className="text-xl font-bold text-gray-900">콘텐츠 작성 가이드</h2>
-                                    <button
-                                        onClick={() => setShowRecommendations(false)}
-                                        className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-                                    >
-                                        ✕
-                                    </button>
-                                </div>
-                                <div className="p-6 overflow-y-auto max-h-[calc(90vh-100px)]">
-                                    <ContentRecommendationPanel
-                                        sectionType={currentSection}
-                                        sectionTitle={
-                                            currentSection === 'about' ? '자기소개' :
-                                            currentSection === 'experience' ? '경력' :
-                                            currentSection === 'projects' ? '프로젝트' :
-                                            currentSection === 'skills' ? '기술' :
-                                            currentSection === 'education' ? '학력' : '섹션'
-                                        }
-                                        onApplyRecommendation={(rec) => {
-                                            handleApplyRecommendation(rec);
-                                            setShowRecommendations(false);
-                                        }}
-                                        isVisible={true}
-                                    />
-                                </div>
-                            </motion.div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-
-                {/* 자연어 편집 프롬프트 모달 */}
-                <AnimatePresence>
-                    {showNaturalEditPrompt && (
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-                            onClick={() => setShowNaturalEditPrompt(false)}
-                        >
-                            <motion.div
-                                initial={{ scale: 0.9, opacity: 0 }}
-                                animate={{ scale: 1, opacity: 1 }}
-                                exit={{ scale: 0.9, opacity: 0 }}
-                                className="bg-white rounded-xl p-6 max-w-md w-full"
-                                onClick={(e) => e.stopPropagation()}
-                            >
-                                <div className="flex items-center mb-4">
-                                    <SparklesIcon className="w-6 h-6 text-purple-600 mr-2" />
-                                    <h3 className="text-lg font-bold text-gray-900">자연어 편집으로 전환</h3>
-                                </div>
-                                <p className="text-gray-600 mb-6">
-                                    AI와 대화하면서 포트폴리오를 더 자연스럽게 개선할 수 있습니다. 
-                                    현재까지의 편집 내용이 저장됩니다.
-                                </p>
-                                <div className="flex space-x-3">
-                                    <button
-                                        onClick={() => {
-                                            handleSave();
-                                            onSkipToNaturalEdit?.();
-                                        }}
-                                        className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-                                    >
-                                        자연어 편집으로
-                                    </button>
-                                    <button
-                                        onClick={() => setShowNaturalEditPrompt(false)}
-                                        className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-                                    >
-                                        계속 편집
-                                    </button>
-                                </div>
-                            </motion.div>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
             </div>
+
+            {/* 추천 사항 패널 */}
+            {showRecommendations && (
+                <ContentRecommendationPanel
+                    sectionType="about"
+                    sectionTitle="포트폴리오 추천사항"
+                    onApplyRecommendation={(recommendation: ContentRecommendation) => {
+                        console.log(`추천 적용:`, recommendation);
+                        setShowRecommendations(false);
+                    }}
+                    isVisible={showRecommendations}
+                />
+            )}
         </div>
     );
 };

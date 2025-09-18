@@ -593,18 +593,24 @@ class OneClickGenerator {
     </div>
     
     <script>
-        // Trust badge animation
-        document.addEventListener('DOMContentLoaded', function() {
-            const trustBadge = document.querySelector('.trust-badge');
-            if (trustBadge) {
-                setTimeout(() => {
-                    trustBadge.style.transform = 'scale(1.05)';
-                    setTimeout(() => {
-                        trustBadge.style.transform = 'scale(1)';
-                    }, 200);
-                }, 1000);
-            }
-        });
+        // Trust badge animation with null checks
+        if (typeof document !== 'undefined' && document.addEventListener) {
+            document.addEventListener('DOMContentLoaded', function() {
+                try {
+                    const trustBadge = document.querySelector('.trust-badge');
+                    if (trustBadge && trustBadge.style) {
+                        setTimeout(() => {
+                            trustBadge.style.transform = 'scale(1.05)';
+                            setTimeout(() => {
+                                trustBadge.style.transform = 'scale(1)';
+                            }, 200);
+                        }, 1000);
+                    }
+                } catch (error) {
+                    console.warn('Trust badge animation failed:', error);
+                }
+            });
+        }
     </script>
 </body>
 </html>`,
