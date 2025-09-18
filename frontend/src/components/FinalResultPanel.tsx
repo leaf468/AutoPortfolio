@@ -11,6 +11,7 @@ import {
   SparklesIcon,
   ArrowPathIcon
 } from '@heroicons/react/24/outline';
+import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
 import { GenerationResult } from '../services/oneClickGenerator';
 import { BoostResult } from '../services/interactiveBooster';
 import { FeedbackResult } from '../services/userFeedbackService';
@@ -35,6 +36,23 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
 }) => {
   const [showPreview, setShowPreview] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [userRating, setUserRating] = useState<number>(0);
+  const [hoverRating, setHoverRating] = useState<number>(0);
+  const [ratingSubmitted, setRatingSubmitted] = useState(false);
+
+  // 기존 평가 불러오기
+  useEffect(() => {
+    try {
+      const savedRating = localStorage.getItem(`portfolio_rating_${finalResult.id}`);
+      if (savedRating) {
+        const ratingData = JSON.parse(savedRating);
+        setUserRating(ratingData.rating);
+        setRatingSubmitted(true);
+      }
+    } catch (error) {
+      console.error('기존 평가 불러오기 실패:', error);
+    }
+  }, [finalResult.id]);
 
   // 선택한 템플릿을 사용해서 실제 HTML 생성
   const generateTemplatedHTML = () => {
@@ -191,6 +209,35 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
     }
   };
 
+  // 별점 평가 핸들러
+  const handleRating = (rating: number) => {
+    setUserRating(rating);
+    setRatingSubmitted(true);
+
+    // 평가 데이터 저장 (로컬 스토리지 또는 서버)
+    const ratingData = {
+      portfolioId: finalResult.id,
+      rating: rating,
+      timestamp: new Date().toISOString(),
+      template: selectedTemplate
+    };
+
+    try {
+      localStorage.setItem(`portfolio_rating_${finalResult.id}`, JSON.stringify(ratingData));
+      console.log('사용자 평가 저장됨:', ratingData);
+    } catch (error) {
+      console.error('평가 저장 실패:', error);
+    }
+  };
+
+  const handleRatingHover = (rating: number) => {
+    setHoverRating(rating);
+  };
+
+  const handleRatingLeave = () => {
+    setHoverRating(0);
+  };
+
   const handleShare = async () => {
     if (navigator.share) {
       try {
@@ -291,6 +338,72 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                   <strong className="text-gray-900 capitalize">{selectedTemplate}</strong>
                 </div>
               </div>
+            </div>
+
+            {/* 사용자 만족도 평가 */}
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+              <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                <StarIcon className="w-5 h-5 mr-2 text-yellow-600" />
+                만족도 평가
+              </h3>
+
+              {!ratingSubmitted ? (
+                <div className="text-center">
+                  <p className="text-sm text-gray-600 mb-4">
+                    생성된 포트폴리오에 대한 만족도를 평가해주세요
+                  </p>
+
+                  <div className="flex justify-center space-x-1 mb-4">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        onClick={() => handleRating(star)}
+                        onMouseEnter={() => handleRatingHover(star)}
+                        onMouseLeave={handleRatingLeave}
+                        className="p-1 transition-transform hover:scale-110 focus:outline-none"
+                      >
+                        {star <= (hoverRating || userRating) ? (
+                          <StarIconSolid className="w-8 h-8 text-yellow-400" />
+                        ) : (
+                          <StarIcon className="w-8 h-8 text-gray-300 hover:text-yellow-400" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+
+                  <p className="text-xs text-gray-500">
+                    {hoverRating === 1 && "매우 불만족"}
+                    {hoverRating === 2 && "불만족"}
+                    {hoverRating === 3 && "보통"}
+                    {hoverRating === 4 && "만족"}
+                    {hoverRating === 5 && "매우 만족"}
+                    {hoverRating === 0 && "별점을 클릭해주세요"}
+                  </p>
+                </div>
+              ) : (
+                <div className="text-center">
+                  <div className="flex justify-center space-x-1 mb-2">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <StarIconSolid
+                        key={star}
+                        className={`w-6 h-6 ${
+                          star <= userRating ? 'text-yellow-400' : 'text-gray-300'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <p className="text-sm font-medium text-gray-900">
+                    평가해주셔서 감사합니다!
+                  </p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {userRating === 1 && "소중한 의견 감사합니다"}
+                    {userRating === 2 && "더 나은 서비스를 위해 노력하겠습니다"}
+                    {userRating === 3 && "의견을 반영하여 개선하겠습니다"}
+                    {userRating === 4 && "만족스러운 결과를 제공할 수 있어 기쁩니다"}
+                    {userRating === 5 && "최고의 평가 감사합니다!"}
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* AI 개선 효과 */}
