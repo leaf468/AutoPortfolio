@@ -286,12 +286,6 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
     }
   };
 
-  const getTotalImprovement = () => {
-    let total = 0;
-    if (boostResult) total += boostResult.improvementScore;
-    if (feedbackResult) total += feedbackResult.improvementScore;
-    return total;
-  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -321,33 +315,6 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2 }}
           >
-            {/* 품질 점수 */}
-            <div className="bg-white rounded-xl border border-gray-200 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center">
-                  <div className="p-2 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-lg mr-3">
-                    <StarIcon className="w-5 h-5 text-white" />
-                  </div>
-                  <h3 className="text-lg font-bold text-gray-900">품질 점수</h3>
-                </div>
-              </div>
-              
-              <div className="text-center">
-                <div className="text-4xl font-bold text-purple-600 mb-2">
-                  {finalResult.qualityScore}
-                </div>
-                <div className="text-sm text-gray-600">/ 100점</div>
-                <div className="text-sm mt-2 text-green-600">
-                  {finalResult.qualityScore >= 90 ? '최고급' : finalResult.qualityScore >= 80 ? '우수' : '양호'}
-                </div>
-              </div>
-
-              {getTotalImprovement() > 0 && (
-                <div className="mt-4 text-sm text-green-600 font-medium text-center">
-                  총 개선: +{getTotalImprovement()}점
-                </div>
-              )}
-            </div>
 
             {/* 통계 정보 */}
             <div className="bg-white rounded-xl border border-gray-200 p-6">
