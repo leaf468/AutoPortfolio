@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 import {
   CheckCircleIcon,
   DocumentArrowDownIcon,
@@ -38,6 +40,8 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
   const [userRating, setUserRating] = useState<number>(0);
   const [hoverRating, setHoverRating] = useState<number>(0);
   const [ratingSubmitted, setRatingSubmitted] = useState(false);
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+  const portfolioRef = useRef<HTMLDivElement>(null);
 
   // 기존 평가 불러오기
   useEffect(() => {
@@ -88,18 +92,70 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
     }
   };
 
-  const handleDownload = (format?: string) => {
-    if (finalResult) {
-      const content = generateTemplatedHTML();
-      const blob = new Blob([content], { 
-        type: format === 'html' ? 'text/html' : 'text/plain' 
+  const handleDownloadPDF = async () => {
+    if (!portfolioRef.current || isGeneratingPDF) return;
+
+    setIsGeneratingPDF(true);
+
+    try {
+      // 미리보기 모드를 활성화하여 전체 콘텐츠가 보이도록 함
+      const wasPreviewOpen = showPreview;
+      if (!wasPreviewOpen) {
+        setShowPreview(true);
+        // DOM 업데이트를 위해 잠시 대기
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+
+      const canvas = await html2canvas(portfolioRef.current, {
+        scale: 2, // 고해상도를 위해 스케일 증가
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        width: portfolioRef.current.scrollWidth,
+        height: portfolioRef.current.scrollHeight,
+        scrollX: 0,
+        scrollY: 0
       });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `portfolio-${finalResult.id}.${format || 'html'}`;
-      link.click();
-      URL.revokeObjectURL(url);
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const imgWidth = 210; // A4 width in mm
+      const pageHeight = 297; // A4 height in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+
+      let position = 0;
+
+      // 첫 페이지 추가
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      // 여러 페이지가 필요한 경우 추가 페이지 생성
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      // PDF 다운로드
+      pdf.save(`portfolio-${finalResult.id}.pdf`);
+
+      // 미리보기 상태 복원
+      if (!wasPreviewOpen) {
+        setShowPreview(false);
+      }
+
+    } catch (error) {
+      console.error('PDF 생성 실패:', error);
+      alert('PDF 생성에 실패했습니다.');
+    } finally {
+      setIsGeneratingPDF(false);
     }
   };
 
@@ -338,11 +394,12 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                 </button>
                 
                 <button
-                  onClick={() => handleDownload('html')}
+                  onClick={handleDownloadPDF}
+                  disabled={isGeneratingPDF}
                   className="group flex items-center justify-center p-6 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-medium hover:from-green-700 hover:to-emerald-700 transition-all duration-200"
                 >
                   <DocumentArrowDownIcon className="w-6 h-6 mr-2" />
-                  다운로드
+{isGeneratingPDF ? 'PDF 생성 중...' : 'PDF 다운로드'}
                 </button>
               </div>
 
@@ -457,7 +514,8 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                 </div>
                 
                 <div className="p-8 bg-white overflow-auto max-h-[calc(90vh-140px)]">
-                  <div 
+                  <div
+                    ref={portfolioRef}
                     dangerouslySetInnerHTML={{ __html: generateTemplatedHTML() }}
                     className="portfolio-preview mx-auto"
                     style={{ maxWidth: '900px' }}
@@ -466,10 +524,11 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                 
                 <div className="bg-gray-50 p-4 border-t flex justify-center space-x-3">
                   <button
-                    onClick={() => handleDownload('html')}
+                    onClick={handleDownloadPDF}
+                  disabled={isGeneratingPDF}
                     className="px-6 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-semibold"
                   >
-                    다운로드
+  {isGeneratingPDF ? 'PDF 생성 중...' : 'PDF 다운로드'}
                   </button>
                   <button
                     onClick={() => setShowPreview(false)}
