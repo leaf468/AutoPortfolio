@@ -590,8 +590,8 @@ export const jamesTemplate: PortfolioTemplate = {
 // Template 2: Geon Lee - Professional Grid Layout
 export const geonTemplate: PortfolioTemplate = {
     id: 'geon-professional',
-    name: '프로페셔널',
-    description: '전문적이고 구조화된 그리드 레이아웃',
+    name: '기업형',
+    description: '기업 카드 디자인과 깔끔한 그리드 레이아웃',
     thumbnail: '/templates/geon.png',
     author: 'Geon Lee',
     designSystem: {
@@ -1014,8 +1014,8 @@ export const geonTemplate: PortfolioTemplate = {
 // Template 3: Eunseong - Colorful Cards
 export const eunseongTemplate: PortfolioTemplate = {
     id: 'eunseong-colorful',
-    name: '컬러풀',
-    description: '컬러풀하고 활기찬 카드 레이아웃',
+    name: '활기찬',
+    description: '하늘색 배경과 이모지 아이콘의 컬러풀 레이아웃',
     thumbnail: '/templates/eunseong.png',
     author: 'Eunseong',
     designSystem: {
@@ -1493,8 +1493,8 @@ export const eunseongTemplate: PortfolioTemplate = {
 // Template 4: IU Style - Elegant and Modern
 export const iuTemplate: PortfolioTemplate = {
     id: 'iu-elegant',
-    name: '엘레간트',
-    description: '우아하고 모던한 미니멀 디자인',
+    name: '우아한',
+    description: '보라색 그라데이션과 우아한 레이아웃',
     thumbnail: '/templates/iu.png',
     author: 'IU Style',
     designSystem: {

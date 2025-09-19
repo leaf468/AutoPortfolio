@@ -7,7 +7,6 @@ import {
   DocumentArrowDownIcon,
   EyeIcon,
   ShareIcon,
-  ClipboardDocumentIcon,
   StarIcon,
   ChartBarIcon,
   SparklesIcon,
@@ -17,6 +16,7 @@ import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid';
 import { GenerationResult } from '../services/oneClickGenerator';
 import { BoostResult } from '../services/interactiveBooster';
 import { FeedbackResult } from '../services/userFeedbackService';
+import { portfolioTemplates } from '../templates/portfolioTemplates';
 
 type TemplateType = 'james' | 'geon' | 'eunseong' | 'iu';
 
@@ -36,7 +36,6 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
   onReset
 }) => {
   const [showPreview, setShowPreview] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [userRating, setUserRating] = useState<number>(0);
   const [hoverRating, setHoverRating] = useState<number>(0);
   const [ratingSubmitted, setRatingSubmitted] = useState(false);
@@ -58,47 +57,39 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
   }, [finalResult.id]);
 
 
-  // 선택한 템플릿을 사용해서 실제 HTML 생성
+  // 선택한 템플릿을 사용해서 완전한 HTML 생성 (CSS 포함)
   const generateTemplatedHTML = () => {
     try {
       // finalResult.content가 PortfolioDocument JSON이라면 파싱해서 사용
       let portfolioData;
-      let htmlContent = '';
 
       try {
         portfolioData = JSON.parse(finalResult.content);
         console.log('파싱된 포트폴리오 데이터:', portfolioData);
 
-        // 1순위: 사용자가 편집한 HTML을 그대로 사용
+
+        // 편집된 HTML을 우선적으로 사용 (EnhancedPortfolioEditor에서 저장한 HTML)
         const editedHTML = portfolioData.sections?.[0]?.blocks?.[0]?.text;
-        if (editedHTML && editedHTML.trim().length > 0) {
-          console.log('편집된 HTML 사용:', editedHTML);
-          htmlContent = editedHTML;
-        } else {
-          // 2순위: fallback으로만 사용하며, 대부분의 경우 원본 HTML 반환
-          console.log('편집된 HTML이 없어서 원본 반환');
-          htmlContent = finalResult.content;
+        if (editedHTML) {
+          // 편집된 HTML이 있으면 그대로 사용
+          console.log('편집된 HTML 사용');
+          return editedHTML;
         }
 
       } catch (parseError) {
         console.error('JSON 파싱 실패:', parseError);
-        console.log('원본 HTML 내용을 그대로 반환:', finalResult.content);
-
-        // JSON 파싱에 실패하면 원본 HTML 내용을 그대로 반환
-        htmlContent = finalResult.content;
       }
 
-      // HTML 콘텐츠를 정리하고 기본 구조 추가
-      if (htmlContent && !htmlContent.includes('<html')) {
-        // HTML 문서가 아닌 경우 기본 구조 추가
-        return `
-          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif; line-height: 1.6; color: #333;">
-            ${htmlContent}
-          </div>
-        `;
+      // fallback: 기본 템플릿으로 생성
+      const template = portfolioTemplates[selectedTemplate];
+      if (template && template.generateHTML) {
+        const defaultData = template.sampleData;
+        console.log('기본 데이터로 템플릿 생성');
+        return template.generateHTML(defaultData);
       }
 
-      return htmlContent;
+      return finalResult.content;
+
     } catch (error) {
       console.error('템플릿 HTML 생성 실패:', error);
       return finalResult.content;
@@ -106,28 +97,43 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
   };
 
   const handleDownloadPDF = async () => {
-    if (!portfolioRef.current || isGeneratingPDF) return;
+    if (isGeneratingPDF) return;
 
     setIsGeneratingPDF(true);
 
     try {
-      // 미리보기 모드를 활성화하여 전체 콘텐츠가 보이도록 함
-      const wasPreviewOpen = showPreview;
-      if (!wasPreviewOpen) {
-        setShowPreview(true);
-        // DOM 업데이트를 위해 잠시 대기
-        await new Promise(resolve => setTimeout(resolve, 500));
-      }
+      // PDF 생성을 위한 임시 div 생성
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = generateTemplatedHTML();
+      tempDiv.style.width = '794px';
+      tempDiv.style.minHeight = '1123px';
+      tempDiv.style.padding = '30px';
+      tempDiv.style.fontSize = '14px';
+      tempDiv.style.lineHeight = '1.5';
+      tempDiv.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif';
+      tempDiv.style.color = '#333333';
+      tempDiv.style.backgroundColor = '#ffffff';
+      tempDiv.style.boxSizing = 'border-box';
+      tempDiv.style.position = 'absolute';
+      tempDiv.style.top = '-9999px';
+      tempDiv.style.left = '-9999px';
 
-      const canvas = await html2canvas(portfolioRef.current, {
-        scale: 2, // 고해상도를 위해 스케일 증가
+      document.body.appendChild(tempDiv);
+
+      // 잠시 대기하여 DOM 렌더링 완료
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      const canvas = await html2canvas(tempDiv, {
+        scale: 1,
         useCORS: true,
         allowTaint: true,
         backgroundColor: '#ffffff',
-        width: portfolioRef.current.scrollWidth,
-        height: portfolioRef.current.scrollHeight,
+        width: 794,
+        height: tempDiv.scrollHeight,
         scrollX: 0,
-        scrollY: 0
+        scrollY: 0,
+        removeContainer: true,
+        logging: false
       });
 
       const imgData = canvas.toDataURL('image/png');
@@ -159,30 +165,23 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
       // PDF 다운로드
       pdf.save(`portfolio-${finalResult.id}.pdf`);
 
-      // 미리보기 상태 복원
-      if (!wasPreviewOpen) {
-        setShowPreview(false);
-      }
+      // 임시 div 제거
+      document.body.removeChild(tempDiv);
 
     } catch (error) {
       console.error('PDF 생성 실패:', error);
       alert('PDF 생성에 실패했습니다.');
+
+      // 오류 발생시에도 임시 div 제거
+      const tempDiv = document.querySelector('div[style*="position: absolute"][style*="top: -9999px"]');
+      if (tempDiv) {
+        document.body.removeChild(tempDiv);
+      }
     } finally {
       setIsGeneratingPDF(false);
     }
   };
 
-  const handleCopy = async () => {
-    try {
-      const textContent = generateTemplatedHTML().replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
-      await navigator.clipboard.writeText(textContent);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
-      console.error('클립보드 복사 실패:', error);
-      alert('클립보드 복사에 실패했습니다.');
-    }
-  };
 
   // 별점 평가 핸들러
   const handleRating = (rating: number) => {
@@ -225,8 +224,13 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
         console.log('공유 취소됨');
       }
     } else {
-      handleCopy();
-      alert('포트폴리오 링크가 클립보드에 복사되었습니다!');
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        alert('포트폴리오 링크가 클립보드에 복사되었습니다!');
+      } catch (error) {
+        console.error('클립보드 복사 실패:', error);
+        alert('클립보드 복사에 실패했습니다.');
+      }
     }
   };
 
@@ -419,40 +423,13 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
               {/* 추가 옵션 */}
               <div className="space-y-4 mb-8">
                 <h3 className="font-semibold text-gray-700">추가 옵션</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <button
-                    onClick={handleCopy}
-                    className={`flex items-center justify-center p-4 rounded-lg border transition-all ${
-                      copied 
-                        ? 'border-green-500 bg-green-50 text-green-700' 
-                        : 'border-gray-300 hover:border-gray-400 text-gray-700 hover:bg-gray-50'
-                    }`}
-                  >
-                    <ClipboardDocumentIcon className="w-5 h-5 mr-2" />
-                    {copied ? '복사됨!' : '텍스트 복사'}
-                  </button>
-                  
+                <div className="grid grid-cols-1 gap-3">
                   <button
                     onClick={handleShare}
                     className="flex items-center justify-center p-4 border border-gray-300 text-gray-700 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-all"
                   >
                     <ShareIcon className="w-5 h-5 mr-2" />
                     공유하기
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      const printWindow = window.open('', '_blank');
-                      if (printWindow) {
-                        printWindow.document.write(generateTemplatedHTML());
-                        printWindow.document.close();
-                        printWindow.focus();
-                        printWindow.print();
-                      }
-                    }}
-                    className="flex items-center justify-center p-4 border border-gray-300 text-gray-700 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-all"
-                  >
-                    📄 PDF 출력
                   </button>
                 </div>
               </div>
@@ -527,89 +504,27 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                 </div>
                 
                 <div className="p-8 bg-white overflow-auto max-h-[calc(90vh-140px)]">
-                  <style>{`
-                    .portfolio-preview {
-                      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-                      line-height: 1.6;
-                      color: #333;
-                    }
-                    .portfolio-preview h1 {
-                      font-size: 2.5rem;
-                      font-weight: bold;
-                      color: #fff;
-                      margin-bottom: 0.5rem;
-                    }
-                    .portfolio-preview h2 {
-                      font-size: 1.875rem;
-                      font-weight: bold;
-                      margin: 2rem 0 1rem 0;
-                      color: #1f2937;
-                      border-bottom: 2px solid #e5e7eb;
-                      padding-bottom: 0.5rem;
-                    }
-                    .portfolio-preview h3 {
-                      font-size: 1.5rem;
-                      font-weight: bold;
-                      margin: 1.5rem 0 0.75rem 0;
-                      color: #374151;
-                    }
-                    .portfolio-preview p {
-                      margin-bottom: 1rem;
-                      text-align: justify;
-                      color: #4b5563;
-                    }
-                    .portfolio-preview header {
-                      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                      color: white;
-                      padding: 3rem 2rem;
-                      text-align: center;
-                      margin-bottom: 3rem;
-                      border-radius: 0;
-                    }
-                    .portfolio-preview .skill-tag {
-                      display: inline-block;
-                      background: #e0e7ff;
-                      color: #3730a3;
-                      padding: 0.5rem 1rem;
-                      margin: 0.25rem;
-                      border-radius: 1rem;
-                      font-size: 0.875rem;
-                      font-weight: 500;
-                    }
-                    .portfolio-preview section {
-                      margin-bottom: 3rem;
-                      padding: 0 2rem;
-                    }
-                    .portfolio-preview .project-card {
-                      background: #f9fafb;
-                      border: 1px solid #e5e7eb;
-                      border-radius: 0.5rem;
-                      padding: 1.5rem;
-                      margin-bottom: 1.5rem;
-                    }
-                    .portfolio-preview ul {
-                      list-style-type: disc;
-                      margin-left: 1.5rem;
-                      margin-bottom: 1rem;
-                    }
-                    .portfolio-preview li {
-                      margin-bottom: 0.5rem;
-                    }
-                    .portfolio-preview strong {
-                      font-weight: 600;
-                      color: #1f2937;
-                    }
-                    .portfolio-preview em {
-                      font-style: italic;
-                      color: #6b7280;
-                    }
-                  `}</style>
-                  <div
-                    ref={portfolioRef}
-                    dangerouslySetInnerHTML={{ __html: generateTemplatedHTML() }}
-                    className="portfolio-preview mx-auto bg-white"
-                    style={{ maxWidth: '900px', minHeight: '800px' }}
-                  />
+                  {/* EnhancedPortfolioEditor와 동일한 iframe 방식 사용 */}
+                  <div className="border border-gray-200 rounded-lg overflow-auto max-h-[600px] bg-white">
+                    <div
+                      ref={portfolioRef}
+                      style={{
+                        width: '794px', // A4 width in pixels at 96 DPI
+                        minHeight: '1123px', // A4 height in pixels at 96 DPI
+                        margin: '0 auto',
+                        transform: 'scale(0.8)',
+                        transformOrigin: 'top left',
+                        backgroundColor: '#ffffff'
+                      }}
+                    >
+                      <iframe
+                        srcDoc={generateTemplatedHTML()}
+                        className="w-full h-[600px] border-0"
+                        title="Portfolio Preview"
+                        style={{ transform: 'scale(0.8)', transformOrigin: 'top left', width: '125%', height: '750px' }}
+                      />
+                    </div>
+                  </div>
                 </div>
                 
                 <div className="bg-gray-50 p-4 border-t flex justify-center space-x-3">

@@ -31,7 +31,7 @@ const AutoFillPortfolioEditor: React.FC<AutoFillPortfolioEditorProps> = ({
     userId,
     initialInputs,
     targetJobKeywords,
-    selectedTemplate = 'james',
+    selectedTemplate,
     onSave,
     onEnhancedEdit
 }) => {
@@ -43,13 +43,6 @@ const AutoFillPortfolioEditor: React.FC<AutoFillPortfolioEditorProps> = ({
     const [savingStatus, setSavingStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
     const [selectedBlocks, setSelectedBlocks] = useState<Set<string>>(new Set());
     const editInputRef = useRef<HTMLTextAreaElement>(null);
-
-    // Generate initial portfolio on mount
-    useEffect(() => {
-        if (initialInputs) {
-            generatePortfolio();
-        }
-    }, []);
 
     const generatePortfolio = async () => {
         setLoading(true);
@@ -74,6 +67,14 @@ const AutoFillPortfolioEditor: React.FC<AutoFillPortfolioEditorProps> = ({
             setLoading(false);
         }
     };
+
+    // Generate initial portfolio on mount
+    useEffect(() => {
+        if (initialInputs) {
+            generatePortfolio();
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [initialInputs]);
 
     const getOriginColor = (origin: TextBlock['origin']) => {
         switch (origin) {

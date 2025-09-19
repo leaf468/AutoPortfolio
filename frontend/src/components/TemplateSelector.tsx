@@ -138,34 +138,21 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
                                                 />
                                             </div>
                                         ) : templateType === 'geon' ? (
-                                            // 프로페셔널 - 데이터 시각화
-                                            <div className="space-y-3">
-                                                <div className="flex justify-between text-xs font-semibold">
-                                                    <span>Frontend</span>
-                                                    <span>85%</span>
+                                            // 기업형 - 깔끔한 라인과 타이포그래피
+                                            <div className="space-y-4">
+                                                <div
+                                                    className="w-full h-px"
+                                                    style={{ backgroundColor: template.designSystem?.colors?.primary }}
+                                                />
+                                                <div className="text-center text-sm font-semibold">
+                                                    <span style={{ color: template.designSystem?.colors?.primary }}>Business</span>
+                                                    <span className="mx-1">&</span>
+                                                    <span style={{ color: template.designSystem?.colors?.accent }}>Professional</span>
                                                 </div>
-                                                <div className="w-full h-2 bg-gray-200 rounded">
-                                                    <div 
-                                                        className="h-full rounded"
-                                                        style={{ 
-                                                            backgroundColor: template.designSystem?.colors?.accent,
-                                                            width: '85%'
-                                                        }}
-                                                    />
-                                                </div>
-                                                <div className="flex justify-between text-xs font-semibold">
-                                                    <span>Backend</span>
-                                                    <span>70%</span>
-                                                </div>
-                                                <div className="w-full h-2 bg-gray-200 rounded">
-                                                    <div 
-                                                        className="h-full rounded"
-                                                        style={{ 
-                                                            backgroundColor: template.designSystem?.colors?.accent,
-                                                            width: '70%'
-                                                        }}
-                                                    />
-                                                </div>
+                                                <div
+                                                    className="w-full h-px"
+                                                    style={{ backgroundColor: template.designSystem?.colors?.primary }}
+                                                />
                                             </div>
                                         ) : templateType === 'eunseong' ? (
                                             // 컬러풀 - 활동적인 색상 조합

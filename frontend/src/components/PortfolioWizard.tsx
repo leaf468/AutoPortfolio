@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
+import {
   CheckIcon,
   SparklesIcon,
-  PencilSquareIcon,
-  DocumentArrowUpIcon
+  PencilSquareIcon
 } from '@heroicons/react/24/outline';
 import AIOrganizer from './AIOrganizer';
 import AutoFillPortfolioEditor from './AutoFillPortfolioEditor';
@@ -46,26 +45,26 @@ const PortfolioWizard: React.FC = () => {
     },
     {
       id: 'organize',
-      name: 'AI 정리',
-      description: '정보를 채용 관점으로 정리',
+      name: '정보 입력',
+      description: '경력, 프로젝트 등 기본 정보 입력',
       icon: SparklesIcon
     },
     {
       id: 'autofill',
-      name: 'AI 자동 생성 & 편집',
-      description: 'AI가 자동으로 포트폴리오 생성 후 편집',
+      name: 'AI 자동 생성',
+      description: 'AI가 자동으로 포트폴리오 생성',
       icon: PencilSquareIcon
     },
     {
       id: 'enhanced-edit',
       name: '상세 편집',
-      description: '포트폴리오 섹션별 편집',
+      description: '포트폴리오 섹션별 상세 편집',
       icon: PencilSquareIcon
     },
     {
       id: 'feedback',
       name: '자연어 편집',
-      description: '대화형 수정',
+      description: '대화형으로 최종 수정',
       icon: PencilSquareIcon
     }
   ];
@@ -98,7 +97,6 @@ const PortfolioWizard: React.FC = () => {
         generatedAt: new Date(),
         template: selectedTemplate || 'james'
       },
-      downloadUrl: '',
       qualityScore: 85,
       suggestions: []
     };
@@ -110,8 +108,6 @@ const PortfolioWizard: React.FC = () => {
     // 자연어 편집 결과를 FeedbackResult 형태로 변환
     const feedbackResult: FeedbackResult = {
       revisedContent: result.content,
-      finalQualityScore: result.qualityScore,
-      improvementScore: result.qualityScore - (initialResult?.qualityScore || 85),
       changesApplied: result.suggestions || []
     };
     setFeedbackResult(feedbackResult);
@@ -137,7 +133,6 @@ const PortfolioWizard: React.FC = () => {
         generatedAt: new Date(),
         template: selectedTemplate || 'james'
       },
-      downloadUrl: createDownloadUrl(document.sections[0]?.blocks[0]?.text || '', 'html'),
       qualityScore: 90,
       suggestions: ['상세 편집 완료']
     };
@@ -145,21 +140,7 @@ const PortfolioWizard: React.FC = () => {
     setCurrentStep('complete');
   };
 
-  const handleSkipToFeedback = () => {
-    setCurrentStep('feedback');
-  };
 
-  const handleSkipFeedback = () => {
-    setFinalResult(initialResult);
-    setCurrentStep('complete');
-  };
-
-  const createDownloadUrl = (content: string, format: string): string => {
-    const blob = new Blob([content], { 
-      type: format === 'html' ? 'text/html' : 'text/plain' 
-    });
-    return URL.createObjectURL(blob);
-  };
 
   const resetWizard = () => {
     setCurrentStep('template');
@@ -245,8 +226,7 @@ const PortfolioWizard: React.FC = () => {
                     generatedAt: new Date(),
                     template: selectedTemplate || 'james'
                   },
-                  downloadUrl: '',
-                  qualityScore: 85,
+                              qualityScore: 85,
                   suggestions: []
                 };
                 setInitialResult(result);
@@ -315,22 +295,36 @@ const PortfolioWizard: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* 헤더 */}
-      <div className="bg-white shadow-sm">
+      <div className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                AI 포트폴리오 제작소
-              </h1>
-              <p className="text-gray-600">
-                5단계로 완성하는 맞춤형 포트폴리오
-              </p>
+            <div
+              className="flex items-center cursor-pointer hover:opacity-80 transition-opacity"
+              onClick={resetWizard}
+              title="홈으로 돌아가기"
+            >
+              <img
+                src="/Careeroad_logo.png"
+                alt="Careeroad"
+                className="h-8 w-8 mr-3"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                }}
+              />
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">
+                  Careeroad
+                </h1>
+                <p className="text-gray-600 text-sm">
+                  AI 포트폴리오 자동 생성 플랫폼
+                </p>
+              </div>
             </div>
-            <div className="text-sm text-gray-500">
+            <div className="flex items-center space-x-4">
               {currentStep !== 'complete' && (
-                <>
+                <div className="text-sm text-gray-500">
                   {steps.findIndex(s => s.id === currentStep) + 1} / {steps.length}
-                </>
+                </div>
               )}
             </div>
           </div>

@@ -25,8 +25,8 @@ export interface UserFeedback {
 export interface FeedbackResult {
     revisedContent: string;
     changesApplied: string[];
-    improvementScore: number; // 기존 대비 개선 점수
-    finalQualityScore: number; // 최종 품질 점수
+    improvementScore?: number; // 기존 대비 개선 점수
+    finalQualityScore?: number; // 최종 품질 점수
 }
 
 class UserFeedbackService {

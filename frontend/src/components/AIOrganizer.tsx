@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  SparklesIcon, 
-  DocumentTextIcon, 
+import {
+  SparklesIcon,
+  DocumentTextIcon,
   ClipboardDocumentListIcon,
   ArrowRightIcon,
   CheckCircleIcon,
-  PencilSquareIcon,
-  XMarkIcon
+  PencilSquareIcon
 } from '@heroicons/react/24/outline';
 import { aiOrganizer, OrganizedContent } from '../services/aiOrganizer';
 
