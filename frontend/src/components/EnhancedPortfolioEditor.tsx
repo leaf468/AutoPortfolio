@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     EyeIcon,
@@ -63,9 +63,23 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
         education: '학력'
     });
 
-    // HTML에서 실제 포트폴리오 데이터 추출
+    // 초기화 완료 상태 추적
+    const hasInitialized = useRef(false);
+
+    // HTML에서 실제 포트폴리오 데이터 추출 - 의존성에서 portfolioData 제거하여 무한 루프 방지
     const extractPortfolioData = useCallback((html: string): PortfolioData => {
-        if (!html) return portfolioData;
+        if (!html) return {
+            name: '',
+            title: '',
+            email: '',
+            phone: '',
+            github: '',
+            about: '',
+            skills: [],
+            projects: [],
+            experience: [],
+            education: []
+        };
 
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, 'text/html');
@@ -133,12 +147,15 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
             .filter((skill): skill is string => !!skill && skill.length > 0);
 
         return extractedData;
-    }, [portfolioData]);
+    }, []);
 
-    // 초기 데이터 로드 및 개선
+    // 초기 데이터 로드 및 개선 - 한 번만 실행되도록 수정
     useEffect(() => {
         const initializeData = async () => {
-            if (!document) return;
+            // 이미 초기화되었으면 실행하지 않음
+            if (!document || hasInitialized.current) return;
+
+            hasInitialized.current = true;
 
             const firstBlock = document.sections?.[0]?.blocks?.[0];
             if (firstBlock && firstBlock.text) {
@@ -147,7 +164,7 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
 
                 const extractedData = extractPortfolioData(html);
 
-                // 데이터가 부족한 경우 AI로 개선
+                // 데이터가 부족한 경우 AI로 개선 - 초기 로드 시에만
                 if (!extractedData.about || extractedData.about.length < 50) {
                     setIsEnhancing(true);
                     try {
@@ -173,7 +190,9 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
         };
 
         initializeData();
-    }, [document, extractPortfolioData]);
+        // document만 의존성으로 하고, extractPortfolioData는 제거
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [document]);
 
     // 자기소개 개선
     const handleEnhanceAbout = async () => {
