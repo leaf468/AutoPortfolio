@@ -14,6 +14,8 @@ import {
 import { PortfolioDocument } from '../services/autoFillService';
 import { portfolioTemplates } from '../templates/portfolioTemplates';
 import portfolioTextEnhancer, { ProjectData, PortfolioData } from '../services/portfolioTextEnhancer';
+import BlurFade from './ui/BlurFade';
+import Badge from './ui/Badge';
 
 type TemplateType = 'james' | 'geon' | 'eunseong' | 'iu';
 
@@ -518,7 +520,8 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                         </div>
 
                         {/* 자기소개 - 큰 박스로 묶음 */}
-                        <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-purple-200 p-6">
+                        <BlurFade delay={0.1}>
+                            <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-purple-200 p-6">
                             <div className="flex items-center justify-between mb-4">
                                 <h3 className="text-lg font-bold text-gray-900">💬 {sectionTitles.about}</h3>
                                 <button
@@ -546,9 +549,11 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                                 </p>
                             )}
                         </div>
+                        </BlurFade>
 
                         {/* 프로젝트 */}
-                        <div className="bg-white rounded-xl border border-gray-200 p-6">
+                        <BlurFade delay={0.2}>
+                            <div className="bg-white rounded-xl border border-gray-200 p-6">
                             <div className="flex items-center justify-between mb-4">
                                 <h3 className="text-lg font-bold text-gray-900">🚀 {sectionTitles.projects}</h3>
                                 <button
@@ -639,25 +644,26 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                                 </p>
                             )}
                         </div>
+                        </BlurFade>
 
-                        {/* 기술 스택 - 태그 방식 */}
-                        <div className="bg-white rounded-xl border border-gray-200 p-6">
-                            <h3 className="text-lg font-bold text-gray-900 mb-4">🛠️ {sectionTitles.skills}</h3>
-                            <div className="flex flex-wrap gap-2 mb-4">
-                                {portfolioData.skills.map((skill, index) => (
-                                    <div
-                                        key={index}
-                                        className="inline-flex items-center px-3 py-1.5 bg-blue-100 text-blue-800 rounded-full text-sm"
-                                    >
-                                        <span>{skill}</span>
-                                        <button
-                                            onClick={() => handleDeleteSkill(index)}
-                                            className="ml-2 text-blue-600 hover:text-blue-800"
-                                        >
-                                            <XMarkIcon className="w-3 h-3" />
-                                        </button>
-                                    </div>
-                                ))}
+                        {/* 기술 스택 - 모던 Badge 스타일 */}
+                        <BlurFade delay={0.3}>
+                            <div className="bg-white rounded-xl border border-gray-200 p-6">
+                                <h3 className="text-lg font-bold text-gray-900 mb-4">🛠️ {sectionTitles.skills}</h3>
+                                <div className="flex flex-wrap gap-2 mb-4">
+                                    {portfolioData.skills.map((skill, index) => (
+                                        <div key={index} className="group relative">
+                                            <Badge variant="primary" className="pr-8">
+                                                {skill}
+                                                <button
+                                                    onClick={() => handleDeleteSkill(index)}
+                                                    className="absolute right-1 top-1/2 -translate-y-1/2 opacity-60 hover:opacity-100 transition-opacity"
+                                                >
+                                                    <XMarkIcon className="w-3 h-3" />
+                                                </button>
+                                            </Badge>
+                                        </div>
+                                    ))}
                             </div>
                             <div className="flex gap-2">
                                 <input
@@ -676,22 +682,30 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                                 </button>
                             </div>
                         </div>
+                        </BlurFade>
 
-                        {/* 경력 */}
-                        <div className="bg-white rounded-xl border border-gray-200 p-6">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-lg font-bold text-gray-900">💼 {sectionTitles.experience}</h3>
-                                <button
-                                    onClick={handleAddExperience}
-                                    className="flex items-center px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
-                                >
-                                    <PlusIcon className="w-4 h-4 mr-1" />
-                                    경력 추가
-                                </button>
-                            </div>
+                        {/* 경력 - 모던 카드 레이아웃 */}
+                        <BlurFade delay={0.4}>
+                            <div className="bg-white rounded-xl border border-gray-200 p-6">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-lg font-bold text-gray-900">💼 {sectionTitles.experience}</h3>
+                                    <button
+                                        onClick={handleAddExperience}
+                                        className="flex items-center px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                                    >
+                                        <PlusIcon className="w-4 h-4 mr-1" />
+                                        경력 추가
+                                    </button>
+                                </div>
 
-                            {portfolioData.experience.map((exp: any, index: number) => (
-                                <div key={index} className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                                <div className="space-y-3">
+                                    {portfolioData.experience.map((exp: any, index: number) => (
+                                        <motion.div
+                                            key={index}
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: index * 0.1 }}
+                                            className="p-4 bg-gradient-to-r from-gray-50 to-white rounded-lg border border-gray-200 hover:shadow-md transition-all">
                                     <div className="flex items-start justify-between mb-3">
                                         <input
                                             type="text"
@@ -735,31 +749,41 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                                         className="w-full p-2 border border-gray-300 rounded min-h-[60px] text-sm"
                                         placeholder="담당 업무와 성과를 입력하세요"
                                     />
+                                        </motion.div>
+                                    ))}
                                 </div>
-                            ))}
 
-                            {portfolioData.experience.length === 0 && (
-                                <p className="text-gray-500 text-center py-8">
-                                    경력을 추가해주세요
-                                </p>
-                            )}
-                        </div>
-
-                        {/* 학력 */}
-                        <div className="bg-white rounded-xl border border-gray-200 p-6">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-lg font-bold text-gray-900">🎓 {sectionTitles.education}</h3>
-                                <button
-                                    onClick={handleAddEducation}
-                                    className="flex items-center px-3 py-1.5 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors"
-                                >
-                                    <PlusIcon className="w-4 h-4 mr-1" />
-                                    학력 추가
-                                </button>
+                                {portfolioData.experience.length === 0 && (
+                                    <p className="text-gray-500 text-center py-8">
+                                        경력을 추가해주세요
+                                    </p>
+                                )}
                             </div>
+                        </BlurFade>
 
-                            {portfolioData.education.map((edu: any, index: number) => (
-                                <div key={index} className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        {/* 학력 - 모던 카드 레이아웃 */}
+                        <BlurFade delay={0.5}>
+                            <div className="bg-white rounded-xl border border-gray-200 p-6">
+                                <div className="flex items-center justify-between mb-4">
+                                    <h3 className="text-lg font-bold text-gray-900">🎓 {sectionTitles.education}</h3>
+                                    <button
+                                        onClick={handleAddEducation}
+                                        className="flex items-center px-3 py-1.5 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors"
+                                    >
+                                        <PlusIcon className="w-4 h-4 mr-1" />
+                                        학력 추가
+                                    </button>
+                                </div>
+
+                                <div className="space-y-3">
+                                    {portfolioData.education.map((edu: any, index: number) => (
+                                        <motion.div
+                                            key={index}
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: index * 0.1 }}
+                                            className="p-4 bg-gradient-to-r from-indigo-50 to-white rounded-lg border border-gray-200 hover:shadow-md transition-all"
+                                        >
                                     <div className="flex items-start justify-between mb-3">
                                         <input
                                             type="text"
@@ -803,15 +827,17 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                                         className="w-full p-2 border border-gray-300 rounded min-h-[60px] text-sm"
                                         placeholder="전공 내용이나 특이사항을 입력하세요"
                                     />
+                                        </motion.div>
+                                    ))}
                                 </div>
-                            ))}
 
-                            {portfolioData.education.length === 0 && (
-                                <p className="text-gray-500 text-center py-8">
-                                    학력을 추가해주세요
-                                </p>
-                            )}
-                        </div>
+                                {portfolioData.education.length === 0 && (
+                                    <p className="text-gray-500 text-center py-8">
+                                        학력을 추가해주세요
+                                    </p>
+                                )}
+                            </div>
+                        </BlurFade>
 
                         {/* 기타 - 섹션 제목 편집 */}
                         <div className="bg-white rounded-xl border border-gray-200 p-6">
