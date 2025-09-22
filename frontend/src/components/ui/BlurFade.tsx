@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { motion, useInView, Variants, AnimatePresence } from 'framer-motion';
+import { motion, useInView, Variants, AnimatePresence, UseInViewOptions } from 'framer-motion';
 
 interface BlurFadeProps {
   children: React.ReactNode;
@@ -28,7 +28,11 @@ const BlurFade: React.FC<BlurFadeProps> = ({
   blur = "6px",
 }) => {
   const ref = useRef(null);
-  const inViewResult = useInView(ref, { once: true, margin: inViewMargin });
+  const options: UseInViewOptions = {
+    once: true,
+    margin: inViewMargin as any // Type assertion for margin compatibility
+  };
+  const inViewResult = useInView(ref, options);
   const isInView = !inView || inViewResult;
 
   const defaultVariants: Variants = {
