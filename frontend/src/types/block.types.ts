@@ -39,3 +39,10 @@ export interface ValidationSummary {
   needs_review: number;
   placeholders: number;
 }
+
+export interface BlockUpdatePayload {
+  text?: string;
+  origin?: BlockOrigin;
+  verify_status?: VerifyStatus;
+  verified?: boolean;
+}

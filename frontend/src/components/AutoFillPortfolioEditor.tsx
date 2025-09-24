@@ -68,13 +68,13 @@ const AutoFillPortfolioEditor: React.FC<AutoFillPortfolioEditorProps> = ({
         }
     };
 
-    // Generate initial portfolio on mount
+    // Generate initial portfolio on mount - run only once
     useEffect(() => {
-        if (initialInputs) {
+        if (initialInputs && !document) {
             generatePortfolio();
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [initialInputs]);
+    }, []);
 
     const getOriginColor = (origin: TextBlock['origin']) => {
         switch (origin) {

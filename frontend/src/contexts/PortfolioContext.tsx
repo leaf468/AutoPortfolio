@@ -1,0 +1,195 @@
+import React, { createContext, useContext, useReducer, ReactNode, useEffect, useState, useCallback } from 'react';
+import { OrganizedContent } from '../services/aiOrganizer';
+import { GenerationResult } from '../services/oneClickGenerator';
+import { FeedbackResult } from '../services/userFeedbackService';
+
+type TemplateType = 'james' | 'geon' | 'eunseong' | 'iu';
+
+interface PortfolioState {
+  userId: string;
+  selectedTemplate: TemplateType | null;
+  organizedContent: OrganizedContent | null;
+  initialResult: GenerationResult | null;
+  feedbackResult: FeedbackResult | null;
+  finalResult: GenerationResult | null;
+  currentStep: 'template' | 'organize' | 'autofill' | 'enhanced-edit' | 'feedback' | 'complete';
+}
+
+type PortfolioAction =
+  | { type: 'SET_TEMPLATE'; payload: TemplateType }
+  | { type: 'SET_ORGANIZED_CONTENT'; payload: OrganizedContent }
+  | { type: 'SET_INITIAL_RESULT'; payload: GenerationResult }
+  | { type: 'SET_FEEDBACK_RESULT'; payload: FeedbackResult }
+  | { type: 'SET_FINAL_RESULT'; payload: GenerationResult }
+  | { type: 'SET_CURRENT_STEP'; payload: PortfolioState['currentStep'] }
+  | { type: 'RESET' };
+
+const STORAGE_KEY = 'portfolio_state';
+
+const initialState: PortfolioState = {
+  userId: `user_${Date.now()}`,
+  selectedTemplate: null,
+  organizedContent: null,
+  initialResult: null,
+  feedbackResult: null,
+  finalResult: null,
+  currentStep: 'template'
+};
+
+const loadFromStorage = (): PortfolioState | null => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsedState = JSON.parse(stored);
+      return {
+        ...initialState,
+        ...parsedState,
+        // 항상 새로운 userId 생성
+        userId: parsedState.userId || `user_${Date.now()}`
+      };
+    }
+  } catch (error) {
+    console.warn('Failed to load state from localStorage:', error);
+  }
+  return null;
+};
+
+const saveToStorage = (state: PortfolioState) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (error) {
+    console.warn('Failed to save state to localStorage:', error);
+  }
+};
+
+const clearStorage = () => {
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch (error) {
+    console.warn('Failed to clear localStorage:', error);
+  }
+};
+
+function portfolioReducer(state: PortfolioState, action: PortfolioAction): PortfolioState {
+  switch (action.type) {
+    case 'SET_TEMPLATE':
+      return { ...state, selectedTemplate: action.payload };
+    case 'SET_ORGANIZED_CONTENT':
+      return { ...state, organizedContent: action.payload };
+    case 'SET_INITIAL_RESULT':
+      return { ...state, initialResult: action.payload };
+    case 'SET_FEEDBACK_RESULT':
+      return { ...state, feedbackResult: action.payload };
+    case 'SET_FINAL_RESULT':
+      return { ...state, finalResult: action.payload };
+    case 'SET_CURRENT_STEP':
+      return { ...state, currentStep: action.payload };
+    case 'RESET':
+      return { ...initialState, userId: `user_${Date.now()}` };
+    default:
+      return state;
+  }
+}
+
+interface PortfolioContextValue {
+  state: PortfolioState;
+  dispatch: React.Dispatch<PortfolioAction>;
+
+  // Helper functions
+  setTemplate: (template: TemplateType) => void;
+  setOrganizedContent: (content: OrganizedContent) => void;
+  setInitialResult: (result: GenerationResult) => void;
+  setFeedbackResult: (result: FeedbackResult) => void;
+  setFinalResult: (result: GenerationResult) => void;
+  setCurrentStep: (step: PortfolioState['currentStep']) => void;
+  reset: () => void;
+}
+
+const PortfolioContext = createContext<PortfolioContextValue | undefined>(undefined);
+
+export function PortfolioProvider({ children }: { children: ReactNode }) {
+  const [state, dispatch] = useReducer(portfolioReducer, initialState);
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // 초기 로드 시 localStorage에서 상태 복원
+  useEffect(() => {
+    const savedState = loadFromStorage();
+    if (savedState && !isInitialized) {
+      dispatch({ type: 'SET_TEMPLATE', payload: savedState.selectedTemplate });
+      dispatch({ type: 'SET_ORGANIZED_CONTENT', payload: savedState.organizedContent });
+      dispatch({ type: 'SET_INITIAL_RESULT', payload: savedState.initialResult });
+      dispatch({ type: 'SET_FEEDBACK_RESULT', payload: savedState.feedbackResult });
+      dispatch({ type: 'SET_FINAL_RESULT', payload: savedState.finalResult });
+      dispatch({ type: 'SET_CURRENT_STEP', payload: savedState.currentStep });
+      setIsInitialized(true);
+    } else {
+      setIsInitialized(true);
+    }
+  }, [isInitialized]);
+
+  // 초기화 완료 후 상태 변경 시 localStorage에 저장 (debounced)
+  useEffect(() => {
+    if (!isInitialized) return;
+
+    const timeoutId = setTimeout(() => {
+      saveToStorage(state);
+    }, 100);
+
+    return () => clearTimeout(timeoutId);
+  }, [state, isInitialized]);
+
+  const setTemplate = useCallback((template: TemplateType) => {
+    dispatch({ type: 'SET_TEMPLATE', payload: template });
+  }, []);
+
+  const setOrganizedContent = useCallback((content: OrganizedContent) => {
+    dispatch({ type: 'SET_ORGANIZED_CONTENT', payload: content });
+  }, []);
+
+  const setInitialResult = useCallback((result: GenerationResult) => {
+    dispatch({ type: 'SET_INITIAL_RESULT', payload: result });
+  }, []);
+
+  const setFeedbackResult = useCallback((result: FeedbackResult) => {
+    dispatch({ type: 'SET_FEEDBACK_RESULT', payload: result });
+  }, []);
+
+  const setFinalResult = useCallback((result: GenerationResult) => {
+    dispatch({ type: 'SET_FINAL_RESULT', payload: result });
+  }, []);
+
+  const setCurrentStep = useCallback((step: PortfolioState['currentStep']) => {
+    dispatch({ type: 'SET_CURRENT_STEP', payload: step });
+  }, []);
+
+  const reset = useCallback(() => {
+    clearStorage();
+    dispatch({ type: 'RESET' });
+  }, []);
+
+  const value: PortfolioContextValue = {
+    state,
+    dispatch,
+    setTemplate,
+    setOrganizedContent,
+    setInitialResult,
+    setFeedbackResult,
+    setFinalResult,
+    setCurrentStep,
+    reset
+  };
+
+  return (
+    <PortfolioContext.Provider value={value}>
+      {children}
+    </PortfolioContext.Provider>
+  );
+}
+
+export function usePortfolio() {
+  const context = useContext(PortfolioContext);
+  if (context === undefined) {
+    throw new Error('usePortfolio must be used within a PortfolioProvider');
+  }
+  return context;
+}
