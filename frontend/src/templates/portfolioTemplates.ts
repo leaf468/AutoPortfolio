@@ -33,6 +33,12 @@ export interface PortfolioTemplate {
         };
     };
     features: string[];
+    sections: Array<{
+        id: string;
+        name: string;
+        icon: string;
+        required: boolean;
+    }>;
     sampleData: {
         name: string;
         title: string;
@@ -126,6 +132,14 @@ export const jamesTemplate: PortfolioTemplate = {
         }
     },
     features: ['다크모드', '이모지 헤더', '2컬럼 레이아웃', '미니멀 디자인'],
+    sections: [
+        { id: 'contact', name: '기본 정보', icon: '👤', required: true },
+        { id: 'about', name: '자기소개', icon: '💬', required: true },
+        { id: 'projects', name: '프로젝트', icon: '🚀', required: false },
+        { id: 'skills', name: '기술 스택', icon: '💻', required: false },
+        { id: 'experience', name: '경력', icon: '💼', required: false },
+        { id: 'education', name: '학력', icon: '🎓', required: false }
+    ],
     sampleData: {
         name: '김포트폴리오',
         title: '풀스택 개발자',
@@ -623,6 +637,14 @@ export const geonTemplate: PortfolioTemplate = {
         }
     },
     features: ['사이드바', '그리드 레이아웃', '프로페셔널', '구조화된 섹션'],
+    sections: [
+        { id: 'contact', name: '기본 정보', icon: '👤', required: true },
+        { id: 'about', name: '개인소개', icon: '👨‍💻', required: true },
+        { id: 'skills', name: '스킬셋', icon: '🛠', required: false },
+        { id: 'experience', name: '커리어/경력', icon: '💼', required: false },
+        { id: 'projects', name: '프로젝트', icon: '🚀', required: false },
+        { id: 'awards', name: '수상/자격증', icon: '🏆', required: false }
+    ],
     sampleData: {
         name: '김포트폴리오',
         title: '풀스택 개발자',
@@ -895,12 +917,12 @@ export const geonTemplate: PortfolioTemplate = {
             
             <nav>
                 <ul class="nav-menu">
-                    <li><a href="#about">개인소개</a></li>
-                    <li><a href="#skills">스킬셋</a></li>
-                    <li><a href="#experience">커리어/경력</a></li>
-                    <li><a href="#projects">프로젝트</a></li>
-                    <li><a href="#awards">수상/자격증</a></li>
-                    <li><a href="#contact">연락처</a></li>
+                    <li><a href="#about" onclick="document.getElementById('about').scrollIntoView({behavior: 'smooth'}); return false;">개인소개</a></li>
+                    <li><a href="#skills" onclick="document.getElementById('skills').scrollIntoView({behavior: 'smooth'}); return false;">스킬셋</a></li>
+                    <li><a href="#experience" onclick="document.getElementById('experience').scrollIntoView({behavior: 'smooth'}); return false;">커리어/경력</a></li>
+                    <li><a href="#projects" onclick="document.getElementById('projects').scrollIntoView({behavior: 'smooth'}); return false;">프로젝트</a></li>
+                    <li><a href="#awards" onclick="document.getElementById('awards').scrollIntoView({behavior: 'smooth'}); return false;">수상/자격증</a></li>
+                    <li><a href="#contact" onclick="document.getElementById('contact').scrollIntoView({behavior: 'smooth'}); return false;">연락처</a></li>
                 </ul>
             </nav>
             
@@ -1047,6 +1069,13 @@ export const eunseongTemplate: PortfolioTemplate = {
         }
     },
     features: ['컬러풀 카드', '그라디언트', '이모지 아이콘', '애니메이션'],
+    sections: [
+        { id: 'contact', name: '기본 정보', icon: '👤', required: true },
+        { id: 'about', name: 'About Me', icon: '🎨', required: true },
+        { id: 'experience', name: 'Experience', icon: '💼', required: false },
+        { id: 'projects', name: 'Projects', icon: '🚀', required: false },
+        { id: 'skills', name: 'Skills', icon: '🛠', required: false }
+    ],
     sampleData: {
         name: '김포트폴리오',
         title: '풀스택 개발자',
@@ -1526,6 +1555,13 @@ export const iuTemplate: PortfolioTemplate = {
         }
     },
     features: ['우아한 타이포그래피', '미니멀', '파스텔 색상', '부드러운 애니메이션'],
+    sections: [
+        { id: 'contact', name: '기본 정보', icon: '👤', required: true },
+        { id: 'about', name: '자기소개', icon: '💬', required: true },
+        { id: 'experience', name: 'Experience', icon: '💼', required: false },
+        { id: 'projects', name: 'Projects', icon: '🚀', required: false },
+        { id: 'skills', name: 'Skills', icon: '✨', required: false }
+    ],
     sampleData: {
         name: '김포트폴리오',
         title: '풀스택 개발자',

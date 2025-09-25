@@ -27,15 +27,25 @@ const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
   const handleOrganize = async () => {
     if (!input.trim()) return;
 
+    console.log('=== AI 정리 시작 ===');
+    console.log('사용자 입력 데이터:', input);
+    console.log('입력 타입:', inputType);
+    console.log('채용공고:', jobPosting);
+
     setIsProcessing(true);
     try {
       let organized = await aiOrganizer.organizeContent(input, inputType);
-      
+      console.log('AI 기본 정리 결과:', organized);
+
       // 채용공고가 있으면 추가 최적화
       if (jobPosting.trim()) {
+        console.log('채용공고 최적화 실행 중...');
         organized = await aiOrganizer.enhanceWithJobPosting(organized, jobPosting);
+        console.log('채용공고 최적화 결과:', organized);
       }
 
+      console.log('=== 최종 AI 정리 결과 ===');
+      console.log(organized);
       setResult(organized);
     } catch (error) {
       console.error('AI 정리 중 오류:', error);
@@ -45,8 +55,12 @@ const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
   };
 
   const handleComplete = () => {
-    if (editedResult || result) {
-      onComplete(editedResult || result!);
+    const finalData = editedResult || result;
+    console.log('=== AI 정리 완료 - 다음 단계로 전달 ===');
+    console.log('전달되는 데이터:', finalData);
+
+    if (finalData) {
+      onComplete(finalData);
     }
   };
 

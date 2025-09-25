@@ -29,6 +29,7 @@ export interface PortfolioData {
     email: string;
     phone: string;
     github?: string;
+    location?: string;
     about: string;
     skills: string[];
     projects: ProjectData[];
@@ -69,7 +70,17 @@ class PortfolioTextEnhancer {
                 max_tokens: 500,
             });
 
-            const result = JSON.parse(response.choices[0].message?.content || "{}");
+            let content = response.choices[0].message?.content || "{}";
+
+            // JSON 응답이 마크다운 코드 블록으로 감싸진 경우 제거
+            if (content.includes('```json')) {
+                const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/);
+                if (jsonMatch) {
+                    content = jsonMatch[1];
+                }
+            }
+
+            const result = JSON.parse(content);
 
             return {
                 original: originalText,
@@ -129,7 +140,17 @@ class PortfolioTextEnhancer {
                 max_tokens: 500,
             });
 
-            const result = JSON.parse(response.choices[0].message?.content || "{}");
+            let content = response.choices[0].message?.content || "{}";
+
+            // JSON 응답이 마크다운 코드 블록으로 감싸진 경우 제거
+            if (content.includes('```json')) {
+                const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/);
+                if (jsonMatch) {
+                    content = jsonMatch[1];
+                }
+            }
+
+            const result = JSON.parse(content);
 
             return {
                 ...project,
@@ -161,6 +182,8 @@ class PortfolioTextEnhancer {
     // 전체 포트폴리오 데이터 개선
     async enhancePortfolioData(data: Partial<PortfolioData>): Promise<PortfolioData> {
         try {
+            console.log('=== 포트폴리오 데이터 개선 시작 ===');
+            console.log('입력 데이터:', data);
             const prompt = `
 당신은 전문 포트폴리오 작성 도우미입니다. 제공된 정보를 바탕으로 완성도 높은 포트폴리오 데이터를 생성해주세요.
 
@@ -187,7 +210,20 @@ ${JSON.stringify(data, null, 2)}
                 max_tokens: 2000,
             });
 
-            const result = JSON.parse(response.choices[0].message?.content || "{}");
+            let content = response.choices[0].message?.content || "{}";
+
+            // JSON 응답이 마크다운 코드 블록으로 감싸진 경우 제거
+            if (content.includes('```json')) {
+                const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/);
+                if (jsonMatch) {
+                    content = jsonMatch[1];
+                }
+            }
+
+            const result = JSON.parse(content);
+            console.log('=== 포트폴리오 데이터 개선 결과 ===');
+            console.log(result);
+
             return result as PortfolioData;
 
         } catch (error) {

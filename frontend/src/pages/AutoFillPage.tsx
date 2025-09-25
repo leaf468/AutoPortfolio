@@ -87,7 +87,10 @@ export default function AutoFillPage() {
           userId={state.userId}
           selectedTemplate={state.selectedTemplate}
           initialInputs={{
-            profile: state.organizedContent.summary || '',
+            profile: JSON.stringify({
+              organizedContent: state.organizedContent, // AI로 가공된 결과
+              originalInput: state.organizedContent.originalInput // 원본 사용자 입력
+            }), // 원본 + 가공 데이터 모두 전달
             projects: state.organizedContent.projects.map(p => ({
               title: p.name,
               description: p.summary,

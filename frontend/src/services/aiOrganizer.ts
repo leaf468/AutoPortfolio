@@ -22,6 +22,12 @@ export interface OrganizedContent {
     };
     missingFields: string[]; // 누락된 중요 필드들
     improvementSuggestions: string[]; // 개선 제안
+    // 원본 데이터 추가
+    originalInput: {
+        rawText: string; // 사용자가 입력한 원본 텍스트
+        inputType: 'freetext' | 'resume' | 'markdown';
+        jobPosting?: string; // 채용공고 (있는 경우)
+    };
 }
 
 export interface OrganizedExperience {
@@ -148,7 +154,16 @@ class AIOrganizer {
                 cleanedResult = match ? match[1] : result;
             }
 
-            return JSON.parse(cleanedResult) as OrganizedContent;
+            const parsedContent = JSON.parse(cleanedResult) as Omit<OrganizedContent, 'originalInput'>;
+
+            // 원본 입력 데이터 추가
+            return {
+                ...parsedContent,
+                originalInput: {
+                    rawText: rawInput,
+                    inputType: inputType
+                }
+            } as OrganizedContent;
         } catch (error) {
             console.error("AI Organizer 오류:", error);
             // 기본 구조 반환
@@ -167,6 +182,10 @@ class AIOrganizer {
                 },
                 missingFields: ["모든 필드"],
                 improvementSuggestions: ["다시 시도해주세요."],
+                originalInput: {
+                    rawText: rawInput,
+                    inputType: inputType
+                }
             };
         }
     }
@@ -213,7 +232,16 @@ class AIOrganizer {
                 cleanedResult = match ? match[1] : result;
             }
 
-            return JSON.parse(cleanedResult) as OrganizedContent;
+            const parsedContent = JSON.parse(cleanedResult) as Omit<OrganizedContent, 'originalInput'>;
+
+            // 원본 입력 데이터 유지하면서 채용공고 정보 추가
+            return {
+                ...parsedContent,
+                originalInput: {
+                    ...organizedContent.originalInput,
+                    jobPosting: jobPosting
+                }
+            } as OrganizedContent;
         } catch (error) {
             console.error("Job posting enhancement 오류:", error);
             return organizedContent; // 원본 반환

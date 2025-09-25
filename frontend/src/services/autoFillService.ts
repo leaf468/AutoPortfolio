@@ -19,6 +19,7 @@ export interface TextBlock {
     created_at: string;
     created_by: string;
     updated_at?: string;
+    extractedData?: any; // 실제 포트폴리오 데이터 저장
     metadata?: {
         tone?: string;
         tags?: string[];
@@ -73,6 +74,9 @@ class AutoFillService {
 
     async generatePortfolio(request: GenerateRequest): Promise<PortfolioDocument> {
         try {
+            console.log('=== AutoFill 포트폴리오 생성 시작 ===');
+            console.log('입력 요청 데이터:', request);
+
             const systemPrompt = "당신은 실제 채용 성공 사례 10,000건을 분석한 포트폴리오 전문가입니다.\n" +
                 "MISSION: 사용자의 빈약한 입력을 → 채용담당자가 '반드시 면접 보고싶다'고 생각할 포트폴리오로 변환\n\n" +
                 "=== 핵심 변환 원칙 ===\n" +
@@ -119,22 +123,47 @@ class AutoFillService {
                 "- 성과/수치: 구체적인 비즈니스 임팩트 수치들\n\n" +
                 "Response format: {\"html_content\": \"<완성된 포트폴리오 HTML>\"}";
 
-            const userMessage = "=== 원본 입력 데이터 ===\n" +
-                "프로필: " + (request.inputs.profile || '정보 없음') + "\n" +
-                "프로젝트: " + JSON.stringify(request.inputs.projects || []) + "\n" +
-                "기술스택: " + JSON.stringify(request.inputs.skills || []) + "\n" +
+            // 원본 + 가공된 데이터 추출
+            const profileData = request.inputs.profile ? JSON.parse(request.inputs.profile) : null;
+            console.log('전달받은 프로필 데이터:', profileData);
+
+            const organizedContent = profileData?.organizedContent;
+            const originalInput = profileData?.originalInput || organizedContent?.originalInput;
+
+            console.log('AI 가공 결과:', organizedContent);
+            console.log('원본 사용자 입력:', originalInput);
+
+            // UserMessage 구성
+            const userMessage = "=== 사용자 원본 입력 (기반 데이터) ===\n" +
+                "원본 텍스트: " + (originalInput?.rawText || '정보 없음') + "\n" +
+                "입력 형식: " + (originalInput?.inputType || '정보 없음') + "\n" +
+                "채용공고: " + (originalInput?.jobPosting || '정보 없음') + "\n\n" +
+                "=== AI 분석된 정리 결과 (참고용) ===\n" +
+                "핵심 피치: " + (organizedContent?.oneLinerPitch || '') + "\n" +
+                "요약: " + (organizedContent?.summary || '') + "\n" +
+                "경력사항: " + JSON.stringify(organizedContent?.experiences || []) + "\n" +
+                "프로젝트: " + JSON.stringify(organizedContent?.projects || []) + "\n" +
+                "기술스택: " + JSON.stringify(organizedContent?.skills || []) + "\n" +
+                "성과: " + JSON.stringify(organizedContent?.achievements || []) + "\n" +
+                "키워드: " + JSON.stringify(organizedContent?.keywords || {}) + "\n\n" +
+                "=== 추가 입력 데이터 ===\n" +
                 "지원분야: " + JSON.stringify(request.target_job_keywords || []) + "\n" +
-                "경력사항: " + (request.inputs.experience || '정보 없음') + "\n" +
                 "교육사항: " + (request.inputs.education || '정보 없음') + "\n\n" +
                 "=== 변환 미션 ===\n" +
-                "위 빈약한 데이터를 다음 원칙으로 변환:\n\n" +
-                "🚀 **스토리 재구성**: 각 경험을 Problem-Solution-Impact로 재해석\n" +
-                "📊 **수치/성과 추가**: 합리적 범위에서 구체적 임팩트 수치 생성\n" +
+                "🎯 **중요**: 사용자 원본 입력을 기반으로 포트폴리오를 생성하되, AI 정리 결과를 참고하여 더욱 풍부하게 만들어주세요.\n\n" +
+                "🚀 **스토리 재구성**: 원본의 각 경험을 Problem-Solution-Impact로 재해석\n" +
+                "📊 **수치/성과 강화**: AI 분석 결과의 성과를 참고하여 구체적 임팩트 수치 생성\n" +
                 "💼 **비즈니스 관점**: 기술적 성취를 비즈니스 가치로 번역\n" +
-                "🎯 **차별점 부각**: 이 지원자만의 독특한 강점 발굴\n" +
-                "🏆 **전문성 강화**: 해당 분야 전문가임을 보여주는 디테일 추가\n\n" +
-                "반드시 완전한 HTML 포트폴리오 생성 (최소 2000단어 수준의 풍부한 내용).\n" +
-                "채용담당자가 '이 사람은 꼭 면접 봐야겠다'고 생각할 수준의 임팩트 있는 포트폴리오 완성!";
+                "🎯 **차별점 부각**: 원본에서 언급된 고유한 강점을 AI 분석 결과로 보완\n" +
+                "🏆 **전문성 강화**: AI가 추출한 키워드와 기술을 활용하여 전문성 강조\n" +
+                "🔍 **누락 정보 보완**: AI 분석에서 부족한 부분은 원본에서 추가 발굴\n\n" +
+                "반드시 완전한 HTML 포트폴리오 생성 (최소 2500단어 수준의 풍부한 내용).\n" +
+                "원본의 진정성 + AI 분석의 체계성을 결합하여 채용담당자가 '이 사람은 꼭 면접 봐야겠다'고 생각할 포트폴리오 완성!";
+
+            console.log('=== AutoFillService AI 요청 데이터 ===');
+            console.log('원본 사용자 입력:', originalInput);
+            console.log('AI 가공 결과:', organizedContent);
+            console.log('AI 요청 메시지:', userMessage);
 
             const response = await openai.chat.completions.create({
                 model: MODEL,
@@ -148,11 +177,126 @@ class AutoFillService {
             });
 
             const content = response.choices[0].message.content;
+            console.log('AI 응답 원본:', content);
+
             if (!content) throw new Error('No content received from AI');
 
             const aiResponse = JSON.parse(content);
+            console.log('파싱된 AI 응답:', aiResponse);
             const now = new Date().toISOString();
-            
+
+            let extractedData = null;
+            if (organizedContent) {
+                // AI가 분석한 한 줄 소개 생성
+                const generateOneLiner = () => {
+                    // 기술스택 기반 직책 추론
+                    const skills = organizedContent.skills?.flatMap((skill: any) => skill.skills || []) || [];
+                    const experiences = organizedContent.experiences || [];
+
+                    // 프론트엔드 관련 기술이 많으면
+                    const frontendKeywords = ['React', 'Vue', 'Angular', 'JavaScript', 'TypeScript', 'HTML', 'CSS', 'Frontend'];
+                    const backendKeywords = ['Node.js', 'Python', 'Java', 'Spring', 'Django', 'Backend', 'API'];
+                    const fullstackKeywords = ['풀스택', 'Fullstack', 'Full Stack'];
+
+                    const hasFrontend = skills.some(skill => frontendKeywords.some(keyword =>
+                        skill.toLowerCase().includes(keyword.toLowerCase())
+                    ));
+                    const hasBackend = skills.some(skill => backendKeywords.some(keyword =>
+                        skill.toLowerCase().includes(keyword.toLowerCase())
+                    ));
+
+                    let jobTitle = '소프트웨어 개발자';
+
+                    // 경험에서 직책 추출 시도
+                    if (experiences.length > 0) {
+                        const latestRole = experiences[0]?.position;
+                        if (latestRole && !latestRole.includes('정보 없음')) {
+                            jobTitle = latestRole;
+                        }
+                    } else {
+                        // 기술 스택 기반 추론
+                        if (hasFrontend && hasBackend) {
+                            jobTitle = '풀스택 개발자';
+                        } else if (hasFrontend) {
+                            jobTitle = '프론트엔드 개발자';
+                        } else if (hasBackend) {
+                            jobTitle = '백엔드 개발자';
+                        }
+
+                        // oneLinerPitch에서 직책 키워드 추출
+                        if (organizedContent.oneLinerPitch) {
+                            const pitch = organizedContent.oneLinerPitch;
+                            if (pitch.includes('프론트엔드') || pitch.includes('Frontend')) jobTitle = '프론트엔드 개발자';
+                            if (pitch.includes('백엔드') || pitch.includes('Backend')) jobTitle = '백엔드 개발자';
+                            if (pitch.includes('풀스택') || pitch.includes('Full Stack')) jobTitle = '풀스택 개발자';
+                            if (pitch.includes('데이터')) jobTitle = '데이터 분석가';
+                            if (pitch.includes('기획')) jobTitle = '서비스 기획자';
+                            if (pitch.includes('디자인')) jobTitle = 'UI/UX 디자이너';
+                        }
+                    }
+
+                    // 핵심 기술 3개 추출
+                    const topSkills = skills.slice(0, 3);
+
+                    // 경험 연수 추론
+                    const totalExp = experiences.reduce((total, exp) => {
+                        const duration = exp.duration || '';
+                        const yearMatch = duration.match(/(\d+)년/);
+                        return total + (yearMatch ? parseInt(yearMatch[1]) : 1);
+                    }, 0);
+
+                    const expYears = totalExp > 0 ? `${totalExp}년차` : '주니어';
+
+                    // 한 줄 소개 생성
+                    if (topSkills.length > 0) {
+                        return `${topSkills.join(', ')} 전문 ${jobTitle} (${expYears})`;
+                    } else if (organizedContent.oneLinerPitch) {
+                        return organizedContent.oneLinerPitch;
+                    } else {
+                        return `${expYears} ${jobTitle}`;
+                    }
+                };
+
+                const generatedOneLiner = generateOneLiner();
+                console.log('=== AI가 생성한 한 줄 소개 ===');
+                console.log('생성된 한 줄 소개:', generatedOneLiner);
+                console.log('분석 기반 데이터:');
+                console.log('- 기술스택:', organizedContent.skills?.flatMap((skill: any) => skill.skills || []));
+                console.log('- 최신 경험:', organizedContent.experiences?.[0]?.position);
+                console.log('- 핵심 피치:', organizedContent.oneLinerPitch);
+
+                extractedData = {
+                    name: '홍길동', // 고정값
+                    title: generatedOneLiner, // AI가 분석한 한 줄 소개
+                    email: 'youremail@gmail.com', // 고정값
+                    phone: '010-0000-0000', // 고정값
+                    github: '', // 빈값 유지
+                    location: 'Seoul, Korea', // 기본 위치
+                    about: organizedContent.summary || '',
+                    skills: organizedContent.skills?.flatMap((skill: any) => skill.skills || []) || [],
+                    skillCategories: organizedContent.skills || [], // 기업형 템플릿을 위한 카테고리별 스킬
+                    projects: organizedContent.projects?.map((proj: any) => ({
+                        name: proj.name,
+                        description: proj.summary,
+                        role: proj.myRole,
+                        period: proj.duration || '',
+                        company: proj.company || '',
+                        tech: proj.technologies || [],
+                        achievements: proj.achievements || []
+                    })) || [],
+                    experience: organizedContent.experiences?.map((exp: any) => ({
+                        position: exp.position,
+                        company: exp.company,
+                        duration: exp.duration,
+                        description: exp.impact,
+                        achievements: exp.achievements || [],
+                        technologies: exp.technologies || []
+                    })) || [],
+                    education: []
+                };
+                console.log('변환된 extractedData:', extractedData);
+            }
+
             const portfolioSection: Section = {
                 section_id: 'portfolio_main',
                 section_title: '포트폴리오',
@@ -165,17 +309,23 @@ class AutoFillService {
                     auto_fill_reason: 'AI 자동 생성된 포트폴리오 HTML',
                     created_at: now,
                     created_by: 'ai',
+                    extractedData: extractedData, // 실제 사용자 데이터 추가
                     edit_history: []
                 }]
             };
 
-            return {
+            const finalDocument = {
                 doc_id: this.generateDocId(),
                 user_id: request.user_id,
                 sections: [portfolioSection],
                 created_at: now,
                 updated_at: now
             };
+
+            console.log('=== 생성된 최종 포트폴리오 문서 ===');
+            console.log(finalDocument);
+
+            return finalDocument;
 
         } catch (error) {
             console.error('Error generating portfolio:', error);

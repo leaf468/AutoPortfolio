@@ -7,9 +7,7 @@ import {
     SwatchIcon,
     PlusIcon,
     XMarkIcon,
-    SparklesIcon,
-    ChevronDownIcon,
-    ChevronUpIcon
+    SparklesIcon
 } from '@heroicons/react/24/outline';
 import { PortfolioDocument } from '../services/autoFillService';
 import { portfolioTemplates } from '../templates/portfolioTemplates';
@@ -53,16 +51,24 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
     const [currentHtml, setCurrentHtml] = useState<string>('');
     const [currentTemplate, setCurrentTemplate] = useState<TemplateType>(selectedTemplate);
     const [showTemplateSelector, setShowTemplateSelector] = useState(false);
-    const [showOthers, setShowOthers] = useState(false); // 기타 섹션 토글
     const [newSkill, setNewSkill] = useState('');
     const [isEnhancing, setIsEnhancing] = useState(false);
     const [enhancedFields, setEnhancedFields] = useState<Record<string, boolean>>({}); // AI 생성 필드 추적
-    const [sectionTitles, setSectionTitles] = useState({
-        about: 'About Me',
-        projects: '핵심 프로젝트',
-        skills: '기술 스택',
-        experience: '경력',
-        education: '학력'
+    const [isInitializing, setIsInitializing] = useState(true); // 초기 로딩 상태
+    const [dataLoaded, setDataLoaded] = useState(false); // 데이터 로딩 완료 상태
+    // 현재 템플릿의 섹션 정보를 가져옴
+    const getCurrentTemplateSections = () => {
+        const template = portfolioTemplates[currentTemplate];
+        return template?.sections || [];
+    };
+
+    const [sectionTitles, setSectionTitles] = useState(() => {
+        const sections = getCurrentTemplateSections();
+        const titles: Record<string, string> = {};
+        sections.forEach(section => {
+            titles[section.id] = section.name;
+        });
+        return titles;
     });
 
     // 초기화 완료 상태 추적
@@ -70,18 +76,25 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
 
     // HTML에서 실제 포트폴리오 데이터 추출 - 의존성에서 portfolioData 제거하여 무한 루프 방지
     const extractPortfolioData = useCallback((html: string): PortfolioData => {
-        if (!html) return {
-            name: '',
-            title: '',
-            email: '',
-            phone: '',
-            github: '',
-            about: '',
-            skills: [],
-            projects: [],
-            experience: [],
-            education: []
-        };
+        console.log('=== HTML 데이터 추출 시작 ===');
+        console.log('HTML 길이:', html?.length || 0);
+        console.log('HTML 내용 (처음 500자):', html?.substring(0, 500));
+
+        if (!html) {
+            console.log('HTML이 비어있음 - 빈 데이터 반환');
+            return {
+                name: '',
+                title: '',
+                email: '',
+                phone: '',
+                github: '',
+                about: '',
+                skills: [],
+                projects: [],
+                experience: [],
+                education: []
+            };
+        }
 
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, 'text/html');
@@ -148,6 +161,13 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
             .map(el => el.textContent?.trim())
             .filter((skill): skill is string => !!skill && skill.length > 0);
 
+        console.log('=== HTML에서 추출된 최종 데이터 ===');
+        console.log('이름:', extractedData.name);
+        console.log('직책:', extractedData.title);
+        console.log('자기소개:', extractedData.about);
+        console.log('기술스택:', extractedData.skills);
+        console.log('전체 추출 데이터:', extractedData);
+
         return extractedData;
     }, []);
 
@@ -158,36 +178,71 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
             if (!document || hasInitialized.current) return;
 
             hasInitialized.current = true;
+            setIsInitializing(true);
 
-            const firstBlock = document.sections?.[0]?.blocks?.[0];
-            if (firstBlock && firstBlock.text) {
-                const html = firstBlock.text;
-                setCurrentHtml(html);
+            try {
+                const firstBlock = document.sections?.[0]?.blocks?.[0];
+                if (firstBlock && firstBlock.text) {
+                    const html = firstBlock.text;
+                    setCurrentHtml(html);
 
-                const extractedData = extractPortfolioData(html);
+                    // 먼저 블록의 extractedData가 있는지 확인 (실제 AI 가공 데이터)
+                    let actualData: PortfolioData;
 
-                // 데이터가 부족한 경우 AI로 개선 - 초기 로드 시에만
-                if (!extractedData.about || extractedData.about.length < 50) {
-                    setIsEnhancing(true);
-                    try {
-                        const enhanced = await portfolioTextEnhancer.enhancePortfolioData(extractedData);
-                        setPortfolioData(enhanced);
-
-                        // AI 생성 필드 표시
-                        const generatedFields: Record<string, boolean> = {};
-                        if (!extractedData.about && enhanced.about) {
-                            generatedFields['about'] = true;
-                        }
-                        setEnhancedFields(generatedFields);
-                    } catch (error) {
-                        console.error('데이터 개선 실패:', error);
-                        setPortfolioData(extractedData);
-                    } finally {
-                        setIsEnhancing(false);
+                    if (firstBlock.extractedData) {
+                        console.log('=== 블록에서 실제 추출된 데이터 발견 ===');
+                        console.log('실제 AI 가공 데이터:', firstBlock.extractedData);
+                        actualData = firstBlock.extractedData as PortfolioData;
+                    } else {
+                        // fallback: HTML에서 추출
+                        console.log('=== 블록에 데이터 없음 - HTML에서 추출 시도 ===');
+                        actualData = extractPortfolioData(html);
                     }
-                } else {
-                    setPortfolioData(extractedData);
+
+                    console.log('=== 사용할 최종 포트폴리오 데이터 ===');
+                    console.log(actualData);
+
+                    // 기본 데이터가 있다면 먼저 설정하여 미리보기 표시
+                    if (actualData.name || actualData.title || actualData.about) {
+                        console.log('기본 데이터 즉시 설정:', actualData);
+                        setPortfolioData(actualData);
+                        setDataLoaded(true);
+                    }
+
+                    // 데이터가 부족한 경우만 AI로 개선 - 초기 로드 시에만
+                    const needsEnhancement = !actualData.about || actualData.about.length < 50;
+
+                    if (needsEnhancement) {
+                        console.log('데이터 개선 필요 - AI 개선 시작:', needsEnhancement);
+                        setIsEnhancing(true);
+                        try {
+                            const enhanced = await portfolioTextEnhancer.enhancePortfolioData(actualData);
+                            console.log('AI 개선 완료, 최종 데이터 설정:', enhanced);
+                            setPortfolioData(enhanced);
+
+                            // AI 생성 필드 표시
+                            const generatedFields: Record<string, boolean> = {};
+                            if (!actualData.about && enhanced.about) {
+                                generatedFields['about'] = true;
+                            }
+                            setEnhancedFields(generatedFields);
+                        } catch (error) {
+                            console.error('데이터 개선 실패:', error);
+                            // AI 개선이 실패해도 기본 데이터는 유지
+                            if (!dataLoaded) {
+                                setPortfolioData(actualData);
+                            }
+                        } finally {
+                            setIsEnhancing(false);
+                        }
+                    }
+
+                    setDataLoaded(true);
                 }
+            } catch (error) {
+                console.error('초기 데이터 로딩 실패:', error);
+            } finally {
+                setIsInitializing(false);
             }
         };
 
@@ -277,7 +332,7 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
     };
 
     // 경력 수정
-    const handleUpdateExperience = (index: number, field: string, value: string) => {
+    const handleUpdateExperience = (index: number, field: string, value: string | string[]) => {
         setPortfolioData(prev => {
             const updatedExperience = [...prev.experience];
             updatedExperience[index] = {
@@ -366,15 +421,467 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
     };
 
     // HTML 업데이트
+    // 섹션 렌더링 함수들
+    const renderContactSection = () => (
+        <div key="contact" className="bg-white rounded-xl border border-gray-200 p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-4">
+                {getCurrentTemplateSections().find(s => s.id === 'contact')?.icon || '👤'} {getCurrentTemplateSections().find(s => s.id === 'contact')?.name || '기본 정보'}
+            </h3>
+            <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">이름</label>
+                        <input
+                            type="text"
+                            value={portfolioData.name || ''}
+                            onChange={(e) => setPortfolioData(prev => ({ ...prev, name: e.target.value }))}
+                            className="w-full p-2 border border-gray-300 rounded-lg"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">한 줄 소개</label>
+                        <input
+                            type="text"
+                            value={portfolioData.title || ''}
+                            onChange={(e) => setPortfolioData(prev => ({ ...prev, title: e.target.value }))}
+                            className="w-full p-2 border border-gray-300 rounded-lg"
+                        />
+                    </div>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">이메일</label>
+                        <input
+                            type="email"
+                            value={portfolioData.email || ''}
+                            onChange={(e) => setPortfolioData(prev => ({ ...prev, email: e.target.value }))}
+                            className="w-full p-2 border border-gray-300 rounded-lg"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">연락처</label>
+                        <input
+                            type="tel"
+                            value={portfolioData.phone || ''}
+                            onChange={(e) => setPortfolioData(prev => ({ ...prev, phone: e.target.value }))}
+                            className="w-full p-2 border border-gray-300 rounded-lg"
+                        />
+                    </div>
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">GitHub</label>
+                    <input
+                        type="text"
+                        value={portfolioData.github || ''}
+                        onChange={(e) => setPortfolioData(prev => ({ ...prev, github: e.target.value }))}
+                        className="w-full p-2 border border-gray-300 rounded-lg"
+                        placeholder="github.com/username"
+                    />
+                </div>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">위치</label>
+                    <input
+                        type="text"
+                        value={portfolioData.location || ''}
+                        onChange={(e) => setPortfolioData(prev => ({ ...prev, location: e.target.value }))}
+                        className="w-full p-2 border border-gray-300 rounded-lg"
+                        placeholder="Seoul, Korea"
+                    />
+                </div>
+            </div>
+        </div>
+    );
+
+    const renderAboutSection = () => (
+        <BlurFade key="about" delay={0.1}>
+            <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-purple-200 p-6">
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold text-gray-900">
+                        {getCurrentTemplateSections().find(s => s.id === 'about')?.icon || '👨‍💻'} {getCurrentTemplateSections().find(s => s.id === 'about')?.name || '개인소개'}
+                    </h3>
+                    <button
+                        onClick={handleEnhanceAbout}
+                        disabled={isEnhancing}
+                        className="flex items-center px-3 py-1.5 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors"
+                    >
+                        <SparklesIcon className="w-4 h-4 mr-1" />
+                        {isEnhancing ? 'AI 개선 중...' : 'AI로 개선'}
+                    </button>
+                </div>
+                <textarea
+                    value={portfolioData.about || ''}
+                    onChange={(e) => setPortfolioData(prev => ({ ...prev, about: e.target.value }))}
+                    className={`w-full p-4 border rounded-lg min-h-[150px] ${
+                        enhancedFields['about']
+                            ? 'bg-yellow-50 border-yellow-300 text-yellow-900'
+                            : 'bg-white border-gray-300'
+                    }`}
+                    placeholder="자기소개를 입력하세요. AI가 전문적으로 개선해드립니다."
+                />
+                {enhancedFields['about'] && (
+                    <p className="mt-2 text-xs text-yellow-700">
+                        ⚠️ AI가 생성/개선한 내용입니다. 검토 후 필요시 수정해주세요.
+                    </p>
+                )}
+            </div>
+        </BlurFade>
+    );
+
+    const renderSkillsSection = () => (
+        <BlurFade key="skills" delay={0.3}>
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+                <h3 className="text-lg font-bold text-gray-900 mb-4">{getCurrentTemplateSections().find(s => s.id === 'skills')?.icon || '🛠️'} {getCurrentTemplateSections().find(s => s.id === 'skills')?.name || '기술 스택'}</h3>
+                <div className="flex flex-wrap gap-2 mb-4">
+                    {portfolioData.skills.map((skill, index) => (
+                        <div key={index} className="group relative">
+                            <Badge variant="primary" className="pr-8">
+                                {skill}
+                                <button
+                                    onClick={() => handleDeleteSkill(index)}
+                                    className="absolute right-1 top-1/2 -translate-y-1/2 opacity-60 hover:opacity-100 transition-opacity"
+                                >
+                                    <XMarkIcon className="w-3 h-3" />
+                                </button>
+                            </Badge>
+                        </div>
+                    ))}
+                </div>
+                <div className="flex gap-2">
+                    <input
+                        type="text"
+                        value={newSkill}
+                        onChange={(e) => setNewSkill(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleAddSkill()}
+                        className="flex-1 p-2 border border-gray-300 rounded-lg"
+                        placeholder="기술 스택 추가 (예: React, TypeScript)"
+                    />
+                    <button
+                        onClick={handleAddSkill}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                        <PlusIcon className="w-5 h-5" />
+                    </button>
+                </div>
+            </div>
+        </BlurFade>
+    );
+
+    const renderProjectsSection = () => (
+        <BlurFade key="projects" delay={0.2}>
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold text-gray-900">
+                        {getCurrentTemplateSections().find(s => s.id === 'projects')?.icon || '🚀'} {getCurrentTemplateSections().find(s => s.id === 'projects')?.name || '프로젝트'}
+                    </h3>
+                    <button
+                        onClick={handleAddProject}
+                        className="flex items-center px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors"
+                    >
+                        <PlusIcon className="w-4 h-4 mr-1" />
+                        프로젝트 추가
+                    </button>
+                </div>
+
+                {portfolioData.projects.map((project, index) => (
+                    <div key={index} className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                        <div className="flex items-start justify-between mb-3">
+                            <input
+                                type="text"
+                                value={project.name || ''}
+                                onChange={(e) => handleUpdateProject(index, 'name', e.target.value)}
+                                className="text-lg font-semibold bg-transparent border-b border-gray-300 focus:border-purple-500 outline-none"
+                            />
+                            <div className="flex items-center space-x-2">
+                                <button
+                                    onClick={() => handleEnhanceProject(index)}
+                                    disabled={isEnhancing}
+                                    className="p-1 text-purple-600 hover:bg-purple-100 rounded"
+                                    title="AI로 개선"
+                                >
+                                    <SparklesIcon className="w-4 h-4" />
+                                </button>
+                                <button
+                                    onClick={() => handleDeleteProject(index)}
+                                    className="p-1 text-red-600 hover:bg-red-100 rounded"
+                                >
+                                    <XMarkIcon className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+
+                        <textarea
+                            value={project.description || ''}
+                            onChange={(e) => handleUpdateProject(index, 'description', e.target.value)}
+                            className={`w-full p-2 mb-3 border rounded min-h-[80px] ${
+                                enhancedFields[`project_${index}`]
+                                    ? 'bg-yellow-50 border-yellow-300'
+                                    : 'bg-white border-gray-300'
+                            }`}
+                            placeholder="프로젝트 설명"
+                        />
+
+                        <div className="grid grid-cols-3 gap-2">
+                            <div>
+                                <label className="text-xs text-gray-600">기간</label>
+                                <input
+                                    type="text"
+                                    value={project.period || ''}
+                                    onChange={(e) => handleUpdateProject(index, 'period', e.target.value)}
+                                    className="w-full p-1 text-sm border border-gray-300 rounded"
+                                    placeholder="2023.01 - 2023.06"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs text-gray-600">역할</label>
+                                <input
+                                    type="text"
+                                    value={project.role || ''}
+                                    onChange={(e) => handleUpdateProject(index, 'role', e.target.value)}
+                                    className="w-full p-1 text-sm border border-gray-300 rounded"
+                                    placeholder="프론트엔드 개발"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs text-gray-600">회사/단체</label>
+                                <input
+                                    type="text"
+                                    value={project.company || ''}
+                                    onChange={(e) => handleUpdateProject(index, 'company', e.target.value)}
+                                    className="w-full p-1 text-sm border border-gray-300 rounded"
+                                    placeholder="○○회사"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                ))}
+
+                {portfolioData.projects.length === 0 && (
+                    <p className="text-gray-500 text-center py-8">
+                        프로젝트를 추가해주세요
+                    </p>
+                )}
+            </div>
+        </BlurFade>
+    );
+
+    const renderExperienceSection = () => (
+        <BlurFade key="experience" delay={0.4}>
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold text-gray-900">{getCurrentTemplateSections().find(s => s.id === 'experience')?.icon || '💼'} {getCurrentTemplateSections().find(s => s.id === 'experience')?.name || '경력'}</h3>
+                    <button
+                        onClick={handleAddExperience}
+                        className="flex items-center px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                        <PlusIcon className="w-4 h-4 mr-1" />
+                        경력 추가
+                    </button>
+                </div>
+
+                <div className="space-y-3">
+                    {portfolioData.experience.map((exp: any, index: number) => (
+                        <motion.div
+                            key={index}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.1 }}
+                            className="p-4 bg-gradient-to-r from-gray-50 to-white rounded-lg border border-gray-200 hover:shadow-md transition-all">
+                            <div className="flex items-start justify-between mb-3">
+                                <input
+                                    type="text"
+                                    value={exp.position || ''}
+                                    onChange={(e) => handleUpdateExperience(index, 'position', e.target.value)}
+                                    className="text-lg font-semibold bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none flex-1 mr-4"
+                                    placeholder="직책"
+                                />
+                                <button
+                                    onClick={() => handleDeleteExperience(index)}
+                                    className="p-1 text-red-600 hover:bg-red-100 rounded"
+                                >
+                                    <XMarkIcon className="w-4 h-4" />
+                                </button>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2 mb-3">
+                                <div>
+                                    <input
+                                        type="text"
+                                        value={exp.company || ''}
+                                        onChange={(e) => handleUpdateExperience(index, 'company', e.target.value)}
+                                        className="w-full p-2 border border-gray-300 rounded text-sm"
+                                        placeholder="회사명"
+                                    />
+                                </div>
+                                <div>
+                                    <input
+                                        type="text"
+                                        value={exp.duration || ''}
+                                        onChange={(e) => handleUpdateExperience(index, 'duration', e.target.value)}
+                                        className="w-full p-2 border border-gray-300 rounded text-sm"
+                                        placeholder="기간 (예: 2022.01 - 2023.12)"
+                                    />
+                                </div>
+                            </div>
+
+                            <textarea
+                                value={exp.description || ''}
+                                onChange={(e) => handleUpdateExperience(index, 'description', e.target.value)}
+                                className="w-full p-2 border border-gray-300 rounded min-h-[60px] text-sm"
+                                placeholder="담당 업무를 입력하세요"
+                            />
+
+                            <div className="mt-3">
+                                <label className="block text-xs font-medium text-gray-600 mb-1">주요 성과 (각 줄에 하나씩)</label>
+                                <textarea
+                                    value={exp.achievements ? exp.achievements.join('\n') : ''}
+                                    onChange={(e) => handleUpdateExperience(index, 'achievements',
+                                        e.target.value.split('\n').filter((achievement: string) => achievement.trim())
+                                    )}
+                                    className="w-full p-2 border border-gray-300 rounded min-h-[60px] text-sm"
+                                    placeholder="• 매출 20% 증가에 기여
+• 시스템 성능 30% 개선
+• 팀 생산성 향상을 위한 자동화 도구 개발"
+                                />
+                            </div>
+                        </motion.div>
+                    ))}
+                </div>
+
+                {portfolioData.experience.length === 0 && (
+                    <p className="text-gray-500 text-center py-8">
+                        경력을 추가해주세요
+                    </p>
+                )}
+            </div>
+        </BlurFade>
+    );
+
+    const renderEducationSection = () => (
+        <BlurFade key="education" delay={0.5}>
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-bold text-gray-900">{getCurrentTemplateSections().find(s => s.id === 'education')?.icon || '🎓'} {getCurrentTemplateSections().find(s => s.id === 'education')?.name || '학력'}</h3>
+                    <button
+                        onClick={handleAddEducation}
+                        className="flex items-center px-3 py-1.5 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors"
+                    >
+                        <PlusIcon className="w-4 h-4 mr-1" />
+                        학력 추가
+                    </button>
+                </div>
+
+                <div className="space-y-3">
+                    {portfolioData.education.map((edu: any, index: number) => (
+                        <motion.div
+                            key={index}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.1 }}
+                            className="p-4 bg-gradient-to-r from-indigo-50 to-white rounded-lg border border-gray-200 hover:shadow-md transition-all"
+                        >
+                            <div className="flex items-start justify-between mb-3">
+                                <input
+                                    type="text"
+                                    value={edu.school || ''}
+                                    onChange={(e) => handleUpdateEducation(index, 'school', e.target.value)}
+                                    className="text-lg font-semibold bg-transparent border-b border-gray-300 focus:border-indigo-500 outline-none flex-1 mr-4"
+                                    placeholder="학교명"
+                                />
+                                <button
+                                    onClick={() => handleDeleteEducation(index)}
+                                    className="p-1 text-red-600 hover:bg-red-100 rounded"
+                                >
+                                    <XMarkIcon className="w-4 h-4" />
+                                </button>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-2 mb-3">
+                                <div>
+                                    <input
+                                        type="text"
+                                        value={edu.degree || ''}
+                                        onChange={(e) => handleUpdateEducation(index, 'degree', e.target.value)}
+                                        className="w-full p-2 border border-gray-300 rounded text-sm"
+                                        placeholder="전공/학위"
+                                    />
+                                </div>
+                                <div>
+                                    <input
+                                        type="text"
+                                        value={edu.period || ''}
+                                        onChange={(e) => handleUpdateEducation(index, 'period', e.target.value)}
+                                        className="w-full p-2 border border-gray-300 rounded text-sm"
+                                        placeholder="기간 (예: 2018.03 - 2022.02)"
+                                    />
+                                </div>
+                            </div>
+
+                            <textarea
+                                value={edu.description || ''}
+                                onChange={(e) => handleUpdateEducation(index, 'description', e.target.value)}
+                                className="w-full p-2 border border-gray-300 rounded min-h-[60px] text-sm"
+                                placeholder="전공 내용이나 특이사항을 입력하세요"
+                            />
+                        </motion.div>
+                    ))}
+                </div>
+
+                {portfolioData.education.length === 0 && (
+                    <p className="text-gray-500 text-center py-8">
+                        학력을 추가해주세요
+                    </p>
+                )}
+            </div>
+        </BlurFade>
+    );
+
+    const renderAwardsSection = () => (
+        <BlurFade key="awards" delay={0.6}>
+            <div className="bg-white rounded-xl border border-gray-200 p-6">
+                <h3 className="text-lg font-bold text-gray-900 mb-4">{getCurrentTemplateSections().find(s => s.id === 'awards')?.icon || '🏆'} {getCurrentTemplateSections().find(s => s.id === 'awards')?.name || '수상/자격증'}</h3>
+                <p className="text-gray-500 text-center py-8">
+                    수상/자격증 섹션 (개발 예정)
+                </p>
+            </div>
+        </BlurFade>
+    );
+
+    // 동적으로 섹션 렌더링
+    const renderSectionsByTemplate = () => {
+        const sections = getCurrentTemplateSections();
+        const sectionRenderers: Record<string, () => React.ReactElement> = {
+            contact: renderContactSection,
+            about: renderAboutSection,
+            skills: renderSkillsSection,
+            projects: renderProjectsSection,
+            experience: renderExperienceSection,
+            education: renderEducationSection,
+            awards: renderAwardsSection,
+        };
+
+        return sections.map((section) => {
+            const renderer = sectionRenderers[section.id];
+            return renderer ? renderer() : null;
+        }).filter(Boolean);
+    };
+
     const updateHtml = useCallback(() => {
         const template = portfolioTemplates[currentTemplate];
         if (template && template.generateHTML) {
-            // 섹션 제목이 포함된 포트폴리오 데이터 생성
-            const dataWithTitles = {
+            // 템플릿에 맞는 포트폴리오 데이터 생성
+            const dataForTemplate = {
                 ...portfolioData,
+                // 연락처 정보를 contact 객체로 구조화
+                contact: {
+                    email: portfolioData.email,
+                    phone: portfolioData.phone,
+                    github: portfolioData.github,
+                },
+                // initials 생성 (기업형 템플릿에서 사용)
+                initials: portfolioData.name ? portfolioData.name.split(' ').map(n => n.charAt(0)).join('').toUpperCase() : 'GL',
                 sectionTitles: sectionTitles
             };
-            const html = template.generateHTML(dataWithTitles);
+            const html = template.generateHTML(dataForTemplate);
             setCurrentHtml(html);
             return html;
         }
@@ -416,11 +923,57 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
     const handleTemplateChange = (templateId: TemplateType) => {
         setCurrentTemplate(templateId);
         setShowTemplateSelector(false);
+
+        // 새 템플릿의 섹션 타이틀로 업데이트
+        const newTemplate = portfolioTemplates[templateId];
+        if (newTemplate?.sections) {
+            const newTitles: Record<string, string> = {};
+            newTemplate.sections.forEach(section => {
+                newTitles[section.id] = section.name;
+            });
+            setSectionTitles(newTitles);
+        }
+
         if (onTemplateChange) {
             onTemplateChange(templateId);
         }
         updateHtml();
     };
+
+    // 로딩 화면 렌더링
+    if (isInitializing || !dataLoaded) {
+        return (
+            <div className="min-h-screen bg-gray-50 relative">
+                {/* 로딩 오버레이 */}
+                <div className="fixed inset-0 bg-white bg-opacity-95 z-50 flex items-center justify-center">
+                    <div className="text-center">
+                        {/* 버퍼링 애니메이션 */}
+                        <div className="flex justify-center items-center mb-6">
+                            <div className="flex space-x-2">
+                                <div className="w-3 h-3 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                                <div className="w-3 h-3 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                                <div className="w-3 h-3 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                            </div>
+                        </div>
+
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">포트폴리오 데이터 준비 중</h3>
+                        <p className="text-gray-600 mb-6">
+                            {isEnhancing ? 'AI가 사용자 입력을 전문적으로 가공하고 있습니다...' : '사용자 데이터를 불러오는 중입니다...'}
+                        </p>
+
+                        {/* 파도 모양 로딩 애니메이션 */}
+                        <div className="w-48 h-2 bg-gray-200 rounded-full overflow-hidden mx-auto">
+                            <div className="h-full bg-gradient-to-r from-purple-400 to-purple-600 rounded-full animate-pulse"></div>
+                        </div>
+
+                        <p className="text-xs text-gray-500 mt-4">
+                            잠시만 기다려주세요. 품질 높은 포트폴리오를 위해 데이터를 정성스럽게 처리하고 있습니다.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -462,467 +1015,9 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* 왼쪽: 편집 인터페이스 */}
                     <div className="space-y-6">
-                        {/* 기본 정보 */}
-                        <div className="bg-white rounded-xl border border-gray-200 p-6">
-                            <h3 className="text-lg font-bold text-gray-900 mb-4">👤 기본 정보</h3>
-                            <div className="space-y-4">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">이름</label>
-                                        <input
-                                            type="text"
-                                            value={portfolioData.name || ''}
-                                            onChange={(e) => setPortfolioData(prev => ({ ...prev, name: e.target.value }))}
-                                            className="w-full p-2 border border-gray-300 rounded-lg"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">직책</label>
-                                        <input
-                                            type="text"
-                                            value={portfolioData.title || ''}
-                                            onChange={(e) => setPortfolioData(prev => ({ ...prev, title: e.target.value }))}
-                                            className="w-full p-2 border border-gray-300 rounded-lg"
-                                        />
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">이메일</label>
-                                        <input
-                                            type="email"
-                                            value={portfolioData.email || ''}
-                                            onChange={(e) => setPortfolioData(prev => ({ ...prev, email: e.target.value }))}
-                                            className="w-full p-2 border border-gray-300 rounded-lg"
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-1">연락처</label>
-                                        <input
-                                            type="tel"
-                                            value={portfolioData.phone || ''}
-                                            onChange={(e) => setPortfolioData(prev => ({ ...prev, phone: e.target.value }))}
-                                            className="w-full p-2 border border-gray-300 rounded-lg"
-                                        />
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700 mb-1">GitHub</label>
-                                    <input
-                                        type="text"
-                                        value={portfolioData.github || ''}
-                                        onChange={(e) => setPortfolioData(prev => ({ ...prev, github: e.target.value }))}
-                                        className="w-full p-2 border border-gray-300 rounded-lg"
-                                        placeholder="github.com/username"
-                                    />
-                                </div>
-                            </div>
-                        </div>
+                        {/* 동적 섹션 렌더링 */}
+                        {renderSectionsByTemplate()}
 
-                        {/* 자기소개 - 큰 박스로 묶음 */}
-                        <BlurFade delay={0.1}>
-                            <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-purple-200 p-6">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-lg font-bold text-gray-900">💬 {sectionTitles.about}</h3>
-                                <button
-                                    onClick={handleEnhanceAbout}
-                                    disabled={isEnhancing}
-                                    className="flex items-center px-3 py-1.5 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors"
-                                >
-                                    <SparklesIcon className="w-4 h-4 mr-1" />
-                                    {isEnhancing ? 'AI 개선 중...' : 'AI로 개선'}
-                                </button>
-                            </div>
-                            <textarea
-                                value={portfolioData.about || ''}
-                                onChange={(e) => setPortfolioData(prev => ({ ...prev, about: e.target.value }))}
-                                className={`w-full p-4 border rounded-lg min-h-[150px] ${
-                                    enhancedFields['about']
-                                        ? 'bg-yellow-50 border-yellow-300 text-yellow-900'
-                                        : 'bg-white border-gray-300'
-                                }`}
-                                placeholder="자기소개를 입력하세요. AI가 전문적으로 개선해드립니다."
-                            />
-                            {enhancedFields['about'] && (
-                                <p className="mt-2 text-xs text-yellow-700">
-                                    ⚠️ AI가 생성/개선한 내용입니다. 검토 후 필요시 수정해주세요.
-                                </p>
-                            )}
-                        </div>
-                        </BlurFade>
-
-                        {/* 프로젝트 */}
-                        <BlurFade delay={0.2}>
-                            <div className="bg-white rounded-xl border border-gray-200 p-6">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-lg font-bold text-gray-900">🚀 {sectionTitles.projects}</h3>
-                                <button
-                                    onClick={handleAddProject}
-                                    className="flex items-center px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors"
-                                >
-                                    <PlusIcon className="w-4 h-4 mr-1" />
-                                    프로젝트 추가
-                                </button>
-                            </div>
-
-                            {portfolioData.projects.map((project, index) => (
-                                <div key={index} className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                                    <div className="flex items-start justify-between mb-3">
-                                        <input
-                                            type="text"
-                                            value={project.name || ''}
-                                            onChange={(e) => handleUpdateProject(index, 'name', e.target.value)}
-                                            className="text-lg font-semibold bg-transparent border-b border-gray-300 focus:border-purple-500 outline-none"
-                                        />
-                                        <div className="flex items-center space-x-2">
-                                            <button
-                                                onClick={() => handleEnhanceProject(index)}
-                                                disabled={isEnhancing}
-                                                className="p-1 text-purple-600 hover:bg-purple-100 rounded"
-                                                title="AI로 개선"
-                                            >
-                                                <SparklesIcon className="w-4 h-4" />
-                                            </button>
-                                            <button
-                                                onClick={() => handleDeleteProject(index)}
-                                                className="p-1 text-red-600 hover:bg-red-100 rounded"
-                                            >
-                                                <XMarkIcon className="w-4 h-4" />
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <textarea
-                                        value={project.description || ''}
-                                        onChange={(e) => handleUpdateProject(index, 'description', e.target.value)}
-                                        className={`w-full p-2 mb-3 border rounded min-h-[80px] ${
-                                            enhancedFields[`project_${index}`]
-                                                ? 'bg-yellow-50 border-yellow-300'
-                                                : 'bg-white border-gray-300'
-                                        }`}
-                                        placeholder="프로젝트 설명"
-                                    />
-
-                                    <div className="grid grid-cols-3 gap-2">
-                                        <div>
-                                            <label className="text-xs text-gray-600">기간</label>
-                                            <input
-                                                type="text"
-                                                value={project.period || ''}
-                                                onChange={(e) => handleUpdateProject(index, 'period', e.target.value)}
-                                                className="w-full p-1 text-sm border border-gray-300 rounded"
-                                                placeholder="2023.01 - 2023.06"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="text-xs text-gray-600">역할</label>
-                                            <input
-                                                type="text"
-                                                value={project.role || ''}
-                                                onChange={(e) => handleUpdateProject(index, 'role', e.target.value)}
-                                                className="w-full p-1 text-sm border border-gray-300 rounded"
-                                                placeholder="프론트엔드 개발"
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="text-xs text-gray-600">회사/단체</label>
-                                            <input
-                                                type="text"
-                                                value={project.company || ''}
-                                                onChange={(e) => handleUpdateProject(index, 'company', e.target.value)}
-                                                className="w-full p-1 text-sm border border-gray-300 rounded"
-                                                placeholder="○○회사"
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-
-                            {portfolioData.projects.length === 0 && (
-                                <p className="text-gray-500 text-center py-8">
-                                    프로젝트를 추가해주세요
-                                </p>
-                            )}
-                        </div>
-                        </BlurFade>
-
-                        {/* 기술 스택 - 모던 Badge 스타일 */}
-                        <BlurFade delay={0.3}>
-                            <div className="bg-white rounded-xl border border-gray-200 p-6">
-                                <h3 className="text-lg font-bold text-gray-900 mb-4">🛠️ {sectionTitles.skills}</h3>
-                                <div className="flex flex-wrap gap-2 mb-4">
-                                    {portfolioData.skills.map((skill, index) => (
-                                        <div key={index} className="group relative">
-                                            <Badge variant="primary" className="pr-8">
-                                                {skill}
-                                                <button
-                                                    onClick={() => handleDeleteSkill(index)}
-                                                    className="absolute right-1 top-1/2 -translate-y-1/2 opacity-60 hover:opacity-100 transition-opacity"
-                                                >
-                                                    <XMarkIcon className="w-3 h-3" />
-                                                </button>
-                                            </Badge>
-                                        </div>
-                                    ))}
-                            </div>
-                            <div className="flex gap-2">
-                                <input
-                                    type="text"
-                                    value={newSkill}
-                                    onChange={(e) => setNewSkill(e.target.value)}
-                                    onKeyDown={(e) => e.key === 'Enter' && handleAddSkill()}
-                                    className="flex-1 p-2 border border-gray-300 rounded-lg"
-                                    placeholder="기술 스택 추가 (예: React, TypeScript)"
-                                />
-                                <button
-                                    onClick={handleAddSkill}
-                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                                >
-                                    <PlusIcon className="w-5 h-5" />
-                                </button>
-                            </div>
-                        </div>
-                        </BlurFade>
-
-                        {/* 경력 - 모던 카드 레이아웃 */}
-                        <BlurFade delay={0.4}>
-                            <div className="bg-white rounded-xl border border-gray-200 p-6">
-                                <div className="flex items-center justify-between mb-4">
-                                    <h3 className="text-lg font-bold text-gray-900">💼 {sectionTitles.experience}</h3>
-                                    <button
-                                        onClick={handleAddExperience}
-                                        className="flex items-center px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
-                                    >
-                                        <PlusIcon className="w-4 h-4 mr-1" />
-                                        경력 추가
-                                    </button>
-                                </div>
-
-                                <div className="space-y-3">
-                                    {portfolioData.experience.map((exp: any, index: number) => (
-                                        <motion.div
-                                            key={index}
-                                            initial={{ opacity: 0, y: 10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: index * 0.1 }}
-                                            className="p-4 bg-gradient-to-r from-gray-50 to-white rounded-lg border border-gray-200 hover:shadow-md transition-all">
-                                    <div className="flex items-start justify-between mb-3">
-                                        <input
-                                            type="text"
-                                            value={exp.position || ''}
-                                            onChange={(e) => handleUpdateExperience(index, 'position', e.target.value)}
-                                            className="text-lg font-semibold bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none flex-1 mr-4"
-                                            placeholder="직책"
-                                        />
-                                        <button
-                                            onClick={() => handleDeleteExperience(index)}
-                                            className="p-1 text-red-600 hover:bg-red-100 rounded"
-                                        >
-                                            <XMarkIcon className="w-4 h-4" />
-                                        </button>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-2 mb-3">
-                                        <div>
-                                            <input
-                                                type="text"
-                                                value={exp.company || ''}
-                                                onChange={(e) => handleUpdateExperience(index, 'company', e.target.value)}
-                                                className="w-full p-2 border border-gray-300 rounded text-sm"
-                                                placeholder="회사명"
-                                            />
-                                        </div>
-                                        <div>
-                                            <input
-                                                type="text"
-                                                value={exp.duration || ''}
-                                                onChange={(e) => handleUpdateExperience(index, 'duration', e.target.value)}
-                                                className="w-full p-2 border border-gray-300 rounded text-sm"
-                                                placeholder="기간 (예: 2022.01 - 2023.12)"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <textarea
-                                        value={exp.description || ''}
-                                        onChange={(e) => handleUpdateExperience(index, 'description', e.target.value)}
-                                        className="w-full p-2 border border-gray-300 rounded min-h-[60px] text-sm"
-                                        placeholder="담당 업무와 성과를 입력하세요"
-                                    />
-                                        </motion.div>
-                                    ))}
-                                </div>
-
-                                {portfolioData.experience.length === 0 && (
-                                    <p className="text-gray-500 text-center py-8">
-                                        경력을 추가해주세요
-                                    </p>
-                                )}
-                            </div>
-                        </BlurFade>
-
-                        {/* 학력 - 모던 카드 레이아웃 */}
-                        <BlurFade delay={0.5}>
-                            <div className="bg-white rounded-xl border border-gray-200 p-6">
-                                <div className="flex items-center justify-between mb-4">
-                                    <h3 className="text-lg font-bold text-gray-900">🎓 {sectionTitles.education}</h3>
-                                    <button
-                                        onClick={handleAddEducation}
-                                        className="flex items-center px-3 py-1.5 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 transition-colors"
-                                    >
-                                        <PlusIcon className="w-4 h-4 mr-1" />
-                                        학력 추가
-                                    </button>
-                                </div>
-
-                                <div className="space-y-3">
-                                    {portfolioData.education.map((edu: any, index: number) => (
-                                        <motion.div
-                                            key={index}
-                                            initial={{ opacity: 0, y: 10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: index * 0.1 }}
-                                            className="p-4 bg-gradient-to-r from-indigo-50 to-white rounded-lg border border-gray-200 hover:shadow-md transition-all"
-                                        >
-                                    <div className="flex items-start justify-between mb-3">
-                                        <input
-                                            type="text"
-                                            value={edu.school || ''}
-                                            onChange={(e) => handleUpdateEducation(index, 'school', e.target.value)}
-                                            className="text-lg font-semibold bg-transparent border-b border-gray-300 focus:border-indigo-500 outline-none flex-1 mr-4"
-                                            placeholder="학교명"
-                                        />
-                                        <button
-                                            onClick={() => handleDeleteEducation(index)}
-                                            className="p-1 text-red-600 hover:bg-red-100 rounded"
-                                        >
-                                            <XMarkIcon className="w-4 h-4" />
-                                        </button>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-2 mb-3">
-                                        <div>
-                                            <input
-                                                type="text"
-                                                value={edu.degree || ''}
-                                                onChange={(e) => handleUpdateEducation(index, 'degree', e.target.value)}
-                                                className="w-full p-2 border border-gray-300 rounded text-sm"
-                                                placeholder="전공/학위"
-                                            />
-                                        </div>
-                                        <div>
-                                            <input
-                                                type="text"
-                                                value={edu.period || ''}
-                                                onChange={(e) => handleUpdateEducation(index, 'period', e.target.value)}
-                                                className="w-full p-2 border border-gray-300 rounded text-sm"
-                                                placeholder="기간 (예: 2018.03 - 2022.02)"
-                                            />
-                                        </div>
-                                    </div>
-
-                                    <textarea
-                                        value={edu.description || ''}
-                                        onChange={(e) => handleUpdateEducation(index, 'description', e.target.value)}
-                                        className="w-full p-2 border border-gray-300 rounded min-h-[60px] text-sm"
-                                        placeholder="전공 내용이나 특이사항을 입력하세요"
-                                    />
-                                        </motion.div>
-                                    ))}
-                                </div>
-
-                                {portfolioData.education.length === 0 && (
-                                    <p className="text-gray-500 text-center py-8">
-                                        학력을 추가해주세요
-                                    </p>
-                                )}
-                            </div>
-                        </BlurFade>
-
-                        {/* 기타 - 섹션 제목 편집 */}
-                        <div className="bg-white rounded-xl border border-gray-200 p-6">
-                            <button
-                                onClick={() => setShowOthers(!showOthers)}
-                                className="w-full flex items-center justify-between text-lg font-bold text-gray-900"
-                            >
-                                <span>⚙️ 섹션 제목 편집</span>
-                                {showOthers ? (
-                                    <ChevronUpIcon className="w-5 h-5" />
-                                ) : (
-                                    <ChevronDownIcon className="w-5 h-5" />
-                                )}
-                            </button>
-
-                            <AnimatePresence>
-                                {showOthers && (
-                                    <motion.div
-                                        initial={{ height: 0, opacity: 0 }}
-                                        animate={{ height: 'auto', opacity: 1 }}
-                                        exit={{ height: 0, opacity: 0 }}
-                                        className="mt-4 space-y-4"
-                                    >
-                                        <div className="bg-gray-50 p-4 rounded-lg">
-                                            <h4 className="text-sm font-medium text-gray-700 mb-3">포트폴리오 섹션 제목 수정</h4>
-                                            <div className="space-y-3">
-                                                <div>
-                                                    <label className="block text-xs text-gray-600 mb-1">자기소개 섹션</label>
-                                                    <input
-                                                        type="text"
-                                                        value={sectionTitles.about}
-                                                        onChange={(e) => setSectionTitles(prev => ({ ...prev, about: e.target.value }))}
-                                                        className="w-full p-2 text-sm border border-gray-300 rounded"
-                                                        placeholder="About Me"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-xs text-gray-600 mb-1">프로젝트 섹션</label>
-                                                    <input
-                                                        type="text"
-                                                        value={sectionTitles.projects}
-                                                        onChange={(e) => setSectionTitles(prev => ({ ...prev, projects: e.target.value }))}
-                                                        className="w-full p-2 text-sm border border-gray-300 rounded"
-                                                        placeholder="핵심 프로젝트"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-xs text-gray-600 mb-1">기술 스택 섹션</label>
-                                                    <input
-                                                        type="text"
-                                                        value={sectionTitles.skills}
-                                                        onChange={(e) => setSectionTitles(prev => ({ ...prev, skills: e.target.value }))}
-                                                        className="w-full p-2 text-sm border border-gray-300 rounded"
-                                                        placeholder="기술 스택"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-xs text-gray-600 mb-1">경력 섹션</label>
-                                                    <input
-                                                        type="text"
-                                                        value={sectionTitles.experience}
-                                                        onChange={(e) => setSectionTitles(prev => ({ ...prev, experience: e.target.value }))}
-                                                        className="w-full p-2 text-sm border border-gray-300 rounded"
-                                                        placeholder="경력"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-xs text-gray-600 mb-1">학력 섹션</label>
-                                                    <input
-                                                        type="text"
-                                                        value={sectionTitles.education}
-                                                        onChange={(e) => setSectionTitles(prev => ({ ...prev, education: e.target.value }))}
-                                                        className="w-full p-2 text-sm border border-gray-300 rounded"
-                                                        placeholder="학력"
-                                                    />
-                                                </div>
-                                            </div>
-                                            <div className="mt-3 text-xs text-gray-500">
-                                                💡 섹션 제목을 원하는 대로 수정할 수 있습니다. (예: "About Me" → "소개", "핵심 프로젝트" → "주요 작업물")
-                                            </div>
-                                        </div>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </div>
                     </div>
 
                     {/* 오른쪽: HTML 미리보기 */}
@@ -975,13 +1070,18 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                         </AnimatePresence>
 
                         {/* HTML 미리보기 */}
-                        <div className="border border-gray-200 rounded-lg overflow-auto max-h-[600px] bg-white">
-                            <iframe
-                                srcDoc={currentHtml}
-                                className="w-full h-[600px] border-0"
-                                title="Portfolio Preview"
-                                style={{ transform: 'scale(0.8)', transformOrigin: 'top left', width: '125%', height: '750px' }}
-                            />
+                        <div className="border border-gray-200 rounded-lg overflow-auto bg-white">
+                            <div className="relative">
+                                <iframe
+                                    srcDoc={currentHtml}
+                                    className="w-full border-0 lg:h-[700px] md:h-[600px] h-[500px]"
+                                    title="Portfolio Preview"
+                                    style={{
+                                        transform: 'scale(1)',
+                                        transformOrigin: 'top left'
+                                    }}
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>
