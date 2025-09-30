@@ -49,6 +49,7 @@ export interface GenerateRequest {
     user_id: string;
     inputs: {
         profile?: string;
+        content?: string; // 추가: 원본 사용자 입력
         projects?: Array<{
             title: string;
             description: string;
@@ -58,9 +59,14 @@ export interface GenerateRequest {
         skills?: string[];
         education?: string;
         experience?: string;
+        tone?: string;
+        target_job?: string;
+        target_job_keywords?: string[];
     };
     target_job_keywords?: string[];
     locale?: string;
+    organized_content?: any; // AI가 이미 분석한 내용
+    template?: 'minimal' | 'clean' | 'colorful' | 'elegant'; // 템플릿 정보 추가
 }
 
 class AutoFillService {
@@ -77,13 +83,42 @@ class AutoFillService {
             console.log('=== AutoFill 포트폴리오 생성 시작 ===');
             console.log('입력 요청 데이터:', request);
 
+            // 템플릿별 특화 지침 생성
+            const getTemplateGuidance = (template?: string) => {
+                switch (template) {
+                    case 'clean':
+                        return "\n=== 깨끗한 레이아웃 템플릿 특화 지침 ===\n" +
+                               "• **위치 정보 필수**: location 필드에 'Seoul, Korea' 등 구체적 위치 포함\n" +
+                               "• **주요 성과 강조**: 각 경력에서 achievements 배열로 구체적 성과 나열\n" +
+                               "• **전문성 중심**: 비즈니스 임팩트와 기술적 전문성을 균형있게 표현\n" +
+                               "• **섹션 순서**: 개인소개 → 스킬셋 → 커리어/경력 → 프로젝트 → 수상/자격증\n\n";
+                    case 'minimal':
+                        return "\n=== 미니멀리스트 템플릿 특화 지침 ===\n" +
+                               "• **교육 배경 포함**: education 섹션에 학력 정보 상세히 기술\n" +
+                               "• **간결한 표현**: 핵심 내용을 간결하고 명확하게 전달\n" +
+                               "• **프로젝트 중심**: 개인 프로젝트와 포트폴리오 작품을 상세히 기술\n" +
+                               "• **섹션 순서**: 기본정보 → 자기소개 → 프로젝트 → 기술스택 → 경력 → 학력\n\n";
+                    case 'colorful':
+                    case 'elegant':
+                        return "\n=== 창의형 템플릿 특화 지침 ===\n" +
+                               "• **경험 중심**: Experience 섹션을 가장 중요하게 다루기\n" +
+                               "• **창의적 표현**: 독특하고 인상적인 프로젝트 스토리텔링\n" +
+                               "• **사용자 경험 강조**: UI/UX 관련 성과와 사용자 만족도 지표 포함\n" +
+                               "• **섹션 순서**: 기본정보 → About Me → Experience → Projects → Skills\n\n";
+                    default:
+                        return "\n=== 일반 템플릿 지침 ===\n" +
+                               "• 균형있는 섹션 구성으로 전문성과 개성을 모두 어필\n\n";
+                }
+            };
+
             const systemPrompt = "당신은 실제 채용 성공 사례 10,000건을 분석한 포트폴리오 전문가입니다.\n" +
                 "MISSION: 사용자의 빈약한 입력을 → 채용담당자가 '반드시 면접 보고싶다'고 생각할 포트폴리오로 변환\n\n" +
                 "=== 핵심 변환 원칙 ===\n" +
                 "🎯 **스토리텔링 강화**: 단순 나열 → 논리적 서사 구조\n" +
                 "📈 **임팩트 극대화**: 모든 경험을 '비즈니스 임팩트'로 재해석\n" +
                 "🔥 **차별점 부각**: 남들과 다른 '독특한 강점' 창조적 발굴\n" +
-                "💡 **구체성 강화**: 추상적 표현 → 구체적 수치/사례로 변환\n\n" +
+                "💡 **구체성 강화**: 추상적 표현 → 구체적 수치/사례로 변환\n" +
+                getTemplateGuidance(request.template) + +
                 "=== 변환 매뉴얼 ===\n" +
                 "1. **빈약한 입력도 풍성하게**: '프로젝트 했다' → '문제 정의 + 해결 과정 + 비즈니스 임팩트' 전체 스토리 구성\n" +
                 "2. **기술을 비즈니스 언어로**: 'React 사용' → 'React로 사용자 경험 40% 개선하여 전환율 향상 달성'\n" +

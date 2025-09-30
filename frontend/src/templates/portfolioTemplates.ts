@@ -94,15 +94,15 @@ export interface PortfolioTemplate {
     generateHTML: (data: any) => string;
 }
 
-export type TemplateType = 'james' | 'geon' | 'eunseong' | 'iu';
+export type TemplateType = 'minimal' | 'clean' | 'colorful' | 'elegant';
 
-// Template 1: James (Min9koo) - Minimalist with Emoji Headers
-export const jamesTemplate: PortfolioTemplate = {
-    id: 'james-minimalist',
+// Template 1: Minimal - Minimalist with Clean Headers
+export const minimalTemplate: PortfolioTemplate = {
+    id: 'minimal',
     name: '미니멀리스트',
     description: '이모지와 깔끔한 레이아웃의 미니멀 포트폴리오',
     thumbnail: '/templates/james.png',
-    author: 'James (Min9koo)',
+    author: 'Minimal Template',
     designSystem: {
         colors: {
             primary: '#000000',
@@ -133,15 +133,15 @@ export const jamesTemplate: PortfolioTemplate = {
     },
     features: ['다크모드', '이모지 헤더', '2컬럼 레이아웃', '미니멀 디자인'],
     sections: [
-        { id: 'contact', name: '기본 정보', icon: '👤', required: true },
-        { id: 'about', name: '자기소개', icon: '💬', required: true },
-        { id: 'projects', name: '프로젝트', icon: '🚀', required: false },
-        { id: 'skills', name: '기술 스택', icon: '💻', required: false },
-        { id: 'experience', name: '경력', icon: '💼', required: false },
-        { id: 'education', name: '학력', icon: '🎓', required: false }
+        { id: 'contact', name: '기본 정보', icon: '', required: true },
+        { id: 'about', name: '자기소개', icon: '', required: true },
+        { id: 'projects', name: '프로젝트', icon: '', required: false },
+        { id: 'skills', name: '기술 스택', icon: '', required: false },
+        { id: 'experience', name: '경력', icon: '', required: false },
+        { id: 'education', name: '학력', icon: '', required: false }
     ],
     sampleData: {
-        name: '김포트폴리오',
+        name: 'Your name',
         title: '풀스택 개발자',
         contact: {
             email: 'portfolio@example.com',
@@ -156,27 +156,27 @@ export const jamesTemplate: PortfolioTemplate = {
             {
                 category: '언어',
                 skills: ['Python', 'Java', 'C', 'JavaScript', 'TypeScript'],
-                icon: '💻'
+                icon: ''
             },
             {
                 category: '프레임워크',
                 skills: ['Spring Boot', 'Django', 'React', 'Express.js'],
-                icon: '🔧'
+                icon: ''
             },
             {
                 category: '데이터베이스',
                 skills: ['MySQL', 'MongoDB', 'PostgreSQL', 'Redis'],
-                icon: '🗄️'
+                icon: ''
             },
             {
                 category: '클라우드 & DevOps',
                 skills: ['AWS EC2', 'Docker', 'GitHub Actions', 'Jenkins'],
-                icon: '☁️'
+                icon: ''
             },
             {
                 category: '협업 툴',
                 skills: ['Git', 'Jira', 'Slack', 'Notion'],
-                icon: '🤝'
+                icon: ''
             }
         ],
         experience: [
@@ -272,7 +272,7 @@ export const jamesTemplate: PortfolioTemplate = {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${data.name || 'Portfolio'} - James Style</title>
+    <title>${data.name || 'Portfolio'} - Minimal Style</title>
     <style>
         * {
             margin: 0;
@@ -464,28 +464,28 @@ export const jamesTemplate: PortfolioTemplate = {
 <body>
     <div class="container">
         <header class="header">
-            <h1>👋 ${data.name || '안녕하세요, 박기훈입니다'}</h1>
+            <h1>${data.name || '안녕하세요, 박기훈입니다'}</h1>
             <p class="subtitle">${data.title || '백엔드와 데이터 처리에 강점을 가진 주니어 개발자'}</p>
             <div class="contact-links">
-                ${data.contact?.email ? `<a href="mailto:${data.contact.email}">📧 ${data.contact.email}</a>` : ''}
-                ${data.contact?.github ? `<a href="https://${data.contact.github}" target="_blank">🔗 GitHub</a>` : ''}
-                ${data.contact?.blog ? `<a href="https://${data.contact.blog}" target="_blank">📝 Blog</a>` : ''}
-                ${data.contact?.linkedin ? `<a href="https://${data.contact.linkedin}" target="_blank">💼 LinkedIn</a>` : ''}
+                ${data.contact?.email ? `<a href="mailto:${data.contact.email}">${data.contact.email}</a>` : ''}
+                ${data.contact?.github ? `<a href="https://${data.contact.github}" target="_blank">GitHub</a>` : ''}
+                ${data.contact?.blog ? `<a href="https://${data.contact.blog}" target="_blank">Blog</a>` : ''}
+                ${data.contact?.linkedin ? `<a href="https://${data.contact.linkedin}" target="_blank">LinkedIn</a>` : ''}
             </div>
         </header>
         
         <section class="section">
             <div class="section-header">
-                <span class="emoji">👨‍💻</span>
-                <h2>개인소개</h2>
+                <span class="emoji"></span>
+                <h2>${data.sectionTitles?.about || '개인소개'}</h2>
             </div>
             <p>${data.about || '안녕하세요, 백엔드와 데이터 처리에 강점을 가진 주니어 개발자입니다.'}</p>
         </section>
-        
+
         <section class="section">
             <div class="section-header">
-                <span class="emoji">🛠</span>
-                <h2>스킬셋</h2>
+                <span class="emoji"></span>
+                <h2>${data.sectionTitles?.skills || '스킬셋'}</h2>
             </div>
             ${(data.skillCategories || []).map((category: any) => `
                 <div style="margin-bottom: 1.5rem;">
@@ -503,8 +503,46 @@ export const jamesTemplate: PortfolioTemplate = {
         
         <section class="section">
             <div class="section-header">
-                <span class="emoji">💼</span>
-                <h2>커리어/경력</h2>
+                <span class="emoji"></span>
+                <h2>${data.sectionTitles?.projects || '프로젝트'}</h2>
+            </div>
+            <div class="two-column">
+                ${(data.projects || []).map((project: any) => `
+                    <div class="card">
+                        <h3>${project.name}</h3>
+                        <p style="margin-bottom: 0.75rem;">${project.description}</p>
+                        ${project.role ? `<p style="color: var(--secondary-text); font-weight: 500; margin-bottom: 0.5rem;">역할: ${project.role}</p>` : ''}
+                        ${project.results && project.results.length > 0 ? `
+                            <div style="margin-bottom: 0.75rem;">
+                                <p style="color: var(--secondary-color); font-weight: 500; margin-bottom: 0.25rem;">주요 성과:</p>
+                                <ul style="margin: 0; padding-left: 1.2rem; color: var(--secondary-text);">
+                                    ${project.results.map((result: any) => `<li>${result}</li>`).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+                        ${project.tech && project.tech.length > 0 ? `
+                            <div class="skill-tags">
+                                ${project.tech.map((tech: any) =>
+                                    `<span class="skill-tag">${tech}</span>`
+                                ).join('')}
+                            </div>
+                        ` : ''}
+                        ${(project.url || project.github || project.demo) ? `
+                            <div style="margin-top: 1rem;">
+                                ${project.url ? `<a href="${project.url}" target="_blank" style="color: var(--accent-color); text-decoration: none; margin-right: 1rem;">사이트</a>` : ''}
+                                ${project.github ? `<a href="${project.github}" target="_blank" style="color: var(--accent-color); text-decoration: none; margin-right: 1rem;">GitHub</a>` : ''}
+                                ${project.demo ? `<a href="${project.demo}" target="_blank" style="color: var(--accent-color); text-decoration: none;">데모</a>` : ''}
+                            </div>
+                        ` : ''}
+                    </div>
+                `).join('')}
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="section-header">
+                <span class="emoji"></span>
+                <h2>${data.sectionTitles?.experience || '경력'}</h2>
             </div>
             <div class="timeline">
                 ${(data.experience || []).map((exp: any) => `
@@ -524,56 +562,38 @@ export const jamesTemplate: PortfolioTemplate = {
             </div>
         </section>
         
+        ${data.education && data.education.length > 0 ? `
         <section class="section">
             <div class="section-header">
-                <span class="emoji">🚀</span>
-                <h2>프로젝트</h2>
+                <span class="emoji"></span>
+                <h2>${data.sectionTitles?.education || '학력'}</h2>
             </div>
-            <div class="two-column">
-                ${(data.projects || []).map((project: any) => `
-                    <div class="card">
-                        <h3>${project.name}</h3>
-                        <p style="margin-bottom: 0.75rem;">${project.description}</p>
-                        ${project.role ? `<p style="color: var(--secondary-text); font-weight: 500; margin-bottom: 0.5rem;">역할: ${project.role}</p>` : ''}
-                        ${project.results && project.results.length > 0 ? `
-                            <div style="margin-bottom: 0.75rem;">
-                                <p style="color: var(--secondary-color); font-weight: 500; margin-bottom: 0.25rem;">주요 성과:</p>
-                                <ul style="margin: 0; padding-left: 1.2rem; color: var(--secondary-text);">
-                                    ${project.results.map((result: any) => `<li>${result}</li>`).join('')}
-                                </ul>
-                            </div>
-                        ` : ''}
-                        ${project.tech && project.tech.length > 0 ? `
-                            <div class="skill-tags">
-                                ${project.tech.map((tech: any) => 
-                                    `<span class="skill-tag">${tech}</span>`
-                                ).join('')}
-                            </div>
-                        ` : ''}
-                        ${(project.url || project.github || project.demo) ? `
-                            <div style="margin-top: 1rem;">
-                                ${project.url ? `<a href="${project.url}" target="_blank" style="color: var(--accent-color); text-decoration: none; margin-right: 1rem;">🔗 사이트</a>` : ''}
-                                ${project.github ? `<a href="${project.github}" target="_blank" style="color: var(--accent-color); text-decoration: none; margin-right: 1rem;">📦 GitHub</a>` : ''}
-                                ${project.demo ? `<a href="${project.demo}" target="_blank" style="color: var(--accent-color); text-decoration: none;">🎬 데모</a>` : ''}
-                            </div>
-                        ` : ''}
+            <div class="timeline">
+                ${data.education.map((edu: any) => `
+                    <div class="timeline-item">
+                        <h3>${edu.school}</h3>
+                        <p style="color: var(--secondary-text); margin-bottom: 0.5rem;">
+                            ${edu.degree} • ${edu.period}
+                        </p>
+                        ${edu.description ? `<p>${edu.description}</p>` : ''}
                     </div>
                 `).join('')}
             </div>
         </section>
-        
+        ` : ''}
+
         ${data.awards && data.awards.length > 0 ? `
         <section class="section">
             <div class="section-header">
-                <span class="emoji">🏆</span>
-                <h2>수상/자격증</h2>
+                <span class="emoji"></span>
+                <h2>${data.sectionTitles?.awards || '수상/자격증'}</h2>
             </div>
             <div class="timeline">
                 ${data.awards.map((award: any) => `
                     <div class="timeline-item">
                         <h3>${award.title}</h3>
                         <p style="color: var(--secondary-text); margin-bottom: 0.5rem;">
-                            ${award.organization} • ${award.date}
+                            ${award.organization} • ${award.year}
                         </p>
                         ${award.description ? `<p>${award.description}</p>` : ''}
                     </div>
@@ -581,7 +601,7 @@ export const jamesTemplate: PortfolioTemplate = {
             </div>
         </section>
         ` : ''}
-        
+
         ${data.certifications && data.certifications.length > 0 ? `
         <section class="section">
             <div class="section-header">
@@ -589,7 +609,7 @@ export const jamesTemplate: PortfolioTemplate = {
                 <h2>자격증</h2>
             </div>
             <div class="skill-tags">
-                ${data.certifications.map((cert: any) => 
+                ${data.certifications.map((cert: any) =>
                     `<span class="skill-tag">${cert}</span>`
                 ).join('')}
             </div>
@@ -601,13 +621,13 @@ export const jamesTemplate: PortfolioTemplate = {
     `
 };
 
-// Template 2: Geon Lee - Professional Grid Layout
-export const geonTemplate: PortfolioTemplate = {
-    id: 'geon-professional',
-    name: '기업형',
+// Template 2: Clean - Professional Grid Layout
+export const cleanTemplate: PortfolioTemplate = {
+    id: 'clean',
+    name: '깨끗한 레이아웃',
     description: '기업 카드 디자인과 깔끔한 그리드 레이아웃',
     thumbnail: '/templates/geon.png',
-    author: 'Geon Lee',
+    author: 'Clean Template',
     designSystem: {
         colors: {
             primary: '#2c3e50',
@@ -638,15 +658,15 @@ export const geonTemplate: PortfolioTemplate = {
     },
     features: ['사이드바', '그리드 레이아웃', '프로페셔널', '구조화된 섹션'],
     sections: [
-        { id: 'contact', name: '기본 정보', icon: '👤', required: true },
-        { id: 'about', name: '개인소개', icon: '👨‍💻', required: true },
-        { id: 'skills', name: '스킬셋', icon: '🛠', required: false },
-        { id: 'experience', name: '커리어/경력', icon: '💼', required: false },
-        { id: 'projects', name: '프로젝트', icon: '🚀', required: false },
-        { id: 'awards', name: '수상/자격증', icon: '🏆', required: false }
+        { id: 'contact', name: '기본 정보', icon: '', required: true },
+        { id: 'about', name: '개인소개', icon: '', required: true },
+        { id: 'skills', name: '스킬셋', icon: '', required: false },
+        { id: 'experience', name: '커리어/경력', icon: '', required: false },
+        { id: 'projects', name: '프로젝트', icon: '', required: false },
+        { id: 'awards', name: '수상/자격증', icon: '', required: false }
     ],
     sampleData: {
-        name: '김포트폴리오',
+        name: 'Your name',
         title: '풀스택 개발자',
         contact: {
             email: 'portfolio@example.com',
@@ -660,12 +680,12 @@ export const geonTemplate: PortfolioTemplate = {
             {
                 category: '언어',
                 skills: ['JavaScript', 'TypeScript', 'Python', 'Java'],
-                icon: '💻'
+                icon: ''
             },
             {
                 category: '프레임워크',
                 skills: ['React', 'Vue.js', 'Node.js', 'Spring'],
-                icon: '🔧'
+                icon: ''
             }
         ],
         experience: [
@@ -910,7 +930,7 @@ export const geonTemplate: PortfolioTemplate = {
                 <div class="profile-image">
                     ${data.initials || 'GL'}
                 </div>
-                <h1>${data.name || 'Geon Lee'}</h1>
+                <h1>${data.name || 'Portfolio Owner'}</h1>
                 <p class="title">${data.title || 'Software Engineer'}</p>
                 <p>${data.location || 'Seoul, Korea'}</p>
             </div>
@@ -918,46 +938,30 @@ export const geonTemplate: PortfolioTemplate = {
             <nav>
                 <ul class="nav-menu">
                     <li><a href="#about" onclick="document.getElementById('about').scrollIntoView({behavior: 'smooth'}); return false;">개인소개</a></li>
-                    <li><a href="#skills" onclick="document.getElementById('skills').scrollIntoView({behavior: 'smooth'}); return false;">스킬셋</a></li>
                     <li><a href="#experience" onclick="document.getElementById('experience').scrollIntoView({behavior: 'smooth'}); return false;">커리어/경력</a></li>
                     <li><a href="#projects" onclick="document.getElementById('projects').scrollIntoView({behavior: 'smooth'}); return false;">프로젝트</a></li>
+                    <li><a href="#skills" onclick="document.getElementById('skills').scrollIntoView({behavior: 'smooth'}); return false;">스킬셋</a></li>
                     <li><a href="#awards" onclick="document.getElementById('awards').scrollIntoView({behavior: 'smooth'}); return false;">수상/자격증</a></li>
                     <li><a href="#contact" onclick="document.getElementById('contact').scrollIntoView({behavior: 'smooth'}); return false;">연락처</a></li>
                 </ul>
             </nav>
             
             <div class="contact-info">
-                ${data.contact?.email ? `<p>📧 ${data.contact.email}</p>` : ''}
-                ${data.contact?.github ? `<p>🔗 ${data.contact.github}</p>` : ''}
-                ${data.contact?.blog ? `<p>📝 ${data.contact.blog}</p>` : ''}
-                ${data.contact?.linkedin ? `<p>💼 ${data.contact.linkedin}</p>` : ''}
+                ${data.contact?.email ? `<p>${data.contact.email}</p>` : ''}
+                ${data.contact?.github ? `<p>${data.contact.github}</p>` : ''}
+                ${data.contact?.blog ? `<p>${data.contact.blog}</p>` : ''}
+                ${data.contact?.linkedin ? `<p>${data.contact.linkedin}</p>` : ''}
             </div>
         </aside>
         
         <main class="main-content">
             <section id="about" class="section">
-                <h2 class="section-title">개인소개</h2>
+                <h2 class="section-title">${data.sectionTitles?.about || '개인소개'}</h2>
                 <p>${data.about || '안녕하세요, 백엔드와 데이터 처리에 강점을 가진 주니어 개발자입니다.'}</p>
             </section>
-            
-            <section id="skills" class="section">
-                <h2 class="section-title">스킬셋</h2>
-                <div class="grid">
-                    ${(data.skillCategories || []).map((category: any) => `
-                        <div class="card">
-                            <h3>${category.icon || '•'} ${category.category}</h3>
-                            <div class="tech-stack">
-                                ${(category.skills || []).map((skill: any) => 
-                                    `<span class="tech-badge">${skill}</span>`
-                                ).join('')}
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            </section>
-            
+
             <section id="experience" class="section">
-                <h2 class="section-title">커리어/경력</h2>
+                <h2 class="section-title">${data.sectionTitles?.experience || '커리어/경력'}</h2>
                 <div class="grid">
                     ${(data.experience || []).map((exp: any) => `
                         <div class="card">
@@ -976,9 +980,9 @@ export const geonTemplate: PortfolioTemplate = {
                     `).join('')}
                 </div>
             </section>
-            
+
             <section id="projects" class="section">
-                <h2 class="section-title">프로젝트</h2>
+                <h2 class="section-title">${data.sectionTitles?.projects || '프로젝트'}</h2>
                 <div class="grid">
                     ${(data.projects || []).map((project: any) => `
                         <div class="card">
@@ -995,18 +999,34 @@ export const geonTemplate: PortfolioTemplate = {
                             ` : ''}
                             ${project.tech && project.tech.length > 0 ? `
                                 <div class="tech-stack">
-                                    ${project.tech.map((tech: any) => 
+                                    ${project.tech.map((tech: any) =>
                                         `<span class="tech-badge">${tech}</span>`
                                     ).join('')}
                                 </div>
                             ` : ''}
                             ${(project.url || project.github || project.demo) ? `
                                 <div style="margin-top: 1rem;">
-                                    ${project.url ? `<a href="${project.url}" target="_blank" style="color: var(--accent-color); text-decoration: none; margin-right: 1rem;">🔗 사이트</a>` : ''}
-                                    ${project.github ? `<a href="${project.github}" target="_blank" style="color: var(--accent-color); text-decoration: none; margin-right: 1rem;">📦 GitHub</a>` : ''}
-                                    ${project.demo ? `<a href="${project.demo}" target="_blank" style="color: var(--accent-color); text-decoration: none;">🎬 데모</a>` : ''}
+                                    ${project.url ? `<a href="${project.url}" target="_blank" style="color: var(--accent-color); text-decoration: none; margin-right: 1rem;">사이트</a>` : ''}
+                                    ${project.github ? `<a href="${project.github}" target="_blank" style="color: var(--accent-color); text-decoration: none; margin-right: 1rem;">GitHub</a>` : ''}
+                                    ${project.demo ? `<a href="${project.demo}" target="_blank" style="color: var(--accent-color); text-decoration: none;">데모</a>` : ''}
                                 </div>
                             ` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+            </section>
+
+            <section id="skills" class="section">
+                <h2 class="section-title">${data.sectionTitles?.skills || '스킬셋'}</h2>
+                <div class="grid">
+                    ${(data.skillCategories || []).map((category: any) => `
+                        <div class="card">
+                            <h3>${category.icon || '•'} ${category.category}</h3>
+                            <div class="tech-stack">
+                                ${(category.skills || []).map((skill: any) =>
+                                    `<span class="tech-badge">${skill}</span>`
+                                ).join('')}
+                            </div>
                         </div>
                     `).join('')}
                 </div>
@@ -1014,12 +1034,12 @@ export const geonTemplate: PortfolioTemplate = {
             
             ${data.awards && data.awards.length > 0 ? `
             <section id="awards" class="section">
-                <h2 class="section-title">수상/자격증</h2>
+                <h2 class="section-title">${data.sectionTitles?.awards || '수상/자격증'}</h2>
                 <div class="grid">
                     ${data.awards.map((award: any) => `
                         <div class="card">
                             <h3>${award.title}</h3>
-                            <p class="meta">${award.organization} | ${award.date}</p>
+                            <p class="meta">${award.organization} | ${award.year}</p>
                             ${award.description ? `<p>${award.description}</p>` : ''}
                         </div>
                     `).join('')}
@@ -1033,13 +1053,13 @@ export const geonTemplate: PortfolioTemplate = {
     `
 };
 
-// Template 3: Eunseong - Colorful Cards
-export const eunseongTemplate: PortfolioTemplate = {
-    id: 'eunseong-colorful',
-    name: '활기찬',
+// Template 3: Colorful - Colorful Cards
+export const colorfulTemplate: PortfolioTemplate = {
+    id: 'colorful',
+    name: '컴러풀 레이아웃',
     description: '하늘색 배경과 이모지 아이콘의 컬러풀 레이아웃',
     thumbnail: '/templates/eunseong.png',
-    author: 'Eunseong',
+    author: 'Colorful Template',
     designSystem: {
         colors: {
             primary: '#5B47E0',
@@ -1070,14 +1090,14 @@ export const eunseongTemplate: PortfolioTemplate = {
     },
     features: ['컬러풀 카드', '그라디언트', '이모지 아이콘', '애니메이션'],
     sections: [
-        { id: 'contact', name: '기본 정보', icon: '👤', required: true },
-        { id: 'about', name: 'About Me', icon: '🎨', required: true },
-        { id: 'experience', name: 'Experience', icon: '💼', required: false },
-        { id: 'projects', name: 'Projects', icon: '🚀', required: false },
-        { id: 'skills', name: 'Skills', icon: '🛠', required: false }
+        { id: 'contact', name: '기본 정보', icon: '', required: true },
+        { id: 'about', name: 'About Me', icon: '', required: true },
+        { id: 'experience', name: 'Experience', icon: '', required: false },
+        { id: 'projects', name: 'Projects', icon: '', required: false },
+        { id: 'skills', name: 'Skills', icon: '', required: false }
     ],
     sampleData: {
-        name: '김포트폴리오',
+        name: 'Your name',
         title: '풀스택 개발자',
         contact: {
             email: 'portfolio@example.com',
@@ -1091,12 +1111,12 @@ export const eunseongTemplate: PortfolioTemplate = {
             {
                 category: '프론트엔드',
                 skills: ['React', 'Vue.js', 'TypeScript', 'CSS'],
-                icon: '🎨'
+                icon: ''
             },
             {
                 category: '디자인',
                 skills: ['Figma', 'Adobe XD', 'Photoshop', 'Illustrator'],
-                icon: '✨'
+                icon: ''
             }
         ],
         experience: [
@@ -1401,7 +1421,7 @@ export const eunseongTemplate: PortfolioTemplate = {
 <body>
     <header class="hero">
         <div class="hero-content">
-            <h1>👩🏻‍💻 ${data.name || 'Eunseong'}</h1>
+            <h1>${data.name || 'Portfolio Owner'}</h1>
             <p class="subtitle">${data.title || 'Creative Developer'}</p>
             <p>${data.description || 'Building colorful and engaging digital experiences'}</p>
         </div>
@@ -1411,19 +1431,19 @@ export const eunseongTemplate: PortfolioTemplate = {
         <section class="section">
             <div class="section-header">
                 <div class="section-emoji">🎨</div>
-                <h2 class="section-title">About Me</h2>
+                <h2 class="section-title">${data.sectionTitles?.about || 'About Me'}</h2>
             </div>
             <div class="card">
                 <p>${data.about || 'Creative developer passionate about building beautiful and functional applications with modern technologies.'}</p>
             </div>
         </section>
-        
+
         <section class="section">
             <div class="section-header">
                 <div class="section-emoji" style="background: linear-gradient(135deg, var(--accent-2), var(--accent-3));">
                     💼
                 </div>
-                <h2 class="section-title">Experience</h2>
+                <h2 class="section-title">${data.sectionTitles?.experience || 'Experience'}</h2>
             </div>
             <div class="cards-grid">
                 ${(data.experience || []).map((exp: any, index: any) => `
@@ -1444,22 +1464,22 @@ export const eunseongTemplate: PortfolioTemplate = {
         <section class="section">
             <div class="section-header">
                 <div class="section-emoji" style="background: linear-gradient(135deg, var(--accent-3), var(--accent-4));">
-                    🚀
+                    
                 </div>
-                <h2 class="section-title">Projects</h2>
+                <h2 class="section-title">${data.sectionTitles?.projects || 'Projects'}</h2>
             </div>
             <div class="cards-grid">
                 ${(data.projects || []).map((project: any, index: any) => `
                     <div class="card">
                         <div class="card-header">
                             <div class="card-icon" style="background: var(--accent-${(index % 4) + 1});">
-                                💡
+                                
                             </div>
                             <h3>${project.name}</h3>
                         </div>
                         <p>${project.description}</p>
                         <div class="tags">
-                            ${(project.tech || []).map((tech: any) => 
+                            ${(project.tech || []).map((tech: any) =>
                                 `<span class="tag">${tech}</span>`
                             ).join('')}
                         </div>
@@ -1467,22 +1487,44 @@ export const eunseongTemplate: PortfolioTemplate = {
                 `).join('')}
             </div>
         </section>
-        
+
         <section class="section">
             <div class="section-header">
                 <div class="section-emoji" style="background: linear-gradient(135deg, var(--accent-4), var(--accent-1));">
-                    🛠
+                    ⚡
                 </div>
-                <h2 class="section-title">Skills</h2>
+                <h2 class="section-title">${data.sectionTitles?.skills || 'Skills'}</h2>
             </div>
-            <div class="skill-grid">
-                ${(data.skills || []).map((skill: any) => `
-                    <div class="skill-item">
-                        <div class="skill-icon">⚡</div>
-                        <p>${skill}</p>
-                    </div>
-                `).join('')}
-            </div>
+            ${data.skillCategories && data.skillCategories.length > 0 ? `
+                <div class="cards-grid">
+                    ${data.skillCategories.map((category: any, index: any) => `
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="card-icon" style="background: var(--accent-${(index % 4) + 1});">
+                                    ${category.icon || '✨'}
+                                </div>
+                                <h3>${category.category}</h3>
+                            </div>
+                            <div style="margin-top: 1rem;">
+                                <div class="tags" style="margin-top: 0;">
+                                    ${(category.skills || []).map((skill: any) =>
+                                        `<span class="tag">${skill}</span>`
+                                    ).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            ` : `
+                <div class="skill-grid">
+                    ${(data.skills || []).map((skill: any) => `
+                        <div class="skill-item">
+                            <div class="skill-icon">✨</div>
+                            <p>${skill}</p>
+                        </div>
+                    `).join('')}
+                </div>
+            `}
         </section>
         
         <section class="section">
@@ -1519,13 +1561,13 @@ export const eunseongTemplate: PortfolioTemplate = {
     `
 };
 
-// Template 4: IU Style - Elegant and Modern
-export const iuTemplate: PortfolioTemplate = {
-    id: 'iu-elegant',
-    name: '우아한',
+// Template 4: Elegant - Elegant and Modern
+export const elegantTemplate: PortfolioTemplate = {
+    id: 'elegant',
+    name: '우아한 레이아웃',
     description: '보라색 그라데이션과 우아한 레이아웃',
     thumbnail: '/templates/iu.png',
-    author: 'IU Style',
+    author: 'Elegant Template',
     designSystem: {
         colors: {
             primary: '#8B5CF6',
@@ -1556,14 +1598,14 @@ export const iuTemplate: PortfolioTemplate = {
     },
     features: ['우아한 타이포그래피', '미니멀', '파스텔 색상', '부드러운 애니메이션'],
     sections: [
-        { id: 'contact', name: '기본 정보', icon: '👤', required: true },
-        { id: 'about', name: '자기소개', icon: '💬', required: true },
-        { id: 'experience', name: 'Experience', icon: '💼', required: false },
-        { id: 'projects', name: 'Projects', icon: '🚀', required: false },
-        { id: 'skills', name: 'Skills', icon: '✨', required: false }
+        { id: 'contact', name: '기본 정보', icon: '', required: true },
+        { id: 'about', name: '자기소개', icon: '', required: true },
+        { id: 'experience', name: 'Experience', icon: '', required: false },
+        { id: 'projects', name: 'Projects', icon: '', required: false },
+        { id: 'skills', name: 'Skills', icon: '', required: false }
     ],
     sampleData: {
-        name: '김포트폴리오',
+        name: 'Your name',
         title: '풀스택 개발자',
         contact: {
             email: 'portfolio@example.com',
@@ -1577,17 +1619,17 @@ export const iuTemplate: PortfolioTemplate = {
             {
                 category: 'Frontend',
                 skills: ['React', 'TypeScript', 'Next.js', 'Tailwind CSS'],
-                icon: '🎨'
+                icon: ''
             },
             {
                 category: 'Backend',
                 skills: ['Node.js', 'Python', 'Express', 'FastAPI'],
-                icon: '💻'
+                icon: ''
             },
             {
                 category: 'DevOps',
                 skills: ['AWS', 'Docker', 'CI/CD', 'Kubernetes'],
-                icon: '☁️'
+                icon: ''
             }
         ],
         experience: [
@@ -1953,7 +1995,7 @@ export const iuTemplate: PortfolioTemplate = {
 <body>
     <div class="wrapper">
         <header class="hero">
-            <h1>${data.name || 'IU'}</h1>
+            <h1>${data.name || 'Portfolio Owner'}</h1>
             <p class="subtitle">${data.title || 'Creative Developer & Designer'}</p>
             <p class="hero-description">
                 ${data.description || 'Crafting elegant digital experiences with passion and precision'}
@@ -1964,9 +2006,23 @@ export const iuTemplate: PortfolioTemplate = {
                 ${data.linkedin ? `<a href="${data.linkedin}" class="social-link">💼</a>` : ''}
             </div>
         </header>
-        
+
+        ${data.about ? `
         <section class="section">
-            <h2 class="section-title">Experience</h2>
+            <h2 class="section-title">${data.sectionTitles?.about || 'About'}</h2>
+            <div class="timeline">
+                <div class="timeline-item">
+                    <div class="timeline-content">
+                        <p style="font-size: 1.1rem; line-height: 1.7; color: var(--text-color);">${data.about}</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        ` : ''}
+
+        ${(data.experience && data.experience.length > 0) ? `
+        <section class="section">
+            <h2 class="section-title">${data.sectionTitles?.experience || 'Experience'}</h2>
             <div class="timeline">
                 ${(data.experience || []).map((exp: any) => `
                     <div class="timeline-item">
@@ -1979,9 +2035,11 @@ export const iuTemplate: PortfolioTemplate = {
                 `).join('')}
             </div>
         </section>
-        
+        ` : ''}
+
+        ${(data.projects && data.projects.length > 0) ? `
         <section class="section">
-            <h2 class="section-title">Projects</h2>
+            <h2 class="section-title">${data.sectionTitles?.projects || 'Projects'}</h2>
             <div class="project-grid">
                 ${(data.projects || []).map((project: any) => `
                     <div class="project-card">
@@ -1992,7 +2050,7 @@ export const iuTemplate: PortfolioTemplate = {
                             <h3>${project.name}</h3>
                             <p>${project.description}</p>
                             <div class="tech-pills">
-                                ${(project.tech || []).map((tech: any) => 
+                                ${(project.tech || []).map((tech: any) =>
                                     `<span class="tech-pill">${tech}</span>`
                                 ).join('')}
                             </div>
@@ -2001,26 +2059,29 @@ export const iuTemplate: PortfolioTemplate = {
                 `).join('')}
             </div>
         </section>
-        
+        ` : ''}
+
+        ${(data.skills && data.skills.length > 0) || (data.skillCategories && data.skillCategories.length > 0) ? `
         <section class="section">
-            <h2 class="section-title">Skills</h2>
+            <h2 class="section-title">${data.sectionTitles?.skills || 'Skills'}</h2>
             <div class="skills-container">
-                ${(data.skillCategories || [
-                    { name: 'Frontend', skills: data.skills?.slice(0, 4) || [] },
-                    { name: 'Backend', skills: data.skills?.slice(4, 8) || [] },
-                    { name: 'Tools', skills: data.skills?.slice(8) || [] }
+                ${(data.skillCategories && data.skillCategories.length > 0 ? data.skillCategories : [
+                    { category: 'Frontend', skills: data.skills?.slice(0, 4) || [] },
+                    { category: 'Backend', skills: data.skills?.slice(4, 8) || [] },
+                    { category: 'Tools', skills: data.skills?.slice(8) || [] }
                 ]).map((category: any) => `
                     <div class="skill-category">
-                        <h3>${category.name}</h3>
+                        <h3>${category.icon || '✨'} ${category.category}</h3>
                         <ul class="skill-list">
-                            ${(category.skills || []).map((skill: any) => 
-                                `<li>${typeof skill === 'string' ? skill : skill.name}</li>`
+                            ${(category.skills || []).map((skill: any) =>
+                                `<li>${typeof skill === 'string' ? skill : skill.name || skill}</li>`
                             ).join('')}
                         </ul>
                     </div>
                 `).join('')}
             </div>
         </section>
+        ` : ''}
     </div>
 </body>
 </html>
@@ -2028,8 +2089,8 @@ export const iuTemplate: PortfolioTemplate = {
 };
 
 export const portfolioTemplates: Record<TemplateType, PortfolioTemplate> = {
-    james: jamesTemplate,
-    geon: geonTemplate,
-    eunseong: eunseongTemplate,
-    iu: iuTemplate
+    minimal: minimalTemplate,
+    clean: cleanTemplate,
+    colorful: colorfulTemplate,
+    elegant: elegantTemplate
 };

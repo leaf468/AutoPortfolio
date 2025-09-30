@@ -51,7 +51,7 @@ export default function FeedbackEditPage() {
     <MainLayout>
       <SimpleNaturalLanguageEditor
         initialResult={state.initialResult}
-        selectedTemplate={state.selectedTemplate || 'james'}
+        selectedTemplate={state.selectedTemplate || 'minimal'}
         onComplete={handleComplete}
         onBack={handleBack}
       />

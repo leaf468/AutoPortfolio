@@ -18,7 +18,7 @@ import { BoostResult } from '../services/interactiveBooster';
 import { FeedbackResult } from '../services/userFeedbackService';
 import { portfolioTemplates } from '../templates/portfolioTemplates';
 
-type TemplateType = 'james' | 'geon' | 'eunseong' | 'iu';
+type TemplateType = 'minimal' | 'clean' | 'colorful' | 'elegant';
 
 interface FinalResultPanelProps {
   finalResult: GenerationResult;
@@ -32,7 +32,7 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
   finalResult,
   boostResult,
   feedbackResult,
-  selectedTemplate = 'james',
+  selectedTemplate = 'minimal',
   onReset
 }) => {
   const [showPreview, setShowPreview] = useState(false);

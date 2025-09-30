@@ -4,7 +4,7 @@ import MainLayout from '../layouts/MainLayout';
 import TemplateSelector from '../components/TemplateSelector';
 import { usePortfolio } from '../contexts/PortfolioContext';
 
-type TemplateType = 'james' | 'geon' | 'eunseong' | 'iu';
+type TemplateType = 'minimal' | 'clean' | 'colorful' | 'elegant';
 
 export default function TemplateSelectionPage() {
   const navigate = useNavigate();

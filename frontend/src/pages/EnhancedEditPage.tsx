@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '../layouts/MainLayout';
 import EnhancedPortfolioEditor from '../components/EnhancedPortfolioEditor';
@@ -8,23 +8,41 @@ import { GenerationResult } from '../services/oneClickGenerator';
 
 export default function EnhancedEditPage() {
   const navigate = useNavigate();
-  const { state, setFinalResult, setCurrentStep } = usePortfolio();
+  const { state, setFinalResult, setCurrentStep, setTemplate } = usePortfolio();
+  const hasRedirected = useRef(false);
 
   useEffect(() => {
-    setCurrentStep('enhanced-edit');
+    // Prevent multiple redirects
+    if (hasRedirected.current) return;
 
-    // 필수 데이터가 없으면 이전 단계로 이동
-    if (!state.selectedTemplate || !state.initialResult) {
-      if (!state.selectedTemplate) {
-        navigate('/template');
-      } else if (!state.organizedContent) {
-        navigate('/organize');
-      } else if (!state.initialResult) {
-        navigate('/autofill');
-      }
+    // This is a legacy route - immediately redirect to template-specific edit page
+    if (state.selectedTemplate && state.initialResult) {
+      hasRedirected.current = true;
+      navigate(`/edit/${state.selectedTemplate}`, { replace: true });
       return;
     }
-  }, []);
+
+    // Check required data and redirect if missing
+    if (!state.selectedTemplate) {
+      hasRedirected.current = true;
+      navigate('/template', { replace: true });
+      return;
+    }
+
+    if (!state.organizedContent) {
+      hasRedirected.current = true;
+      navigate('/organize', { replace: true });
+      return;
+    }
+
+    if (!state.initialResult) {
+      hasRedirected.current = true;
+      navigate('/autofill', { replace: true });
+      return;
+    }
+
+    setCurrentStep('enhanced-edit');
+  }, []); // Run only once on mount
 
   const handleSave = (document: PortfolioDocument) => {
     // Convert PortfolioDocument back to GenerationResult format
@@ -42,7 +60,7 @@ export default function EnhancedEditPage() {
           ) / 200
         ),
         generatedAt: new Date(),
-        template: state.selectedTemplate || 'james'
+        template: state.selectedTemplate || 'minimal'
       },
       qualityScore: 90,
       suggestions: ['상세 편집 완료']
@@ -62,8 +80,30 @@ export default function EnhancedEditPage() {
     navigate('/feedback');
   };
 
-  if (!state.initialResult) {
-    return null; // 리다이렉션 중이므로 아무것도 렌더링하지 않음
+  const handleTemplateChange = (template: 'minimal' | 'clean' | 'colorful' | 'elegant') => {
+    // 새 템플릿 저장
+    setTemplate(template);
+    // autofill 단계로 이동하여 로딩 화면과 함께 데이터 재가공
+    setCurrentStep('autofill');
+    navigate('/autofill');
+  };
+
+  // Show loading during redirect (but only briefly)
+  if (!state.initialResult || !state.selectedTemplate) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="flex justify-center items-center mb-4">
+            <div className="flex space-x-2">
+              <div className="w-3 h-3 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+              <div className="w-3 h-3 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+              <div className="w-3 h-3 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+            </div>
+          </div>
+          <p className="text-gray-600">편집 페이지로 리디렉션 중...</p>
+        </div>
+      </div>
+    );
   }
 
   let parsedDocument;
@@ -92,10 +132,11 @@ export default function EnhancedEditPage() {
     <MainLayout>
       <EnhancedPortfolioEditor
         document={parsedDocument}
-        selectedTemplate={state.selectedTemplate || 'james'}
+        selectedTemplate={state.selectedTemplate || 'minimal'}
         onSave={handleSave}
         onBack={handleBack}
         onSkipToNaturalEdit={handleSkipToNaturalEdit}
+        onTemplateChange={handleTemplateChange}
       />
     </MainLayout>
   );

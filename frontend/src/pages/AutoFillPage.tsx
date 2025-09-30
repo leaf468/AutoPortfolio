@@ -40,7 +40,7 @@ export default function AutoFillPage() {
           ) / 200
         ),
         generatedAt: new Date(),
-        template: state.selectedTemplate || 'james'
+        template: state.selectedTemplate || 'minimal'
       },
       qualityScore: 85,
       suggestions: []
@@ -66,7 +66,7 @@ export default function AutoFillPage() {
           ) / 200
         ),
         generatedAt: new Date(),
-        template: state.selectedTemplate || 'james'
+        template: state.selectedTemplate || 'minimal'
       },
       qualityScore: 85,
       suggestions: []
@@ -80,6 +80,14 @@ export default function AutoFillPage() {
     return null; // 리다이렉션 중이므로 아무것도 렌더링하지 않음
   }
 
+  // 디버깅: AutoFill 단계로 전달되는 데이터 확인
+  console.log('=== AutoFillPage 데이터 확인 ===');
+  console.log('organizedContent 전체:', state.organizedContent);
+  console.log('originalInput:', state.organizedContent?.originalInput);
+  console.log('originalInput.rawText:', state.organizedContent?.originalInput?.rawText);
+  console.log('originalInput.inputType:', state.organizedContent?.originalInput?.inputType);
+  console.log('originalInput.jobPosting:', state.organizedContent?.originalInput?.jobPosting);
+
   return (
     <MainLayout>
       <div className="max-w-full">
@@ -87,10 +95,12 @@ export default function AutoFillPage() {
           userId={state.userId}
           selectedTemplate={state.selectedTemplate}
           initialInputs={{
+            // 원본 사용자 입력 추가
+            content: state.organizedContent?.originalInput?.rawText || '',
             profile: JSON.stringify({
               organizedContent: state.organizedContent, // AI로 가공된 결과
-              originalInput: state.organizedContent.originalInput // 원본 사용자 입력
-            }), // 원본 + 가공 데이터 모두 전달
+              originalInput: state.organizedContent?.originalInput || null // 전체 originalInput 객체 전달
+            }),
             projects: state.organizedContent.projects.map(p => ({
               title: p.name,
               description: p.summary,
@@ -101,7 +111,9 @@ export default function AutoFillPage() {
             education: '',
             experience: state.organizedContent.experiences.map(e =>
               `${e.position} at ${e.company} (${e.duration})`
-            ).join('\n')
+            ).join('\n'),
+            // 채용공고가 있으면 추가
+            target_job: state.organizedContent?.originalInput?.jobPosting || ''
           }}
           targetJobKeywords={[
             ...state.organizedContent.keywords.technical,

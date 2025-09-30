@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MainLayout from '../layouts/MainLayout';
 import AIOrganizer from '../components/AIOrganizer';
@@ -19,11 +19,18 @@ export default function OrganizeContentPage() {
     }
   }, []);
 
-  const handleOrganizeComplete = (content: OrganizedContent) => {
+  // AI 조직화 완료 후 AutoFill 페이지로 이동하는 함수
+  const handleOrganizeComplete = useCallback(async (content: OrganizedContent) => {
+    console.log('=== AI 조직화 완료, AutoFill 단계로 이동 ===');
+    console.log('조직화된 내용:', content);
+
+    // 조직화된 내용 저장
     setOrganizedContent(content);
+
+    // AutoFill 단계로 이동 (로딩 화면 표시를 위해)
     setCurrentStep('autofill');
     navigate('/autofill');
-  };
+  }, [navigate, setOrganizedContent, setCurrentStep]);
 
   if (!state.selectedTemplate) {
     return null; // 리다이렉션 중이므로 아무것도 렌더링하지 않음

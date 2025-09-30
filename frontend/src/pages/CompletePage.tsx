@@ -33,7 +33,7 @@ export default function CompletePage() {
         finalResult={state.finalResult}
         boostResult={undefined}
         feedbackResult={state.feedbackResult || undefined}
-        selectedTemplate={state.selectedTemplate || 'james'}
+        selectedTemplate={state.selectedTemplate || 'minimal'}
         onReset={handleReset}
       />
     </MainLayout>

@@ -1,9 +1,9 @@
-import React, { createContext, useContext, useReducer, ReactNode, useEffect, useState, useCallback } from 'react';
+import React, { createContext, useContext, useReducer, ReactNode, useEffect, useState, useCallback, useRef } from 'react';
 import { OrganizedContent } from '../services/aiOrganizer';
 import { GenerationResult } from '../services/oneClickGenerator';
 import { FeedbackResult } from '../services/userFeedbackService';
 
-type TemplateType = 'james' | 'geon' | 'eunseong' | 'iu';
+type TemplateType = 'minimal' | 'clean' | 'colorful' | 'elegant';
 
 interface PortfolioState {
   userId: string;
@@ -108,32 +108,28 @@ interface PortfolioContextValue {
 const PortfolioContext = createContext<PortfolioContextValue | undefined>(undefined);
 
 export function PortfolioProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(portfolioReducer, initialState);
   const [isInitialized, setIsInitialized] = useState(false);
+  const initRef = useRef(false);
 
-  // 초기 로드 시 localStorage에서 상태 복원
+  // Initialize state with localStorage data immediately
+  const savedState = loadFromStorage();
+  const [state, dispatch] = useReducer(portfolioReducer, savedState || initialState);
+
+  // Mark as initialized immediately to prevent loading flicker
   useEffect(() => {
-    const savedState = loadFromStorage();
-    if (savedState && !isInitialized) {
-      dispatch({ type: 'SET_TEMPLATE', payload: savedState.selectedTemplate });
-      dispatch({ type: 'SET_ORGANIZED_CONTENT', payload: savedState.organizedContent });
-      dispatch({ type: 'SET_INITIAL_RESULT', payload: savedState.initialResult });
-      dispatch({ type: 'SET_FEEDBACK_RESULT', payload: savedState.feedbackResult });
-      dispatch({ type: 'SET_FINAL_RESULT', payload: savedState.finalResult });
-      dispatch({ type: 'SET_CURRENT_STEP', payload: savedState.currentStep });
-      setIsInitialized(true);
-    } else {
+    if (!initRef.current) {
+      initRef.current = true;
       setIsInitialized(true);
     }
-  }, [isInitialized]);
+  }, []);
 
-  // 초기화 완료 후 상태 변경 시 localStorage에 저장 (debounced)
+  // Save to localStorage when state changes (debounced)
   useEffect(() => {
     if (!isInitialized) return;
 
     const timeoutId = setTimeout(() => {
       saveToStorage(state);
-    }, 100);
+    }, 500); // Increased debounce time to reduce writes
 
     return () => clearTimeout(timeoutId);
   }, [state, isInitialized]);

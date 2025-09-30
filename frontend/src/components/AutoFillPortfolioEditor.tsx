@@ -16,7 +16,7 @@ import autoFillService, {
     TextBlock, 
     GenerateRequest 
 } from '../services/autoFillService';
-type TemplateType = 'james' | 'geon' | 'eunseong' | 'iu';
+type TemplateType = 'minimal' | 'clean' | 'colorful' | 'elegant';
 
 interface AutoFillPortfolioEditorProps {
     userId: string;
@@ -51,6 +51,7 @@ const AutoFillPortfolioEditor: React.FC<AutoFillPortfolioEditorProps> = ({
                 user_id: userId,
                 inputs: initialInputs || {},
                 target_job_keywords: targetJobKeywords,
+                template: selectedTemplate,
                 locale: 'ko-KR'
             };
 
