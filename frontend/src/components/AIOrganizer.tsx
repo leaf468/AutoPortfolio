@@ -121,7 +121,7 @@ const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              className="w-full h-52 p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent resize-none text-sm"
+              className="w-full h-80 p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent resize-none text-sm"
               placeholder="예: 3년차 풀스택 개발자입니다. React와 Node.js로 쇼핑몰 플랫폼을 개발했고, 사용자 50% 증가와 매출 200% 상승에 기여했습니다..."
             />
             <div className="text-xs text-gray-500 mt-1.5">
@@ -152,7 +152,7 @@ const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
                 <textarea
                   value={jobPosting}
                   onChange={(e) => setJobPosting(e.target.value)}
-                  className="w-full h-24 p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent resize-none text-sm"
+                  className="w-full h-32 p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent resize-none text-sm"
                   placeholder="지원하려는 채용공고 내용을 입력하면 맞춤형 최적화를 해드립니다..."
                 />
               </motion.div>

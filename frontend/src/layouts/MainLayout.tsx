@@ -93,25 +93,29 @@ export default function MainLayout({
       {/* 헤더 */}
       {showHeader && (
         <div className="bg-white shadow-sm border-b border-gray-200">
-          <div className="max-w-7xl mx-auto px-8 py-2">
+          <div className="max-w-7xl mx-auto px-8 py-4">
             <div className="flex items-center justify-between">
               <div
-                className="flex items-center cursor-pointer hover:opacity-80 transition-opacity"
+                className="flex items-center gap-4 cursor-pointer hover:opacity-80 transition-opacity"
                 onClick={handleLogoClick}
                 title="홈으로 돌아가기"
               >
                 <img
                   src="/Careeroad_logo.png"
                   alt="Careeroad"
-                  className="h-7 w-7 mr-2"
+                  className="h-20 w-auto object-contain"
+                  style={{ maxHeight: '80px' }}
                   onError={(e) => {
                     e.currentTarget.style.display = 'none';
                   }}
                 />
-                <div>
-                  <h1 className="text-lg font-bold text-gray-900">
-                    Careeroad
-                  </h1>
+                <div className="border-l-2 border-gray-300 pl-4 py-1">
+                  <p className="text-sm text-gray-700 font-semibold">
+                    당신만의 AI 커리어 비서
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    경험 관리부터 포트폴리오 생성까지
+                  </p>
                 </div>
               </div>
               <div className="flex items-center space-x-3">
@@ -186,9 +190,15 @@ export default function MainLayout({
 
       {/* 푸터 */}
       <div className="bg-gray-100 border-t border-gray-200">
-        <div className="max-w-6xl mx-auto px-6 py-4">
-          <div className="text-center text-sm text-gray-500">
-            <p>AI 기술로 만드는 차별화된 포트폴리오 | 채용 성공률 UP 🚀</p>
+        <div className="max-w-6xl mx-auto px-6 py-6">
+          <div className="text-center">
+            <p className="text-sm text-gray-600 mb-1">커리어 성공을 위한 당신의 AI 파트너</p>
+            <p className="text-sm text-gray-500">
+              Contact: <a href="mailto:careeroad2025@gmail.com" className="text-gray-500 hover:text-gray-700">careeroad2025@gmail.com</a>
+            </p>
+            <div className="mt-3 pt-3 border-t border-gray-300">
+              <p className="text-xs text-gray-400">© 2025 Careeroad. All rights reserved.</p>
+            </div>
           </div>
         </div>
       </div>
