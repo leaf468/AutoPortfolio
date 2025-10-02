@@ -7,7 +7,8 @@ import {
     SwatchIcon,
     PlusIcon,
     XMarkIcon,
-    SparklesIcon
+    SparklesIcon,
+    ChatBubbleLeftRightIcon
 } from '@heroicons/react/24/outline';
 import { PortfolioDocument } from '../services/autoFillService';
 import { portfolioTemplates } from '../templates/portfolioTemplates';
@@ -15,6 +16,8 @@ import portfolioTextEnhancer, { ProjectData, PortfolioData } from '../services/p
 import BlurFade from './ui/BlurFade';
 import Badge from './ui/Badge';
 import { useScrollPreservation } from '../hooks/useScrollPreservation';
+import NaturalLanguageModal from './NaturalLanguageModal';
+import { userFeedbackService } from '../services/userFeedbackService';
 
 type TemplateType = 'minimal' | 'clean' | 'colorful' | 'elegant';
 
@@ -58,6 +61,7 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
     const [enhancedFields, setEnhancedFields] = useState<Record<string, boolean>>({}); // AI 생성 필드 추적
     const [isInitializing, setIsInitializing] = useState(true); // 초기 로딩 상태
     const [dataLoaded, setDataLoaded] = useState(false); // 데이터 로딩 완료 상태
+    const [showNaturalLanguage, setShowNaturalLanguage] = useState(false); // 자연어 편집 모달 상태
     // 현재 템플릿의 섹션 정보를 가져옴
     const getCurrentTemplateSections = () => {
         const template = portfolioTemplates[currentTemplate];
@@ -292,6 +296,34 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
             console.error('자기소개 개선 실패:', error);
         } finally {
             setIsEnhancing(false);
+        }
+    };
+
+    // 자연어 편집 핸들러
+    const handleNaturalLanguageChange = async (instruction: string): Promise<void> => {
+        try {
+            // 현재 포트폴리오 데이터를 문자열로 변환
+            const currentPortfolio = JSON.stringify(portfolioData);
+
+            // userFeedbackService를 사용하여 자연어 명령 처리
+            const improvedPortfolio = await userFeedbackService.improvePortfolioWithNaturalLanguage(
+                currentPortfolio,
+                instruction
+            );
+
+            // 개선된 포트폴리오 데이터로 업데이트
+            const parsedPortfolio = JSON.parse(improvedPortfolio);
+            setPortfolioData(parsedPortfolio);
+
+            // HTML 재생성을 위해 강제 업데이트
+            const template = portfolioTemplates[currentTemplate];
+            if (template && template.generateHTML) {
+                const html = template.generateHTML(parsedPortfolio);
+                preserveScrollAndUpdate(html);
+            }
+        } catch (error) {
+            console.error('자연어 편집 실패:', error);
+            throw error;
         }
     };
 
@@ -1386,6 +1418,27 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                     </div>
                 </div>
             </div>
+
+            {/* 자연어 편집 플로팅 버튼 - 항상 화면에 고정 */}
+            <motion.button
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.5 }}
+                onClick={() => setShowNaturalLanguage(true)}
+                className="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-5 py-3.5 rounded-full shadow-2xl hover:shadow-3xl hover:scale-105 transition-all duration-200 flex items-center gap-2.5"
+                style={{ position: 'fixed' }}
+            >
+                <ChatBubbleLeftRightIcon className="w-5 h-5" />
+                <span className="font-semibold text-sm">AI 자연어 편집</span>
+            </motion.button>
+
+            {/* 자연어 편집 모달 */}
+            <NaturalLanguageModal
+                isOpen={showNaturalLanguage}
+                onClose={() => setShowNaturalLanguage(false)}
+                onApplyChange={handleNaturalLanguageChange}
+                currentContent={JSON.stringify(portfolioData)}
+            />
         </div>
     );
 };

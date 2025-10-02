@@ -1,9 +1,8 @@
-import React, { ReactNode, useState } from 'react';
+import React, { ReactNode } from 'react';
 import { motion } from 'framer-motion';
-import { CheckIcon, SparklesIcon, PencilSquareIcon, ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
+import { CheckIcon, SparklesIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
 import { usePortfolio } from '../contexts/PortfolioContext';
 import { useNavigate } from 'react-router-dom';
-import NaturalLanguageSidebar from '../components/NaturalLanguageSidebar';
 
 interface StepInfo {
   id: string;
@@ -64,7 +63,6 @@ export default function MainLayout({
 }: MainLayoutProps) {
   const { state, reset } = usePortfolio();
   const navigate = useNavigate();
-  const [isNaturalEditOpen, setIsNaturalEditOpen] = useState(false);
 
   const handleLogoClick = () => {
     reset();
@@ -119,16 +117,6 @@ export default function MainLayout({
                 </div>
               </div>
               <div className="flex items-center space-x-3">
-                {/* 자연어 편집 버튼 - 상세 편집 단계에서만 표시 */}
-                {state.currentStep === 'enhanced-edit' && (
-                  <button
-                    onClick={() => setIsNaturalEditOpen(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white text-xs font-medium rounded-lg hover:shadow-md transition-all"
-                  >
-                    <ChatBubbleLeftRightIcon className="w-4 h-4" />
-                    AI 자연어 편집
-                  </button>
-                )}
                 {showProgress && state.currentStep !== 'complete' && (
                   <div className="text-xs text-gray-500 font-medium">
                     {steps.findIndex(s => s.id === state.currentStep) + 1} / {steps.length}
@@ -203,11 +191,6 @@ export default function MainLayout({
         </div>
       </div>
 
-      {/* 자연어 편집 사이드바 */}
-      <NaturalLanguageSidebar
-        isOpen={isNaturalEditOpen}
-        onClose={() => setIsNaturalEditOpen(false)}
-      />
     </div>
   );
 }

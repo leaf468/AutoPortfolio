@@ -111,9 +111,82 @@ class AutoFillService {
                 }
             };
 
-            const systemPrompt = "당신은 글로벌 테크 기업(Google, Apple, Amazon, Netflix)의 HR 전문가 10년 경력을 가진 포트폴리오 아키텍트입니다.\n" +
+            const systemPrompt = "당신은 글로벌 테크 기업(Google, Apple, Amazon, Netflix)의 HR 전문가 10년 경력을 가진 포트폴리오 데이터 아키텍트입니다.\n" +
                 "채용 성공률 95%를 자랑하는 실전 포트폴리오 제작 전문가로, 실제 면접관의 시선과 사고방식을 완벽히 이해합니다.\n\n" +
-                "**IMPORTANT**: You must respond in JSON format only. Your response must be a valid JSON object.\n\n" +
+                "**CRITICAL**: 당신의 임무는 사용자가 입력한 원본 데이터를 분석하여, 각 정보가 포트폴리오의 어느 섹션에 속하는지 정확히 판단하고 구조화된 JSON 데이터를 생성하는 것입니다.\n\n" +
+                "=== 데이터 분류 가이드 (MOST IMPORTANT) ===\n" +
+                "사용자 입력을 분석하여 각 정보를 다음 섹션으로 분류하세요:\n\n" +
+                "1. **기본 정보 (name, title, email, phone, github, location)**\n" +
+                "   - 이름, 연락처, 소셜 미디어 링크 등 식별 정보\n" +
+                "   - title: 한 줄로 자신을 소개하는 문구 (예: 'Senior Full-Stack Developer', 'AI Engineer')\n" +
+                "   - location: 거주 지역 (Clean 템플릿에서 사용)\n\n" +
+                "2. **자기소개 (about)**\n" +
+                "   - 자신의 배경, 전문성, 가치관, 목표를 담은 300-500자의 풍부한 내러티브\n" +
+                "   - STAR 구조: 배경 → 전환점/중요 경험 → 현재 전문성 → 미래 비전\n" +
+                "   - 사용자 입력에 자기소개가 없으면 다른 정보를 종합하여 작성\n\n" +
+                "3. **기술 스택 (skills)**\n" +
+                "   - 프로그래밍 언어, 프레임워크, 도구, 소프트 스킬\n" +
+                "   - 배열 형태: [\"React\", \"TypeScript\", \"Node.js\"] 또는\n" +
+                "   - 카테고리 형태: [{\"category\": \"Frontend\", \"skills\": [\"React\", \"Vue\"], \"icon\": \"💻\"}]\n\n" +
+                "4. **프로젝트 (projects)**\n" +
+                "   - 개인/팀 프로젝트, 사이드 프로젝트, 포트폴리오 작품\n" +
+                "   - 각 프로젝트마다 STAR 구조로 200-300자 설명\n" +
+                "   - 필수 필드: name, description, role, period, tech, achievements\n\n" +
+                "5. **경력/경험 (experience)**\n" +
+                "   - 회사 경력, 인턴십, 자원봉사, 동아리 활동 등\n" +
+                "   - 각 경력마다 150-200자 설명\n" +
+                "   - 필수 필드: position, company, duration, description, achievements, technologies\n\n" +
+                "6. **학력 (education)**\n" +
+                "   - 대학, 부트캠프, 온라인 과정, 자격증\n" +
+                "   - 필수 필드: school, degree, period, description\n\n" +
+                "**분류 원칙:**\n" +
+                "- 사용자 입력이 명확하지 않으면 문맥을 분석하여 가장 적절한 섹션에 배치\n" +
+                "- 한 정보가 여러 섹션에 걸쳐있으면 주요 섹션에 배치하고 나머지는 참조\n" +
+                "- 빈 섹션이 있어도 괜찮음 (억지로 채우지 말 것)\n" +
+                "- STAR 프레임워크를 적용하여 풍부한 내용으로 확장\n\n" +
+                "**IMPORTANT**: You must respond in JSON format only. Your response must be a valid JSON object with the following structure:\n" +
+                "{\n" +
+                "  \"portfolioData\": {\n" +
+                "    \"name\": \"이름 (입력에서 추출, 없으면 'Your Name')\",\n" +
+                "    \"title\": \"한 줄 소개 (예: Senior Full-Stack Developer)\",\n" +
+                "    \"email\": \"이메일 (입력에서 추출, 없으면 'youremail@example.com')\",\n" +
+                "    \"phone\": \"전화번호 (입력에서 추출, 없으면 '010-0000-0000')\",\n" +
+                "    \"github\": \"깃허브 (입력에서 추출, 없으면 빈 문자열)\",\n" +
+                "    \"location\": \"위치 (Clean 템플릿용, 입력에서 추출, 없으면 'Seoul, Korea')\",\n" +
+                "    \"about\": \"자기소개 (300-500자의 풍부한 내용, STAR 구조)\",\n" +
+                "    \"skills\": [\"기술1\", \"기술2\", ...] 또는 [{\"category\": \"Frontend\", \"skills\": [...], \"icon\": \"💻\"}],\n" +
+                "    \"projects\": [\n" +
+                "      {\n" +
+                "        \"name\": \"프로젝트명\",\n" +
+                "        \"description\": \"상세 설명 (200-300자, STAR 구조: 상황-과제-행동-결과-통찰)\",\n" +
+                "        \"role\": \"역할 (예: Frontend Developer, Team Lead)\",\n" +
+                "        \"period\": \"기간 (예: 2023.01 - 2023.06)\",\n" +
+                "        \"company\": \"회사/조직 (선택사항)\",\n" +
+                "        \"tech\": [\"기술1\", \"기술2\"],\n" +
+                "        \"achievements\": [\"성과1 (정량적 지표 포함)\", \"성과2\"]\n" +
+                "      }\n" +
+                "    ],\n" +
+                "    \"experience\": [\n" +
+                "      {\n" +
+                "        \"position\": \"직책\",\n" +
+                "        \"company\": \"회사명\",\n" +
+                "        \"duration\": \"기간\",\n" +
+                "        \"description\": \"업무 설명 (150-200자, STAR 구조)\",\n" +
+                "        \"achievements\": [\"성과1 (정량적 지표 포함)\", \"성과2\"],\n" +
+                "        \"technologies\": [\"기술1\", \"기술2\"]\n" +
+                "      }\n" +
+                "    ],\n" +
+                "    \"education\": [\n" +
+                "      {\n" +
+                "        \"school\": \"학교명\",\n" +
+                "        \"degree\": \"학위/전공\",\n" +
+                "        \"period\": \"기간\",\n" +
+                "        \"description\": \"세부사항 (선택사항)\"\n" +
+                "      }\n" +
+                "    ]\n" +
+                "  },\n" +
+                "  \"html_content\": \"<완성된 HTML 포트폴리오>\"\n" +
+                "}\n\n" +
                 "=== 핵심 철학: STAR+I 프레임워크 ===\n" +
                 "모든 경험은 반드시 다음 구조로 재구성:\n" +
                 "• **S**ituation (상황): 비즈니스 맥락과 해결해야 할 문제의 본질\n" +
@@ -324,233 +397,114 @@ class AutoFillService {
             const now = new Date().toISOString();
 
             // ====================================================================
-            // CRITICAL FIX: Extract rich data from AI-generated HTML
-            // Previously was using simple organizedContent, now parsing rich HTML
+            // NEW APPROACH: Use AI-generated portfolioData directly
+            // AI now returns structured JSON with proper section categorization
             // ====================================================================
             let extractedData = null;
 
-            // Parse the rich AI HTML to extract structured data
-            const htmlContent = aiResponse.html_content || content;
-            console.log('=== AI가 생성한 풍부한 HTML 파싱 시작 ===');
-            console.log('HTML 길이:', htmlContent?.length || 0);
+            if (aiResponse.portfolioData) {
+                console.log('=== AI가 구조화한 portfolioData 사용 (NEW) ===');
+                const pd = aiResponse.portfolioData;
 
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(htmlContent, 'text/html');
+                // Normalize skills format
+                let normalizedSkills = [];
+                let skillCategories = [];
 
-            // Extract name (from h1 in header)
-            const extractedName = 'Your name'; // Default placeholder name
-
-            // Extract title/one-liner (from header p or subtitle)
-            const titleElement = doc.querySelector('header p, .subtitle, .headline');
-            const extractedTitle = titleElement?.textContent?.trim() || '';
-
-            // Extract contact info
-            let extractedEmail = 'youremail@gmail.com';
-            let extractedPhone = '010-0000-0000';
-            let extractedGithub = '';
-            let extractedLocation = 'Seoul, Korea';
-
-            const contactElements = doc.querySelectorAll('a, p, span, div');
-            contactElements.forEach(el => {
-                const text = el.textContent || '';
-
-                // Email extraction
-                if (text.includes('@')) {
-                    const emailMatch = text.match(/\S+@\S+\.\S+/);
-                    if (emailMatch) extractedEmail = emailMatch[0];
-                }
-
-                // Phone extraction
-                if (text.includes('010') || text.includes('+82')) {
-                    const phoneMatch = text.match(/[\d\-+\s()]+/);
-                    if (phoneMatch) extractedPhone = phoneMatch[0].trim();
-                }
-
-                // GitHub extraction
-                if (text.toLowerCase().includes('github')) {
-                    const githubMatch = text.match(/github\.com\/[\w\-.]+/);
-                    if (githubMatch) extractedGithub = githubMatch[0];
-                }
-
-                // Location extraction (Seoul, Korea, etc.)
-                if (text.includes('Seoul') || text.includes('서울')) {
-                    extractedLocation = text.trim();
-                }
-            });
-
-            // Extract About section (FULL RICH CONTENT - 300-400 characters)
-            const aboutSection = doc.querySelector('.about, section.about, .summary, section.summary');
-            let extractedAbout = '';
-            if (aboutSection) {
-                const aboutParagraphs = aboutSection.querySelectorAll('p');
-                extractedAbout = Array.from(aboutParagraphs)
-                    .map(p => p.textContent?.trim())
-                    .filter(text => text && text.length > 0)
-                    .join('\n\n');
-            }
-
-            // If no about section found, try to find any long paragraph
-            if (!extractedAbout || extractedAbout.length < 100) {
-                const allParagraphs = Array.from(doc.querySelectorAll('p'));
-                for (const p of allParagraphs) {
-                    const text = p.textContent?.trim() || '';
-                    if (text.length > 150 && !text.includes('프로젝트') && !text.includes('경력')) {
-                        extractedAbout = text;
-                        break;
+                if (Array.isArray(pd.skills)) {
+                    if (pd.skills.length > 0 && typeof pd.skills[0] === 'object' && pd.skills[0].category) {
+                        // Categorized skills format
+                        skillCategories = pd.skills;
+                        normalizedSkills = pd.skills.flatMap((cat: any) => cat.skills || []);
+                    } else {
+                        // Simple array format
+                        normalizedSkills = pd.skills;
                     }
                 }
-            }
 
-            console.log('=== About 섹션 추출 결과 ===');
-            console.log('추출된 About 길이:', extractedAbout.length);
-            console.log('추출된 About 내용:', extractedAbout.substring(0, 200) + '...');
-
-            // Extract skills (from skill tags, badges, or lists)
-            const skillElements = doc.querySelectorAll('.skill-tag, .skill, .tech-stack span, .badge, .tag');
-            const extractedSkills = Array.from(skillElements)
-                .map(el => el.textContent?.trim())
-                .filter((skill): skill is string => !!skill && skill.length > 0 && skill.length < 30);
-
-            // Extract projects (FULL RICH CONTENT - 200-300 characters each)
-            const projectCards = doc.querySelectorAll('.project-card, .project, article.project');
-            const extractedProjects = Array.from(projectCards).map(card => {
-                const nameEl = card.querySelector('h3, h2, .project-title');
-                const name = nameEl?.textContent?.trim() || '프로젝트';
-
-                // Get FULL description - not just first paragraph
-                const descriptionEls = card.querySelectorAll('p');
-                const description = Array.from(descriptionEls)
-                    .map(p => p.textContent?.trim())
-                    .filter(text => text && text.length > 20)
-                    .join('\n\n') || '프로젝트 설명';
-
-                // Extract period/duration
-                const periodEl = card.querySelector('.period, .duration, time');
-                const period = periodEl?.textContent?.trim() || '';
-
-                // Extract role
-                const roleEl = card.querySelector('.role, .position');
-                const role = roleEl?.textContent?.trim() || '';
-
-                // Extract company
-                const companyEl = card.querySelector('.company');
-                const company = companyEl?.textContent?.trim() || '';
-
-                // Extract technologies
-                const techEls = card.querySelectorAll('.skill-tag, .tech, .technology, .badge');
-                const tech = Array.from(techEls)
-                    .map(el => el.textContent?.trim())
-                    .filter((t): t is string => !!t && t.length > 0);
-
-                // Extract achievements (bullet points, highlights)
-                const achievementEls = card.querySelectorAll('.achievement-item, li, .highlight');
-                const achievements = Array.from(achievementEls)
-                    .map(el => el.textContent?.trim())
-                    .filter((a): a is string => !!a && a.length > 0);
-
-                console.log(`=== 프로젝트 "${name}" 추출 결과 ===`);
-                console.log('설명 길이:', description.length);
-                console.log('설명 내용:', description.substring(0, 150) + '...');
-                console.log('성과:', achievements);
-
-                return {
-                    name,
-                    description, // FULL RICH DESCRIPTION
-                    role,
-                    period,
-                    company,
-                    tech,
-                    achievements
+                extractedData = {
+                    name: pd.name || 'Your Name',
+                    title: pd.title || '소프트웨어 개발자',
+                    email: pd.email || 'youremail@example.com',
+                    phone: pd.phone || '010-0000-0000',
+                    github: pd.github || '',
+                    location: pd.location || 'Seoul, Korea',
+                    about: pd.about || '',
+                    skills: normalizedSkills,
+                    skillCategories: skillCategories,
+                    projects: (pd.projects || []).map((proj: any) => ({
+                        name: proj.name || '프로젝트',
+                        description: proj.description || '',
+                        role: proj.role || '',
+                        period: proj.period || '',
+                        company: proj.company || '',
+                        tech: proj.tech || [],
+                        achievements: proj.achievements || []
+                    })),
+                    experience: (pd.experience || []).map((exp: any) => ({
+                        position: exp.position || '직책',
+                        company: exp.company || '회사',
+                        duration: exp.duration || '',
+                        description: exp.description || '',
+                        achievements: exp.achievements || [],
+                        technologies: exp.technologies || []
+                    })),
+                    education: (pd.education || []).map((edu: any) => ({
+                        school: edu.school || '학교',
+                        degree: edu.degree || '학위',
+                        period: edu.period || '',
+                        description: edu.description || ''
+                    }))
                 };
-            });
 
-            // Extract experience (FULL RICH CONTENT - 150-200 characters each)
-            const experienceCards = doc.querySelectorAll('.experience-card, .experience, article.experience, .job');
-            const extractedExperience = Array.from(experienceCards).map(card => {
-                const positionEl = card.querySelector('h3, h2, .position');
-                const position = positionEl?.textContent?.trim() || '직책';
-
-                const companyEl = card.querySelector('.company, .employer');
-                const company = companyEl?.textContent?.trim() || '회사';
-
-                const durationEl = card.querySelector('.duration, .period, time');
-                const duration = durationEl?.textContent?.trim() || '';
-
-                // Get FULL description
-                const descriptionEls = card.querySelectorAll('p');
-                const description = Array.from(descriptionEls)
-                    .map(p => p.textContent?.trim())
-                    .filter(text => text && text.length > 20)
-                    .join('\n\n') || '업무 설명';
-
-                // Extract achievements
-                const achievementEls = card.querySelectorAll('.achievement-item, li, .highlight');
-                const achievements = Array.from(achievementEls)
-                    .map(el => el.textContent?.trim())
-                    .filter((a): a is string => !!a && a.length > 0);
-
-                // Extract technologies
-                const techEls = card.querySelectorAll('.skill-tag, .tech, .technology');
-                const technologies = Array.from(techEls)
-                    .map(el => el.textContent?.trim())
-                    .filter((t): t is string => !!t && t.length > 0);
-
-                console.log(`=== 경력 "${position}" 추출 결과 ===`);
-                console.log('설명 길이:', description.length);
-                console.log('설명 내용:', description.substring(0, 150) + '...');
-                console.log('성과:', achievements);
-
-                return {
-                    position,
-                    company,
-                    duration,
-                    description, // FULL RICH DESCRIPTION
-                    achievements,
-                    technologies
+                console.log('=== 최종 extractedData (AI portfolioData 기반) ===');
+                console.log('이름:', extractedData.name);
+                console.log('타이틀:', extractedData.title);
+                console.log('About 길이:', extractedData.about.length);
+                console.log('스킬 수:', extractedData.skills.length);
+                console.log('프로젝트 수:', extractedData.projects.length);
+                console.log('경력 수:', extractedData.experience.length);
+                console.log('학력 수:', extractedData.education.length);
+                if (extractedData.projects.length > 0) {
+                    console.log('첫 번째 프로젝트:', extractedData.projects[0].name);
+                    console.log('첫 번째 프로젝트 설명 길이:', extractedData.projects[0].description.length);
+                }
+                if (extractedData.experience.length > 0) {
+                    console.log('첫 번째 경력:', extractedData.experience[0].position);
+                    console.log('첫 번째 경력 설명 길이:', extractedData.experience[0].description.length);
+                }
+            } else {
+                console.log('=== portfolioData 없음, 기본값 사용 ===');
+                extractedData = {
+                    name: 'Your Name',
+                    title: organizedContent?.oneLinerPitch || '소프트웨어 개발자',
+                    email: 'youremail@example.com',
+                    phone: '010-0000-0000',
+                    github: '',
+                    location: 'Seoul, Korea',
+                    about: organizedContent?.summary || '',
+                    skills: organizedContent?.skills?.flatMap((skill: any) => skill.skills || []) || [],
+                    skillCategories: organizedContent?.skills || [],
+                    projects: organizedContent?.projects?.map((proj: any) => ({
+                        name: proj.name,
+                        description: proj.summary,
+                        role: proj.myRole,
+                        period: proj.duration || '',
+                        company: proj.company || '',
+                        tech: proj.technologies || [],
+                        achievements: proj.achievements || []
+                    })) || [],
+                    experience: organizedContent?.experiences?.map((exp: any) => ({
+                        position: exp.position,
+                        company: exp.company,
+                        duration: exp.duration,
+                        description: exp.impact,
+                        achievements: exp.achievements || [],
+                        technologies: exp.technologies || []
+                    })) || [],
+                    education: []
                 };
-            });
-
-            // Build extractedData from RICH HTML (not from simple organizedContent)
-            extractedData = {
-                name: extractedName,
-                title: extractedTitle || (organizedContent?.oneLinerPitch || '소프트웨어 개발자'),
-                email: extractedEmail,
-                phone: extractedPhone,
-                github: extractedGithub,
-                location: extractedLocation,
-                about: extractedAbout || (organizedContent?.summary || ''), // RICH ABOUT
-                skills: extractedSkills.length > 0 ? extractedSkills : (organizedContent?.skills?.flatMap((skill: any) => skill.skills || []) || []),
-                skillCategories: organizedContent?.skills || [],
-                projects: extractedProjects.length > 0 ? extractedProjects : (organizedContent?.projects?.map((proj: any) => ({
-                    name: proj.name,
-                    description: proj.summary,
-                    role: proj.myRole,
-                    period: proj.duration || '',
-                    company: proj.company || '',
-                    tech: proj.technologies || [],
-                    achievements: proj.achievements || []
-                })) || []),
-                experience: extractedExperience.length > 0 ? extractedExperience : (organizedContent?.experiences?.map((exp: any) => ({
-                    position: exp.position,
-                    company: exp.company,
-                    duration: exp.duration,
-                    description: exp.impact,
-                    achievements: exp.achievements || [],
-                    technologies: exp.technologies || []
-                })) || []),
-                education: []
-            };
-
-            console.log('=== 최종 extractedData (RICH HTML 기반) ===');
-            console.log('About 길이:', extractedData.about.length);
-            console.log('프로젝트 수:', extractedData.projects.length);
-            console.log('경력 수:', extractedData.experience.length);
-            if (extractedData.projects.length > 0) {
-                console.log('첫 번째 프로젝트 설명 길이:', extractedData.projects[0].description.length);
             }
-            if (extractedData.experience.length > 0) {
-                console.log('첫 번째 경력 설명 길이:', extractedData.experience[0].description.length);
-            }
+
             console.log('변환된 extractedData:', extractedData);
 
             const portfolioSection: Section = {

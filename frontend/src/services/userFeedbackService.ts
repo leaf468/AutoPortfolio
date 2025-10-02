@@ -362,6 +362,61 @@ ${allRequests.map((req, idx) => `${idx + 1}. ${req}`).join("\n")}
             design: "🎨 디자인 & 레이아웃",
         };
     }
+
+    // 자연어 명령으로 포트폴리오 개선
+    async improvePortfolioWithNaturalLanguage(
+        currentPortfolio: string,
+        instruction: string
+    ): Promise<string> {
+        try {
+            const systemPrompt = `
+당신은 포트폴리오 편집 전문가입니다.
+사용자의 자연어 지시에 따라 포트폴리오를 수정해주세요.
+
+=== 핵심 원칙 ===
+1. 사용자가 요청한 내용만 정확히 수정
+2. 요청하지 않은 부분은 절대 변경하지 않음
+3. 원본 데이터의 사실과 구조는 최대한 유지
+4. 자연스럽고 일관된 톤 유지
+
+=== 수정 전략 ===
+• 간결하게 만들기 요청 → 핵심만 남기고 불필요한 설명 제거
+• 자세하게 만들기 요청 → 구체적인 예시와 설명 추가
+• 톤 변경 요청 → 전문적/친근한 어조로 조정
+• 강조 요청 → 해당 부분을 더 부각시키고 임팩트 있게 표현
+• 구조 변경 요청 → 섹션 순서나 레이아웃 조정
+
+반드시 JSON 형식의 포트폴리오 데이터로 응답해주세요.
+`;
+
+            const response = await openai.chat.completions.create({
+                model: REACT_APP_OPENAI_MODEL,
+                messages: [
+                    { role: "system", content: systemPrompt },
+                    {
+                        role: "user",
+                        content: `현재 포트폴리오:\n${currentPortfolio}\n\n수정 요청: ${instruction}`,
+                    },
+                ],
+                max_tokens: 4000,
+            });
+
+            const result = response.choices[0].message.content || currentPortfolio;
+
+            // JSON 형식 검증
+            try {
+                JSON.parse(result);
+                return result;
+            } catch {
+                // JSON 파싱 실패 시 원본 반환
+                console.error("Invalid JSON response from AI");
+                return currentPortfolio;
+            }
+        } catch (error) {
+            console.error("Natural language improvement error:", error);
+            throw error;
+        }
+    }
 }
 
 export const userFeedbackService = new UserFeedbackService();
