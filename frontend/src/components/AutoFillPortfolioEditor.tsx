@@ -16,7 +16,7 @@ import autoFillService, {
     TextBlock, 
     GenerateRequest 
 } from '../services/autoFillService';
-type TemplateType = 'james' | 'geon' | 'eunseong' | 'iu';
+type TemplateType = 'minimal' | 'clean' | 'colorful' | 'elegant';
 
 interface AutoFillPortfolioEditorProps {
     userId: string;
@@ -31,7 +31,7 @@ const AutoFillPortfolioEditor: React.FC<AutoFillPortfolioEditorProps> = ({
     userId,
     initialInputs,
     targetJobKeywords,
-    selectedTemplate = 'james',
+    selectedTemplate,
     onSave,
     onEnhancedEdit
 }) => {
@@ -44,13 +44,6 @@ const AutoFillPortfolioEditor: React.FC<AutoFillPortfolioEditorProps> = ({
     const [selectedBlocks, setSelectedBlocks] = useState<Set<string>>(new Set());
     const editInputRef = useRef<HTMLTextAreaElement>(null);
 
-    // Generate initial portfolio on mount
-    useEffect(() => {
-        if (initialInputs) {
-            generatePortfolio();
-        }
-    }, []);
-
     const generatePortfolio = async () => {
         setLoading(true);
         try {
@@ -58,6 +51,7 @@ const AutoFillPortfolioEditor: React.FC<AutoFillPortfolioEditorProps> = ({
                 user_id: userId,
                 inputs: initialInputs || {},
                 target_job_keywords: targetJobKeywords,
+                template: selectedTemplate,
                 locale: 'ko-KR'
             };
 
@@ -74,6 +68,14 @@ const AutoFillPortfolioEditor: React.FC<AutoFillPortfolioEditorProps> = ({
             setLoading(false);
         }
     };
+
+    // Generate initial portfolio on mount - run only once
+    useEffect(() => {
+        if (initialInputs && !document) {
+            generatePortfolio();
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const getOriginColor = (origin: TextBlock['origin']) => {
         switch (origin) {

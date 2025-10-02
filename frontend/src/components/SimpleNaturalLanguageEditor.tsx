@@ -77,7 +77,7 @@ const SimpleNaturalLanguageEditor: React.FC<SimpleNaturalLanguageEditorProps> = 
             // 결과 업데이트 시뮬레이션
             const updatedResult = {
                 ...currentResult,
-                qualityScore: Math.min(95, currentResult.qualityScore + Math.floor(Math.random() * 5) + 1),
+                qualityScore: currentResult.qualityScore,
                 suggestions: [
                     ...currentResult.suggestions,
                     `개선 요청: "${userMessage.content}"`
@@ -201,9 +201,6 @@ const SimpleNaturalLanguageEditor: React.FC<SimpleNaturalLanguageEditorProps> = 
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
                     <div className="flex items-center justify-between mb-6">
                         <h3 className="text-xl font-bold text-gray-900">개선된 포트폴리오</h3>
-                        <div className="text-sm text-gray-500">
-                            품질 점수: <span className="font-semibold text-green-600">{currentResult.qualityScore}점</span>
-                        </div>
                     </div>
 
                     {/* 개선 사항 요약 */}

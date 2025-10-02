@@ -51,7 +51,7 @@ export interface GenerationResult {
     format: string;
     content: string;
     previewUrl?: string;
-    downloadUrl: string;
+    downloadUrl?: string;
     metadata: {
         pageCount?: number;
         wordCount: number;

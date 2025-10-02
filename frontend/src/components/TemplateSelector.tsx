@@ -8,7 +8,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { portfolioTemplates } from '../templates/portfolioTemplates';
 
-type TemplateType = 'james' | 'geon' | 'eunseong' | 'iu';
+type TemplateType = 'minimal' | 'clean' | 'colorful' | 'elegant';
 
 interface TemplateSelectorProps {
     onTemplateSelect: (templateType: TemplateType) => void;
@@ -75,14 +75,14 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
                                     <div className="mb-6">
                                         <div 
                                             className={`text-2xl mb-3 ${
-                                                templateType === 'james' ? 'font-light' :
-                                                templateType === 'geon' ? 'font-bold' :
-                                                templateType === 'eunseong' ? 'font-extrabold' :
+                                                templateType === 'minimal' ? 'font-light' :
+                                                templateType === 'clean' ? 'font-bold' :
+                                                templateType === 'colorful' ? 'font-extrabold' :
                                                 'font-medium'
                                             }`}
                                             style={{ color: template.designSystem?.colors?.primary || '#000000' }}
                                         >
-                                            김포트폴리오
+                                            Your name
                                         </div>
                                         <div 
                                             className="text-lg"
@@ -97,22 +97,22 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
                                     {/* 스킬 태그 */}
                                     <div className="mb-6 flex flex-wrap gap-2">
                                         {['React', 'TypeScript', 'Node.js'].map((skill, idx) => (
-                                            <div 
+                                            <div
                                                 key={idx}
                                                 className={`px-3 py-1 text-sm ${
-                                                    templateType === 'james' ? 'border-2 bg-transparent' :
-                                                    templateType === 'geon' ? 'rounded-sm' :
-                                                    templateType === 'eunseong' ? 'rounded-full' :
+                                                    templateType === 'minimal' ? 'border-2 bg-transparent' :
+                                                    templateType === 'clean' ? 'rounded-sm' :
+                                                    templateType === 'colorful' ? 'rounded-full' :
                                                     'rounded-lg'
                                                 }`}
-                                                style={{ 
-                                                    backgroundColor: templateType === 'james' ? 'transparent' : 
+                                                style={{
+                                                    backgroundColor: templateType === 'minimal' ? 'transparent' :
                                                                    template.designSystem?.colors?.secondary || '#6366f1',
-                                                    color: templateType === 'james' ? 
+                                                    color: templateType === 'minimal' ?
                                                            template.designSystem?.colors?.primary : 'white',
-                                                    borderColor: templateType === 'james' ? 
+                                                    borderColor: templateType === 'minimal' ?
                                                                 template.designSystem?.colors?.primary : 'transparent',
-                                                    borderWidth: templateType === 'james' ? '2px' : '0'
+                                                    borderWidth: templateType === 'minimal' ? '2px' : '0'
                                                 }}
                                             >
                                                 {skill}
@@ -122,64 +122,51 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
 
                                     {/* 템플릿별 특징적 요소 */}
                                     <div className="flex-1 flex flex-col justify-center">
-                                        {templateType === 'james' ? (
+                                        {templateType === 'minimal' ? (
                                             // 미니멀 - 단순한 라인과 타이포그래피
                                             <div className="space-y-4">
-                                                <div 
+                                                <div
                                                     className="w-full h-px"
                                                     style={{ backgroundColor: template.designSystem?.colors?.primary }}
                                                 />
                                                 <div className="text-center text-sm font-light text-gray-500">
                                                     Clean & Minimal
                                                 </div>
-                                                <div 
+                                                <div
                                                     className="w-full h-px"
                                                     style={{ backgroundColor: template.designSystem?.colors?.primary }}
                                                 />
                                             </div>
-                                        ) : templateType === 'geon' ? (
-                                            // 프로페셔널 - 데이터 시각화
-                                            <div className="space-y-3">
-                                                <div className="flex justify-between text-xs font-semibold">
-                                                    <span>Frontend</span>
-                                                    <span>85%</span>
+                                        ) : templateType === 'clean' ? (
+                                            // 기업형 - 깔끔한 라인과 타이포그래피
+                                            <div className="space-y-4">
+                                                <div
+                                                    className="w-full h-px"
+                                                    style={{ backgroundColor: template.designSystem?.colors?.primary }}
+                                                />
+                                                <div className="text-center text-sm font-semibold">
+                                                    <span style={{ color: template.designSystem?.colors?.primary }}>Business</span>
+                                                    <span className="mx-1">&</span>
+                                                    <span style={{ color: template.designSystem?.colors?.accent }}>Professional</span>
                                                 </div>
-                                                <div className="w-full h-2 bg-gray-200 rounded">
-                                                    <div 
-                                                        className="h-full rounded"
-                                                        style={{ 
-                                                            backgroundColor: template.designSystem?.colors?.accent,
-                                                            width: '85%'
-                                                        }}
-                                                    />
-                                                </div>
-                                                <div className="flex justify-between text-xs font-semibold">
-                                                    <span>Backend</span>
-                                                    <span>70%</span>
-                                                </div>
-                                                <div className="w-full h-2 bg-gray-200 rounded">
-                                                    <div 
-                                                        className="h-full rounded"
-                                                        style={{ 
-                                                            backgroundColor: template.designSystem?.colors?.accent,
-                                                            width: '70%'
-                                                        }}
-                                                    />
-                                                </div>
+                                                <div
+                                                    className="w-full h-px"
+                                                    style={{ backgroundColor: template.designSystem?.colors?.primary }}
+                                                />
                                             </div>
-                                        ) : templateType === 'eunseong' ? (
+                                        ) : templateType === 'colorful' ? (
                                             // 컬러풀 - 활동적인 색상 조합
                                             <div className="space-y-4">
                                                 <div className="flex justify-center space-x-2">
-                                                    <div 
+                                                    <div
                                                         className="w-8 h-8 rounded-full"
                                                         style={{ backgroundColor: template.designSystem?.colors?.primary }}
                                                     />
-                                                    <div 
+                                                    <div
                                                         className="w-8 h-8 rounded-full"
                                                         style={{ backgroundColor: template.designSystem?.colors?.secondary }}
                                                     />
-                                                    <div 
+                                                    <div
                                                         className="w-8 h-8 rounded-full"
                                                         style={{ backgroundColor: template.designSystem?.colors?.accent }}
                                                     />
@@ -194,11 +181,17 @@ const TemplateSelector: React.FC<TemplateSelectorProps> = ({
                                         ) : (
                                             // 엘레간트 - 우아한 그라데이션
                                             <div className="space-y-4">
-                                                <div className="w-full h-1 bg-gradient-to-r from-purple-200 via-purple-400 to-purple-600 rounded-full opacity-80"></div>
-                                                <div className="text-center text-sm italic text-gray-500">
+                                                <div
+                                                    className="w-full h-1 rounded-full opacity-80"
+                                                    style={{ background: `linear-gradient(90deg, ${template.designSystem?.colors?.primary}20, ${template.designSystem?.colors?.primary}, ${template.designSystem?.colors?.accent})` }}
+                                                />
+                                                <div className="text-center text-sm italic" style={{ color: template.designSystem?.colors?.secondary }}>
                                                     Elegant & Sophisticated
                                                 </div>
-                                                <div className="w-full h-1 bg-gradient-to-r from-pink-200 via-pink-400 to-pink-600 rounded-full opacity-60"></div>
+                                                <div
+                                                    className="w-full h-1 rounded-full opacity-60"
+                                                    style={{ background: `linear-gradient(90deg, ${template.designSystem?.colors?.accent}20, ${template.designSystem?.colors?.accent}, ${template.designSystem?.colors?.primary})` }}
+                                                />
                                             </div>
                                         )}
                                     </div>
