@@ -72,40 +72,40 @@ const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
   ];
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
+    <div className="max-w-6xl mx-auto px-16 py-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-center mb-8"
+        className="text-center mb-6"
       >
-        <div className="flex justify-center items-center mb-4">
-          <SparklesIcon className="w-8 h-8 text-purple-600 mr-2" />
-          <h2 className="text-3xl font-bold text-gray-900">AI 정리</h2>
+        <div className="flex justify-center items-center mb-2">
+          <SparklesIcon className="w-7 h-7 text-purple-600 mr-2" />
+          <h2 className="text-2xl font-bold text-gray-900">정보 입력</h2>
         </div>
-        <p className="text-lg text-gray-600">
+        <p className="text-sm text-gray-600">
           채용 관점에서 정보를 정리하고 핵심 성과를 추출합니다
         </p>
       </motion.div>
 
-      <div className="space-y-6">
+      <div className="space-y-4">
         {/* 입력 타입 선택 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-3">
+            <label className="block text-xs font-medium text-gray-700 mb-2">
               입력 형식 선택
             </label>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-3 gap-3">
               {inputTypes.map((type) => (
                 <button
                   key={type.value}
                   onClick={() => setInputType(type.value as any)}
-                  className={`p-4 border-2 rounded-lg flex flex-col items-center space-y-2 transition-colors ${
+                  className={`p-3 border-2 rounded-lg flex flex-col items-center space-y-1.5 transition-colors ${
                     inputType === type.value
                       ? 'border-purple-600 bg-purple-50 text-purple-600'
-                      : 'border-gray-300 hover:border-gray-400'
+                      : 'border-gray-300 hover:border-purple-300'
                   }`}
                 >
-                  <type.icon className="w-6 h-6" />
-                  <span className="text-sm font-medium">{type.label}</span>
+                  <type.icon className="w-5 h-5" />
+                  <span className="text-xs font-medium">{type.label}</span>
                 </button>
               ))}
             </div>
@@ -113,7 +113,7 @@ const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
 
           {/* 메인 입력 */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-xs font-medium text-gray-700 mb-2">
               {inputType === 'freetext' && '자유롭게 경력, 프로젝트, 기술 등을 작성해주세요'}
               {inputType === 'resume' && '기존 이력서 내용을 붙여넣어주세요'}
               {inputType === 'markdown' && '마크다운 형식의 포트폴리오를 입력해주세요'}
@@ -121,10 +121,10 @@ const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              className="w-full h-64 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent resize-none"
+              className="w-full h-52 p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent resize-none text-sm"
               placeholder="예: 3년차 풀스택 개발자입니다. React와 Node.js로 쇼핑몰 플랫폼을 개발했고, 사용자 50% 증가와 매출 200% 상승에 기여했습니다..."
             />
-            <div className="text-sm text-gray-500 mt-2">
+            <div className="text-xs text-gray-500 mt-1.5">
               {input.length} / 5000 글자
             </div>
           </div>
@@ -132,12 +132,12 @@ const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
           {/* 채용공고 추가 입력 */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="block text-sm font-medium text-gray-700">
+              <label className="block text-xs font-medium text-gray-700">
                 채용공고 (선택사항)
               </label>
               <button
                 onClick={() => setShowJobPosting(!showJobPosting)}
-                className="text-sm text-purple-600 hover:text-purple-800"
+                className="text-xs text-purple-600 hover:text-purple-800 font-medium"
               >
                 {showJobPosting ? '숨기기' : '추가하기'}
               </button>
@@ -152,7 +152,7 @@ const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
                 <textarea
                   value={jobPosting}
                   onChange={(e) => setJobPosting(e.target.value)}
-                  className="w-full h-32 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent resize-none"
+                  className="w-full h-24 p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent resize-none text-sm"
                   placeholder="지원하려는 채용공고 내용을 입력하면 맞춤형 최적화를 해드립니다..."
                 />
               </motion.div>
@@ -163,7 +163,7 @@ const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
           <button
             onClick={handleOrganize}
             disabled={!input.trim() || isProcessing}
-            className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white py-4 px-6 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:from-purple-700 hover:to-pink-700 transition-all duration-200 flex items-center justify-center"
+            className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3 px-5 rounded-lg font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-all duration-200 flex items-center justify-center"
           >
             {isProcessing ? (
               <>

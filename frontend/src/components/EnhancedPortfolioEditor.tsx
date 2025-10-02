@@ -465,12 +465,12 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                             onChange={(e) => setPortfolioData(prev => ({ ...prev, name: e.target.value }))}
                             className={`w-full p-2 border rounded-lg ${
                                 enhancedFields['name']
-                                    ? 'bg-yellow-50 border-yellow-300'
+                                    ? 'bg-purple-50 border-purple-300'
                                     : 'border-gray-300'
                             }`}
                         />
                         {enhancedFields['name'] && (
-                            <p className="mt-1 text-xs text-yellow-700">⚠️ AI가 자동 생성한 내용입니다.</p>
+                            <p className="mt-1 text-xs text-purple-700">⚠️ AI가 자동 생성한 내용입니다.</p>
                         )}
                     </div>
                     <div>
@@ -481,12 +481,12 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                             onChange={(e) => setPortfolioData(prev => ({ ...prev, title: e.target.value }))}
                             className={`w-full p-2 border rounded-lg ${
                                 enhancedFields['title']
-                                    ? 'bg-yellow-50 border-yellow-300'
+                                    ? 'bg-purple-50 border-purple-300'
                                     : 'border-gray-300'
                             }`}
                         />
                         {enhancedFields['title'] && (
-                            <p className="mt-1 text-xs text-yellow-700">⚠️ AI가 자동 생성한 내용입니다.</p>
+                            <p className="mt-1 text-xs text-purple-700">⚠️ AI가 자동 생성한 내용입니다.</p>
                         )}
                     </div>
                 </div>
@@ -529,13 +529,13 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                             onChange={(e) => setPortfolioData(prev => ({ ...prev, location: e.target.value }))}
                             className={`w-full p-2 border rounded-lg ${
                                 enhancedFields['location']
-                                    ? 'bg-yellow-50 border-yellow-300'
+                                    ? 'bg-purple-50 border-purple-300'
                                     : 'border-gray-300'
                             }`}
                             placeholder="Seoul, Korea"
                         />
                         {enhancedFields['location'] && (
-                            <p className="mt-1 text-xs text-yellow-700">⚠️ AI가 자동 생성한 내용입니다.</p>
+                            <p className="mt-1 text-xs text-purple-700">⚠️ AI가 자동 생성한 내용입니다.</p>
                         )}
                     </div>
                 )}
@@ -571,7 +571,7 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                     onChange={(e) => setPortfolioData(prev => ({ ...prev, about: e.target.value }))}
                     className={`w-full p-4 border rounded-lg min-h-[150px] ${
                         enhancedFields['about']
-                            ? 'bg-yellow-50 border-yellow-300 text-yellow-900'
+                            ? 'bg-purple-50 border-purple-300 text-purple-900'
                             : 'bg-white border-gray-300'
                     }`}
                     placeholder="자기소개를 입력하세요. AI가 전문적으로 개선해드립니다."
@@ -580,7 +580,7 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                     💡 <strong>마크다운 지원:</strong> **굵게**, *기울임*, `코드`, [링크](URL) 사용 가능 | Enter로 줄바꿈
                 </div>
                 {enhancedFields['about'] && (
-                    <p className="mt-2 text-xs text-yellow-700">
+                    <p className="mt-2 text-xs text-purple-700">
                         ⚠️ AI가 생성/개선한 내용입니다. 검토 후 필요시 수정해주세요.
                     </p>
                 )}
@@ -608,7 +608,7 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                                 variant="primary"
                                 className={`pr-8 ${
                                     enhancedFields[`skill_${index}`]
-                                        ? 'bg-yellow-100 border-yellow-300 text-yellow-800'
+                                        ? 'bg-purple-100 border-purple-300 text-purple-800'
                                         : ''
                                 }`}
                             >
@@ -662,7 +662,7 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                     </div>
                     <button
                         onClick={handleAddProject}
-                        className="flex items-center px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors"
+                        className="flex items-center px-3 py-1.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white text-sm rounded-lg hover:shadow-md transition-all"
                     >
                         <PlusIcon className="w-4 h-4 mr-1" />
                         프로젝트 추가
@@ -689,7 +689,7 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                                 </button>
                                 <button
                                     onClick={() => handleDeleteProject(index)}
-                                    className="p-1 text-red-600 hover:bg-red-100 rounded"
+                                    className="p-1 text-purple-600 hover:bg-purple-100 rounded"
                                 >
                                     <XMarkIcon className="w-4 h-4" />
                                 </button>
@@ -701,7 +701,7 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                             onChange={(e) => handleUpdateProject(index, 'description', e.target.value)}
                             className={`w-full p-2 mb-1 border rounded min-h-[80px] ${
                                 enhancedFields[`project_${index}`]
-                                    ? 'bg-yellow-50 border-yellow-300 text-yellow-900'
+                                    ? 'bg-purple-50 border-purple-300 text-purple-900'
                                     : 'bg-white border-gray-300'
                             }`}
                             placeholder="프로젝트 설명 (마크다운 지원)"
@@ -710,7 +710,7 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                             💡 **굵게**, *기울임*, `코드`, [링크](URL) 사용 가능
                         </div>
                         {enhancedFields[`project_${index}`] && (
-                            <p className="mb-3 text-xs text-yellow-700">
+                            <p className="mb-3 text-xs text-purple-700">
                                 ⚠️ AI가 생성/개선한 내용입니다. 검토 후 필요시 수정해주세요.
                             </p>
                         )}
@@ -724,13 +724,13 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                                     onChange={(e) => handleUpdateProject(index, 'period', e.target.value)}
                                     className={`w-full p-1 text-sm border rounded ${
                                         enhancedFields[`project_${index}_period`]
-                                            ? 'bg-yellow-50 border-yellow-300 text-yellow-900'
+                                            ? 'bg-purple-50 border-purple-300 text-purple-900'
                                             : 'border-gray-300'
                                     }`}
                                     placeholder="2023.01 - 2023.06"
                                 />
                                 {enhancedFields[`project_${index}_period`] && (
-                                    <p className="mt-1 text-xs text-yellow-700">⚠️ AI 생성</p>
+                                    <p className="mt-1 text-xs text-purple-700">⚠️ AI 생성</p>
                                 )}
                             </div>
                             <div>
@@ -741,13 +741,13 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                                     onChange={(e) => handleUpdateProject(index, 'role', e.target.value)}
                                     className={`w-full p-1 text-sm border rounded ${
                                         enhancedFields[`project_${index}_role`]
-                                            ? 'bg-yellow-50 border-yellow-300 text-yellow-900'
+                                            ? 'bg-purple-50 border-purple-300 text-purple-900'
                                             : 'border-gray-300'
                                     }`}
                                     placeholder="프론트엔드 개발"
                                 />
                                 {enhancedFields[`project_${index}_role`] && (
-                                    <p className="mt-1 text-xs text-yellow-700">⚠️ AI 생성</p>
+                                    <p className="mt-1 text-xs text-purple-700">⚠️ AI 생성</p>
                                 )}
                             </div>
                             <div>
@@ -758,13 +758,13 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                                     onChange={(e) => handleUpdateProject(index, 'company', e.target.value)}
                                     className={`w-full p-1 text-sm border rounded ${
                                         enhancedFields[`project_${index}_company`]
-                                            ? 'bg-yellow-50 border-yellow-300 text-yellow-900'
+                                            ? 'bg-purple-50 border-purple-300 text-purple-900'
                                             : 'border-gray-300'
                                     }`}
                                     placeholder="○○회사"
                                 />
                                 {enhancedFields[`project_${index}_company`] && (
-                                    <p className="mt-1 text-xs text-yellow-700">⚠️ AI 생성</p>
+                                    <p className="mt-1 text-xs text-purple-700">⚠️ AI 생성</p>
                                 )}
                             </div>
                         </div>
@@ -821,7 +821,7 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                                 />
                                 <button
                                     onClick={() => handleDeleteExperience(index)}
-                                    className="p-1 text-red-600 hover:bg-red-100 rounded"
+                                    className="p-1 text-purple-600 hover:bg-purple-100 rounded"
                                 >
                                     <XMarkIcon className="w-4 h-4" />
                                 </button>
@@ -853,7 +853,7 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                                 onChange={(e) => handleUpdateExperience(index, 'description', e.target.value)}
                                 className={`w-full p-2 border rounded min-h-[60px] text-sm ${
                                     enhancedFields[`experience_${index}_description`]
-                                        ? 'bg-yellow-50 border-yellow-300 text-yellow-900'
+                                        ? 'bg-purple-50 border-purple-300 text-purple-900'
                                         : 'border-gray-300'
                                 }`}
                                 placeholder="담당 업무 (마크다운 지원)"
@@ -862,7 +862,7 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                                 💡 **굵게**, *기울임* 사용 가능
                             </div>
                             {enhancedFields[`experience_${index}_description`] && (
-                                <p className="mt-2 text-xs text-yellow-700">
+                                <p className="mt-2 text-xs text-purple-700">
                                     ⚠️ AI가 생성/개선한 내용입니다. 검토 후 필요시 수정해주세요.
                                 </p>
                             )}
@@ -877,7 +877,7 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                                         )}
                                         className={`w-full p-2 border rounded min-h-[60px] text-sm ${
                                             enhancedFields[`experience_${index}_achievements`]
-                                                ? 'bg-yellow-50 border-yellow-300 text-yellow-900'
+                                                ? 'bg-purple-50 border-purple-300 text-purple-900'
                                                 : 'border-gray-300'
                                         }`}
                                         placeholder="• 매출 20% 증가에 기여
@@ -885,7 +885,7 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
 • 팀 생산성 향상을 위한 자동화 도구 개발"
                                     />
                                     {enhancedFields[`experience_${index}_achievements`] && (
-                                        <p className="mt-2 text-xs text-yellow-700">
+                                        <p className="mt-2 text-xs text-purple-700">
                                             ⚠️ AI가 생성/개선한 내용입니다. 검토 후 필요시 수정해주세요.
                                         </p>
                                     )}
@@ -946,7 +946,7 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                                 />
                                 <button
                                     onClick={() => handleDeleteEducation(index)}
-                                    className="p-1 text-red-600 hover:bg-red-100 rounded"
+                                    className="p-1 text-purple-600 hover:bg-purple-100 rounded"
                                 >
                                     <XMarkIcon className="w-4 h-4" />
                                 </button>

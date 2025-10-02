@@ -1,8 +1,9 @@
-import React, { ReactNode } from 'react';
+import React, { ReactNode, useState } from 'react';
 import { motion } from 'framer-motion';
-import { CheckIcon, SparklesIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
+import { CheckIcon, SparklesIcon, PencilSquareIcon, ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
 import { usePortfolio } from '../contexts/PortfolioContext';
 import { useNavigate } from 'react-router-dom';
+import NaturalLanguageSidebar from '../components/NaturalLanguageSidebar';
 
 interface StepInfo {
   id: string;
@@ -63,6 +64,7 @@ export default function MainLayout({
 }: MainLayoutProps) {
   const { state, reset } = usePortfolio();
   const navigate = useNavigate();
+  const [isNaturalEditOpen, setIsNaturalEditOpen] = useState(false);
 
   const handleLogoClick = () => {
     reset();
@@ -91,7 +93,7 @@ export default function MainLayout({
       {/* 헤더 */}
       {showHeader && (
         <div className="bg-white shadow-sm border-b border-gray-200">
-          <div className="max-w-6xl mx-auto px-6 py-4">
+          <div className="max-w-7xl mx-auto px-8 py-2">
             <div className="flex items-center justify-between">
               <div
                 className="flex items-center cursor-pointer hover:opacity-80 transition-opacity"
@@ -101,23 +103,30 @@ export default function MainLayout({
                 <img
                   src="/Careeroad_logo.png"
                   alt="Careeroad"
-                  className="h-8 w-8 mr-3"
+                  className="h-7 w-7 mr-2"
                   onError={(e) => {
                     e.currentTarget.style.display = 'none';
                   }}
                 />
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-900">
+                  <h1 className="text-lg font-bold text-gray-900">
                     Careeroad
                   </h1>
-                  <p className="text-gray-600 text-sm">
-                    AI 포트폴리오 자동 생성 플랫폼
-                  </p>
                 </div>
               </div>
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-3">
+                {/* 자연어 편집 버튼 - 상세 편집 단계에서만 표시 */}
+                {state.currentStep === 'enhanced-edit' && (
+                  <button
+                    onClick={() => setIsNaturalEditOpen(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white text-xs font-medium rounded-lg hover:shadow-md transition-all"
+                  >
+                    <ChatBubbleLeftRightIcon className="w-4 h-4" />
+                    AI 자연어 편집
+                  </button>
+                )}
                 {showProgress && state.currentStep !== 'complete' && (
-                  <div className="text-sm text-gray-500">
+                  <div className="text-xs text-gray-500 font-medium">
                     {steps.findIndex(s => s.id === state.currentStep) + 1} / {steps.length}
                   </div>
                 )}
@@ -130,35 +139,29 @@ export default function MainLayout({
       {/* 진행 단계 표시 */}
       {showProgress && state.currentStep !== 'complete' && (
         <div className="bg-white border-b border-gray-200">
-          <div className="max-w-6xl mx-auto px-6 py-6">
-            <div className="flex items-center justify-between">
+          <div className="max-w-7xl mx-auto px-8 py-3">
+            <div className="flex items-center justify-between gap-3">
               {steps.map((step, index) => {
                 const status = getStepStatus(step.id);
-                const StepIcon = step.icon;
 
                 return (
                   <React.Fragment key={step.id}>
-                    <div className="flex items-center">
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center ${getStepColor(status)}`}>
+                    <div className="flex flex-col items-center min-w-0 flex-1">
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center ${getStepColor(status)} mb-1`}>
                         {status === 'complete' ? (
-                          <CheckIcon className="w-6 h-6" />
+                          <CheckIcon className="w-5 h-5" />
                         ) : (
-                          <StepIcon className="w-6 h-6" />
+                          <span className="text-sm font-bold">{index + 1}</span>
                         )}
                       </div>
-                      <div className="ml-3">
-                        <p className={`font-medium ${status === 'current' ? 'text-purple-600' : status === 'complete' ? 'text-green-600' : 'text-gray-500'}`}>
-                          {step.name}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {step.description}
-                        </p>
-                      </div>
+                      <p className={`text-xs font-medium whitespace-nowrap ${status === 'current' ? 'text-purple-600' : status === 'complete' ? 'text-green-600' : 'text-gray-500'}`}>
+                        {step.name}
+                      </p>
                     </div>
 
                     {index < steps.length - 1 && (
-                      <div className="flex-1 mx-4">
-                        <div className={`h-1 rounded-full ${status === 'complete' ? 'bg-green-600' : 'bg-gray-200'}`} />
+                      <div className="flex-1 mx-2 mt-[-18px]">
+                        <div className={`h-0.5 rounded-full ${status === 'complete' ? 'bg-green-600' : 'bg-gray-200'}`} />
                       </div>
                     )}
                   </React.Fragment>
@@ -189,6 +192,12 @@ export default function MainLayout({
           </div>
         </div>
       </div>
+
+      {/* 자연어 편집 사이드바 */}
+      <NaturalLanguageSidebar
+        isOpen={isNaturalEditOpen}
+        onClose={() => setIsNaturalEditOpen(false)}
+      />
     </div>
   );
 }

@@ -6,7 +6,7 @@ const openai = new OpenAI({
     dangerouslyAllowBrowser: true,
 });
 
-const REACT_APP_OPENAI_MODEL = process.env.REACT_APP_OPENAI_MODEL || "gpt-4";
+const REACT_APP_OPENAI_MODEL = process.env.REACT_APP_OPENAI_MODEL || "gpt-4o-mini";
 
 export interface BoosterQuestion {
     id: string;
@@ -113,7 +113,6 @@ JSON 배열 형식으로 반환:
                         )}`,
                     },
                 ],
-                temperature: 0.4,
                 max_tokens: 2000,
             });
 
@@ -264,7 +263,6 @@ ${JSON.stringify(session.answers, null, 2)}
 `,
                     },
                 ],
-                temperature: 0.2,
                 max_tokens: 3000,
             });
 

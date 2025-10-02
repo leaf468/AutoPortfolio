@@ -5,7 +5,7 @@ const openai = new OpenAI({
     dangerouslyAllowBrowser: true,
 });
 
-const REACT_APP_OPENAI_MODEL = process.env.REACT_APP_OPENAI_MODEL || "gpt-4";
+const REACT_APP_OPENAI_MODEL = process.env.REACT_APP_OPENAI_MODEL || "gpt-4o-mini";
 
 export interface EnhancedText {
     original: string;
@@ -42,65 +42,44 @@ class PortfolioTextEnhancer {
     async enhanceAboutMe(originalText: string): Promise<EnhancedText> {
         try {
             const prompt = `
-당신은 Fortune 500 기업 인사팀과 협력한 경험이 있는 전문 포트폴리오 작성 컨설턴트입니다.
-1,000명 이상의 후보자가 이 자기소개로 면접 합격률 80% 이상을 달성했습니다.
+당신은 글로벌 테크 기업 HR 전문가가 인정하는 포트폴리오 라이팅 전문가입니다.
+사용자가 제공한 자기소개를 채용담당자가 '이 사람을 꼭 면접 보고싶다'고 생각하게 만드는 전문적인 About Me 섹션으로 재구성하세요.
 
 원본 텍스트: "${originalText}"
 
-=== 개선 원칙 ===
-1. **스토리텔링 구조**: 배경 → 전환점 → 현재 전문성 → 미래 비전 (4단계 서사)
-2. **구체성 극대화**: 추상적 표현 금지, 구체적 사례와 수치로 증명
-3. **차별화 포인트**: 다른 후보자와 다른 독특한 강점 부각
-4. **전문성 + 인간미**: 기술적 전문성과 개인의 가치관/동기 균형
-5. **임팩트 중심**: 무엇을 할 수 있는지보다, 어떤 가치를 만들 수 있는지 강조
+=== HR 관점의 자기소개 작성 원칙 ===
+1. **첫 문장이 결정적**: 핵심 가치 제안을 명확히 (전문성 + 차별점)
+2. **STAR 스토리텔링**: 배경 → 전문성 구축 → 주요 성과 → 미래 비전
+3. **정량적 임팩트**: 가능한 모든 성과를 수치로 표현
+4. **비즈니스 언어**: 기술 나열이 아닌, 비즈니스 가치 중심 서술
+5. **개성과 전문성 균형**: 독특한 강점을 전문적 톤으로 표현
 
-=== 필수 구성 요소 ===
-**300-400자 분량으로 다음을 모두 포함:**
+=== 구조 가이드 (4-6문장) ===
+• 문장 1: 핵심 정체성 + 전문 분야 + 경력/경험 수준
+• 문장 2-3: 주요 기술 스택과 비즈니스 임팩트 (구체적 성과 포함)
+• 문장 4: 협업/리더십 경험 또는 독특한 강점
+• 문장 5-6: 전문성의 방향성과 미래 목표
 
-1. **배경 스토리 (100자)**
-   - 이 분야에 관심을 갖게 된 계기
-   - 초기 경험이나 인상적인 에피소드
-   - 예: "대학 시절 첫 웹사이트를 만들면서 코드가 실제 서비스로 작동하는 순간의 감동..."
+=== 예시 (참고용) ===
+"5년 경력의 풀스택 개발자로, React와 Node.js 기반 서비스로 누적 사용자 100만명 달성에 기여했습니다.
+스타트업에서 서비스 기획부터 배포까지 전 과정을 경험하며, 비즈니스 임팩트를 최우선으로 하는 개발 철학을 확립했습니다.
+특히 데이터 기반 의사결정으로 전환율을 40% 개선한 경험이 있으며, 팀 내 기술 리드로서 코드 리뷰와 멘토링을 주도했습니다.
+현재는 AI 기술을 활용한 사용자 경험 혁신에 집중하고 있으며, 기술로 실질적인 비즈니스 문제를 해결하는 개발자로 성장하고 있습니다."
 
-2. **전환점/성장 (100자)**
-   - 중요한 프로젝트나 경험
-   - 큰 도전과 극복 과정
-   - 핵심 역량을 키운 계기
-   - 예: "스타트업에서 3개월 만에 월 10만 사용자 서비스를 런칭하면서..."
-
-3. **현재 전문성 (100자)**
-   - 핵심 기술 스택 (3-5개)
-   - 특기와 강점
-   - 구체적인 경험치 (년수, 프로젝트 수 등)
-   - 예: "현재 React, TypeScript, Node.js를 활용한 풀스택 개발에 3년 이상의 경험을 보유..."
-
-4. **미래 비전 (100자)**
-   - 커리어 목표
-   - 기여하고 싶은 가치
-   - 학습 계획이나 성장 방향
-   - 예: "앞으로는 AI 기술을 접목한 사용자 경험 혁신에 집중하여..."
-
-=== 문체 가이드 ===
-- 1인칭 시점 사용
-- 능동적이고 자신감 있는 표현
-- "~했습니다" 보다 "~하여 ~을 달성했습니다" (결과 중심)
-- 구체적 수치와 사례 포함 (프로젝트 수, 사용자 수, 성과 등)
-
-응답 형식:
+응답 형식 (JSON):
 {
-  "enhanced": "300-400자 분량의 풍부하고 스토리가 있는 자기소개 (4개 문단으로 구성)",
-  "generated_parts": ["배경 스토리", "전환점", "현재 전문성", "미래 비전"] // 새로 생성하거나 크게 확장한 부분
+  "enhanced": "개선된 자기소개 (4-6문장, 정량적 성과 포함)",
+  "generated_parts": ["새로 추가/생성한 부분만 나열"]
 }
 `;
 
             const response = await openai.chat.completions.create({
                 model: REACT_APP_OPENAI_MODEL,
                 messages: [
-                    { role: "system", content: "You are a professional portfolio writing consultant specializing in compelling personal narratives and career storytelling." },
+                    { role: "system", content: "You are a professional portfolio writing assistant specialized in HR-approved content." },
                     { role: "user", content: prompt }
                 ],
-                temperature: 0.6, // 더 풍부한 스토리텔링을 위해 조정
-                max_tokens: 1200, // 300-400단어 목표를 위해 증가
+                max_tokens: 800,
             });
 
             let content = response.choices[0].message?.content || "{}";
@@ -135,8 +114,8 @@ class PortfolioTextEnhancer {
     async enhanceProject(project: ProjectData): Promise<ProjectData & { enhanced: EnhancedText }> {
         try {
             const prompt = `
-당신은 실리콘밸리 스타트업과 대기업 모두에서 인정받은 프로젝트 포트폴리오 작성 전문가입니다.
-성공적인 프로젝트 설명으로 500명 이상의 개발자가 원하는 회사에 입사했습니다.
+당신은 실리콘밸리 테크 기업의 채용 전문가입니다.
+프로젝트 정보를 STAR+I 프레임워크로 재구성하여, 면접관이 '이 사람의 문제해결 능력과 임팩트'를 명확히 이해하게 만드세요.
 
 === 현재 프로젝트 정보 ===
 - 이름: ${project.name || "[미입력]"}
@@ -146,69 +125,45 @@ class PortfolioTextEnhancer {
 - 회사/단체: ${project.company || "[미입력]"}
 - 기술 스택: ${project.tech?.join(", ") || "[미입력]"}
 
-=== 프로젝트 설명 개선 원칙 ===
-**STAR 기법 + 비즈니스 임팩트 중심**
+=== STAR+I 프로젝트 서술 프레임워크 ===
+**S**ituation (상황): 어떤 비즈니스 문제/기회가 있었나? (1-2문장)
+**T**ask (과제): 내가 맡은 구체적 역할과 목표는? (1문장)
+**A**ction (행동): 어떤 기술/전략으로 접근했나? 핵심 의사결정은? (2-3문장)
+**R**esult (결과): 정량적 성과 + 비즈니스 임팩트는? (1-2문장)
+**I**nsight (통찰): 이 프로젝트에서 얻은 핵심 교훈은? (1문장)
 
-1. **Situation (상황/배경) - 50자**
-   - 어떤 문제나 니즈가 있었나?
-   - 프로젝트가 필요했던 비즈니스 맥락
-   - 예: "월 5만 사용자의 전자상거래 플랫폼이 레거시 시스템으로 인해 페이지 로딩에 평균 5초가 걸리며 이탈률이 45%에 달하는 문제가 있었습니다."
+=== 작성 원칙 ===
+1. **비즈니스 맥락 우선**: 단순 기술 나열이 아닌, 왜 이 프로젝트가 중요했는지
+2. **정량화**: 사용자 수, 성능 개선%, 매출 증가, 개발 시간 단축 등 구체적 수치
+3. **기술 선택의 근거**: 왜 이 기술 스택을 선택했는지 전략적 사고 표현
+4. **협업 강조**: 팀 규모, 역할 분담, 커뮤니케이션 방식
+5. **학습과 성장**: 이 경험이 나를 어떻게 성장시켰는지
 
-2. **Task (과제) - 30자**
-   - 해결해야 할 구체적 과제
-   - 목표와 제약조건
-   - 예: "3개월 내에 성능을 개선하면서도 기존 기능을 모두 유지해야 했습니다."
+=== 예시 참고 ===
+"사용자 이탈률이 높은 기존 결제 시스템을 개선하는 프로젝트를 리드했습니다. (Situation)
+프론트엔드 개발 리드로서 UI/UX 재설계부터 성능 최적화까지 전 과정을 담당했습니다. (Task)
+React와 TypeScript로 컴포넌트를 모듈화하고, Lazy Loading으로 초기 로딩 시간을 60% 단축했으며, A/B 테스트를 통해 사용자 경험을 검증했습니다. (Action)
+그 결과 결제 전환율이 35% 증가했고, 월 거래액이 2억원 상승하는 비즈니스 임팩트를 달성했습니다. (Result)
+데이터 기반 의사결정과 점진적 개선의 중요성을 체득한 프로젝트였습니다. (Insight)"
 
-3. **Action (실행/해결방법) - 100자**
-   - 사용한 기술 스택과 아키텍처
-   - 구현 방법과 기술적 의사결정
-   - 팀 협업 방식 (인원, 역할분담)
-   - 극복한 기술적 챌린지
-   - 예: "React 18과 Next.js를 활용한 SSR/ISR 아키텍처로 전면 리팩토링했습니다.
-     5명의 프론트엔드 개발자와 애자일 방식으로 협업하며, 저는 아키텍처 설계와 성능 최적화를 담당했습니다.
-     Redis 캐싱 전략과 Webpack 번들 최적화로 초기 로딩 시간을 대폭 개선했습니다."
-
-4. **Result (결과/성과) - 50자**
-   - 정량적 성과 (수치로 증명)
-   - 비즈니스 임팩트
-   - 기술적 개선 사항
-   - 예: "페이지 로딩 시간을 5초→1.2초로 76% 개선, 이탈률 45%→18%로 감소, 월 매출 1,500만원 증가에 기여했습니다."
-
-5. **Learning (배운 점) - 30자**
-   - 기술적 학습
-   - 프로세스 개선
-   - 차기 프로젝트에 적용할 인사이트
-   - 예: "대규모 리팩토링 시 점진적 마이그레이션 전략의 중요성을 깨달았습니다."
-
-=== 필수 요구사항 ===
-✓ **총 200-300 자** (빈약한 설명 절대 금지)
-✓ **구체적 수치 최소 3개** (사용자 수, 성능 개선율, 매출/비용 영향 등)
-✓ **기술 스택 명시** (버전, 주요 라이브러리 포함)
-✓ **팀 규모와 역할** (예: "5명 중 프론트엔드 리드", "단독 개발")
-✓ **비즈니스 가치** (매출, 사용자, 효율성 등으로 표현)
-✓ **부족한 정보는 합리적 추론**으로 채우되 [생성됨] 표시
-
-응답 형식:
+응답 형식 (JSON):
 {
-  "name": "프로젝트명",
-  "description": "200-300자의 풍부한 STAR 구조 설명",
-  "period": "구체적 기간 (예: 2023.03 - 2023.06, 3개월)",
-  "role": "구체적 역할 (예: Frontend Lead / 5명 중 1명)",
-  "company": "회사/단체명",
-  "tech": ["React 18", "TypeScript 4.9", "Next.js 13", "Tailwind CSS"],
-  "achievements": ["페이지 로딩 76% 개선", "이탈률 45%→18% 감소", "월 매출 1,500만원 증가"],
-  "generated_fields": ["생성되거나 크게 확장된 필드명"]
+  "name": "프로젝트명 (임팩트 강조 형태로 가능하면 개선)",
+  "description": "STAR+I 구조로 재작성된 설명 (6-8문장)",
+  "period": "기간 (없으면 합리적으로 추정)",
+  "role": "구체적 역할 (책임 범위 포함)",
+  "company": "회사/단체 (없으면 합리적으로 추정)",
+  "generated_fields": ["새로 생성/추정한 필드명들"]
 }
 `;
 
             const response = await openai.chat.completions.create({
                 model: REACT_APP_OPENAI_MODEL,
                 messages: [
-                    { role: "system", content: "You are a professional portfolio writing assistant with expertise in STAR methodology and business impact storytelling." },
+                    { role: "system", content: "You are a Silicon Valley tech recruiter specialized in STAR framework." },
                     { role: "user", content: prompt }
                 ],
-                temperature: 0.6, // 약간 높여서 더 풍부하고 창의적인 콘텐츠 생성
-                max_tokens: 1500, // 더 긴 프로젝트 설명을 위해 증가 (200-300단어 목표)
+                max_tokens: 1000,
             });
 
             let content = response.choices[0].message?.content || "{}";
@@ -435,7 +390,6 @@ ${JSON.stringify(data, null, 2)}
                     { role: "system", content: "You are a professional Korean portfolio writing assistant." },
                     { role: "user", content: prompt }
                 ],
-                temperature: 0.7,
                 max_tokens: 2000,
             });
 
@@ -489,7 +443,6 @@ JSON 배열 형식으로 응답해주세요:
                     { role: "system", content: "You are a professional Korean portfolio writing assistant." },
                     { role: "user", content: prompt }
                 ],
-                temperature: 0.7,
                 max_tokens: 500,
             });
 
@@ -546,7 +499,6 @@ JSON 배열 형식으로 응답해주세요:
                     { role: "system", content: "You are a professional Korean portfolio writing assistant." },
                     { role: "user", content: prompt }
                 ],
-                temperature: 0.7,
                 max_tokens: 500,
             });
 

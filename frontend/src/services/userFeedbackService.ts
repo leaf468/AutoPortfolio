@@ -6,7 +6,7 @@ const openai = new OpenAI({
     dangerouslyAllowBrowser: true,
 });
 
-const REACT_APP_OPENAI_MODEL = process.env.REACT_APP_OPENAI_MODEL || "gpt-4";
+const REACT_APP_OPENAI_MODEL = process.env.REACT_APP_OPENAI_MODEL || "gpt-4o-mini";
 
 export interface FeedbackOption {
     id: string;
@@ -166,19 +166,37 @@ class UserFeedbackService {
             }
 
             const systemPrompt = `
-당신은 포트폴리오 개선 전문가입니다. 
-사용자의 피드백을 바탕으로 포트폴리오를 수정하세요.
+당신은 채용 성공률 95%를 자랑하는 포트폴리오 리팩토링 전문가입니다.
+사용자 피드백을 바탕으로 HR 전문가 관점에서 포트폴리오를 전략적으로 개선하세요.
 
-개선 원칙:
-1. 기존 내용의 핵심은 유지하되 표현과 구조를 개선
-2. 사실과 데이터는 변경하지 말고 표현 방식만 개선
-3. 일관된 톤과 스타일 유지
-4. 채용담당자 관점에서 더 매력적으로 만들기
+=== 핵심 원칙 (STAR+I 프레임워크 준수) ===
+1. **사실 보존**: 모든 경험, 프로젝트, 성과의 핵심 사실은 절대 변경 금지
+2. **표현 고도화**: 기술 용어 → 비즈니스 임팩트 언어로 전환
+3. **맥락 강화**: 단편적 성과 → Situation-Task-Action-Result-Insight 스토리로 재구성
+4. **정량화 극대화**: 모든 성과에 구체적 수치 추가 (%, 개수, 기간, 금액 등)
+5. **신뢰 신호 부각**: 검증 가능한 정보(URL, GitHub, 레퍼런스) 강조
 
-수정 요청사항:
+=== 사용자 피드백 요청사항 ===
 ${allRequests.map((req, idx) => `${idx + 1}. ${req}`).join("\n")}
 
-원본 포트폴리오를 위 요청사항에 따라 수정하되, 과도한 변경은 피하고 자연스럽게 개선해주세요.
+=== 수정 전략 ===
+• **톤 조정**: 피드백에 따라 전문적/친근함/자신감 균형 조절
+• **내용 보강**:
+  - 리더십 → 팀 규모, 의사결정 권한, 갈등 해결 사례 추가
+  - 기술 깊이 → 기술 선택 근거, 대안 검토, 트레이드오프 설명
+  - 수치 강화 → Before/After 비교, ROI, 사용자 임팩트 명시
+• **구조 최적화**:
+  - 시간순 → 최신 경험 우선 배치
+  - 임팩트순 → 가장 인상적인 성과 최상단 배치
+• **스타일 정제**:
+  - 불릿 포인트 → 한 줄에 하나의 핵심 메시지
+  - 액션 동사 → 강력한 동사로 문장 시작 (달성, 구현, 주도, 개선 등)
+
+=== 출력 요구사항 ===
+원본 포트폴리오를 위 피드백과 전략에 따라 수정하되:
+- 과도한 변경 금지 (사실과 본질은 유지)
+- 자연스럽고 일관된 톤 유지
+- 채용담당자가 5초 안에 핵심을 파악할 수 있도록 구조화
 `;
 
             const response = await openai.chat.completions.create({
@@ -190,8 +208,7 @@ ${allRequests.map((req, idx) => `${idx + 1}. ${req}`).join("\n")}
                         content: `수정할 포트폴리오:\n\n${originalContent}`,
                     },
                 ],
-                temperature: 0.3,
-                max_tokens: 3000,
+                max_tokens: 4000,
             });
 
             const revisedContent =
@@ -279,7 +296,6 @@ ${allRequests.map((req, idx) => `${idx + 1}. ${req}`).join("\n")}
                         content: `원본:\n${original}\n\n수정본:\n${revised}`,
                     },
                 ],
-                temperature: 0.1,
                 max_tokens: 10,
             });
 
@@ -314,7 +330,6 @@ ${allRequests.map((req, idx) => `${idx + 1}. ${req}`).join("\n")}
                     { role: "system", content: systemPrompt },
                     { role: "user", content: `포트폴리오:\n${content}` },
                 ],
-                temperature: 0.1,
                 max_tokens: 10,
             });
 
