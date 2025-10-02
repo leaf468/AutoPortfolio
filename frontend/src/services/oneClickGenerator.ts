@@ -8,7 +8,7 @@ const openai = new OpenAI({
     dangerouslyAllowBrowser: true,
 });
 
-const REACT_APP_OPENAI_MODEL = process.env.REACT_APP_OPENAI_MODEL || "gpt-4";
+const REACT_APP_OPENAI_MODEL = process.env.REACT_APP_OPENAI_MODEL || "gpt-4o-mini";
 
 export interface GenerationTemplate {
     id: string;
@@ -2222,7 +2222,6 @@ ${userTemplate}
                         )}`,
                     },
                 ],
-                temperature: 0.2,
                 max_tokens: 3000,
             });
 
@@ -2271,7 +2270,6 @@ JSON 형식:
                         )}`,
                     },
                 ],
-                temperature: 0.2,
             });
 
             return response.choices[0].message.content || "{}";
@@ -2288,15 +2286,35 @@ JSON 형식:
         originalContent: OrganizedContent
     ): Promise<number> {
         const systemPrompt = `
-포트폴리오 품질을 0-100점으로 평가하세요.
+당신은 글로벌 테크 기업 HR 전문가입니다. 포트폴리오를 실제 채용 기준으로 평가하세요.
 
-평가 기준:
-1. 완성도 (25점): 필수 정보 포함 정도
-2. 가독성 (25점): 구조와 레이아웃의 명확성  
-3. 임팩트 (25점): 성과와 결과의 구체성
-4. ATS 최적화 (25점): 키워드와 형식의 적절성
+=== 평가 기준 (0-100점) ===
+**1. 비즈니스 임팩트 (30점)**
+- 정량적 성과 지표 명시 (매출, 사용자 수, 성능 개선%)
+- 비즈니스 맥락과 문제 해결 스토리
+- ROI 및 실질적 가치 창출 증거
 
-숫자만 반환하세요 (예: 85)
+**2. 기술 전문성 (25점)**
+- 기술 스택의 깊이와 실전 활용도
+- 복잡한 문제 해결 능력 입증
+- 최신 기술 트렌드 적용 여부
+
+**3. 협업 & 리더십 (20점)**
+- 팀 협업 경험과 커뮤니케이션
+- 프로젝트 리드/멘토링 경험
+- 크로스 펑셔널 협업 사례
+
+**4. 성장 가능성 (15점)**
+- 학습 민첩성과 자기계발
+- 커리어 성장 궤적의 일관성
+- 미래 비전과 목표의 명확성
+
+**5. ATS & 신뢰도 (10점)**
+- 핵심 키워드 최적화
+- 검증 가능한 정보 (URL, GitHub 등)
+- 전문적 구조와 가독성
+
+**반환 형식**: 숫자만 (예: 87)
 `;
 
         try {
@@ -2313,7 +2331,6 @@ JSON 형식:
                         )}`,
                     },
                 ],
-                temperature: 0.1,
                 max_tokens: 10,
             });
 
@@ -2330,11 +2347,22 @@ JSON 형식:
         originalContent: OrganizedContent
     ): Promise<string[]> {
         const systemPrompt = `
-포트폴리오 개선 제안을 3-5개 생성하세요.
-실용적이고 구체적인 제안을 해주세요.
+당신은 채용 성공률 95%를 자랑하는 커리어 코치입니다.
+포트폴리오를 분석하여 즉시 실행 가능한 개선 제안을 3-5개 생성하세요.
 
-JSON 배열 형식으로 반환:
-["제안1", "제안2", "제안3"]
+=== 제안 우선순위 ===
+1. **정량적 성과 보강**: 수치가 없는 성과에 구체적 지표 추가 제안
+2. **STAR 스토리텔링**: 맥락 없는 경험을 Situation-Task-Action-Result 구조로 재구성
+3. **비즈니스 언어 전환**: 기술 용어를 비즈니스 임팩트로 번역
+4. **신뢰 신호 추가**: URL, GitHub, 검증 가능한 레퍼런스 추가
+5. **협업 경험 강조**: 팀워크, 리더십, 커뮤니케이션 사례 추가
+
+=== 제안 형식 ===
+각 제안은 "무엇을 → 어떻게 → 왜" 구조로 작성:
+- 예: "프로젝트 A의 성과에 '사용자 20% 증가' 같은 구체적 수치를 추가하면, 채용담당자가 임팩트를 즉시 파악할 수 있습니다."
+
+**반환 형식**: JSON 배열
+["실행 가능한 제안 1", "실행 가능한 제안 2", "실행 가능한 제안 3"]
 `;
 
         try {
@@ -2347,7 +2375,6 @@ JSON 배열 형식으로 반환:
                         content: `포트폴리오:\n${generatedContent}`,
                     },
                 ],
-                temperature: 0.4,
             });
 
             const result = response.choices[0].message.content || "[]";

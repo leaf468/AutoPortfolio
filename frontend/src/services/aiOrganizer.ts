@@ -5,7 +5,7 @@ const openai = new OpenAI({
     dangerouslyAllowBrowser: true,
 });
 
-const REACT_APP_OPENAI_MODEL = process.env.REACT_APP_OPENAI_MODEL || "gpt-4";
+const REACT_APP_OPENAI_MODEL = process.env.REACT_APP_OPENAI_MODEL || "gpt-4o-mini";
 
 export interface OrganizedContent {
     oneLinerPitch: string; // 1문장 핵심 요약
@@ -138,7 +138,6 @@ class AIOrganizer {
                         content: `다음 ${inputType} 정보를 채용 관점에서 정리해주세요:\n\n${rawInput}`,
                     },
                 ],
-                temperature: 0.3,
                 max_tokens: 3000,
             });
 
@@ -220,7 +219,6 @@ class AIOrganizer {
                         )}`,
                     },
                 ],
-                temperature: 0.2,
                 max_tokens: 3000,
             });
 
@@ -282,7 +280,6 @@ JSON 형식으로 반환:
                         }`,
                     },
                 ],
-                temperature: 0.2,
             });
 
             const result = response.choices[0].message.content || "{}";

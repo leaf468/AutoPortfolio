@@ -11,11 +11,12 @@ import {
     EyeSlashIcon,
     ClockIcon
 } from '@heroicons/react/24/outline';
-import autoFillService, { 
-    PortfolioDocument, 
-    TextBlock, 
-    GenerateRequest 
+import autoFillService, {
+    PortfolioDocument,
+    TextBlock,
+    GenerateRequest
 } from '../services/autoFillService';
+import JobRecommendationSlider from './JobRecommendationSlider';
 type TemplateType = 'minimal' | 'clean' | 'colorful' | 'elegant';
 
 interface AutoFillPortfolioEditorProps {
@@ -211,14 +212,51 @@ const AutoFillPortfolioEditor: React.FC<AutoFillPortfolioEditorProps> = ({
 
     if (loading && !document) {
         return (
-            <div className="flex items-center justify-center min-h-screen bg-gray-50">
-                <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                >
-                    <SparklesIcon className="w-12 h-12 text-purple-600" />
-                </motion.div>
-                <span className="ml-3 text-lg text-gray-700">AI가 포트폴리오를 생성하고 있습니다...</span>
+            <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 flex flex-col items-center justify-center px-4">
+                <div className="mb-8">
+                    <motion.div
+                        className="flex flex-col items-center"
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.5 }}
+                    >
+                        <motion.div
+                            animate={{ rotate: 360 }}
+                            transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+                            className="mb-4"
+                        >
+                            <SparklesIcon className="w-12 h-12 text-purple-600" />
+                        </motion.div>
+                        <h2 className="text-lg font-semibold text-gray-700 mb-2">
+                            AI가 포트폴리오를 생성하고 있습니다
+                        </h2>
+                        <p className="text-sm text-gray-500">
+                            잠시만 기다려주세요
+                        </p>
+                    </motion.div>
+                </div>
+
+                {/* 직무 추천 슬라이더 */}
+                <div className="w-full">
+                    <JobRecommendationSlider userKeywords={targetJobKeywords} />
+                </div>
+
+                {/* 로딩 프로그레스 */}
+                <div className="mt-6 w-64">
+                    <div className="h-1 bg-gray-200 rounded-full overflow-hidden">
+                        <motion.div
+                            className="h-full bg-gradient-to-r from-purple-500 to-blue-500"
+                            initial={{ width: '0%' }}
+                            animate={{ width: '100%' }}
+                            transition={{
+                                duration: 3,
+                                repeat: Infinity,
+                                ease: 'easeInOut'
+                            }}
+                        />
+                    </div>
+                    <p className="text-center text-xs text-gray-400 mt-2">생성 중...</p>
+                </div>
             </div>
         );
     }
