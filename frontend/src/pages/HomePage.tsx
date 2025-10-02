@@ -55,9 +55,9 @@ export default function HomePage() {
               <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-8">
                 <CpuChipIcon className="w-10 h-10 text-white" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-5">AI 기반 최적화</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-5">AI 맞춤 분석</h3>
               <p className="text-lg text-gray-600 leading-relaxed">
-                GPT-4 기술로 당신의 경험을 분석하고 채용 트렌드에 맞게 최적화된 내용을 생성합니다.
+                당신의 경력을 깊이 이해하고 직무에 최적화된 스토리텔링으로 재구성합니다.
               </p>
             </div>
 
@@ -65,9 +65,9 @@ export default function HomePage() {
               <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-8">
                 <SparklesIcon className="w-10 h-10 text-white" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-5">전문적인 디자인</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-5">검증된 템플릿</h3>
               <p className="text-lg text-gray-600 leading-relaxed">
-                2024년 웹 디자인 트렌드를 반영한 깔끔하고 모던한 템플릿으로 완성도를 높입니다.
+                실제 합격자들이 사용한 디자인으로 채용담당자의 시선을 사로잡습니다.
               </p>
             </div>
 
@@ -77,7 +77,8 @@ export default function HomePage() {
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-5">빠른 생성</h3>
               <p className="text-lg text-gray-600 leading-relaxed">
-                복잡한 작업 없이 5단계만 거치면 완성! PDF, HTML 등 다양한 형태로 다운로드 가능합니다.
+                복잡한 작업 없이 5단계만 거치면 완성!<br />
+                PDF, HTML 등 다양한 형태로 다운로드 가능합니다.
               </p>
             </div>
           </motion.div>
@@ -90,10 +91,11 @@ export default function HomePage() {
             className="mt-40 text-center"
           >
             <h2 className="text-4xl font-bold text-gray-900 mb-20">
-              5단계로 완성하는 포트폴리오
+              <span className="inline-block">5단계로 완성하는</span>{' '}
+              <span className="inline-block">프로페셔널 포트폴리오</span>
             </h2>
 
-            <div className="flex flex-col md:flex-row items-center justify-center space-y-12 md:space-y-0 md:space-x-12">
+            <div className="flex flex-col md:flex-row items-center justify-between max-w-6xl mx-auto px-8">
               {[
                 { step: 1, title: '템플릿 선택', desc: '원하는 디자인 선택' },
                 { step: 2, title: '정보 입력', desc: '경력과 프로젝트 정보' },
@@ -102,15 +104,15 @@ export default function HomePage() {
                 { step: 5, title: '완성 & 다운로드', desc: 'PDF, HTML 다운로드' }
               ].map((item, index) => (
                 <React.Fragment key={item.step}>
-                  <div className="flex flex-col items-center">
+                  <div className="flex flex-col items-center flex-1">
                     <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-blue-500 text-white rounded-full flex items-center justify-center font-bold text-2xl mb-5">
                       {item.step}
                     </div>
-                    <h3 className="font-semibold text-gray-900 mb-3 text-lg">{item.title}</h3>
-                    <p className="text-base text-gray-600 text-center">{item.desc}</p>
+                    <h3 className="font-semibold text-gray-900 mb-3 text-lg whitespace-nowrap">{item.title}</h3>
+                    <p className="text-base text-gray-600 text-center whitespace-nowrap">{item.desc}</p>
                   </div>
                   {index < 4 && (
-                    <div className="hidden md:block w-12 h-1 bg-gradient-to-r from-purple-300 to-blue-300"></div>
+                    <div className="hidden md:block flex-shrink-0 w-8 h-0.5 bg-gradient-to-r from-purple-300 to-blue-300 self-center mb-12"></div>
                   )}
                 </React.Fragment>
               ))}

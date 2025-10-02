@@ -17,7 +17,8 @@ function App() {
     <PortfolioProvider>
       <Router>
         <Routes>
-          <Route path="/" element={<HomePage />} />
+          <Route path="/" element={<TemplateSelectionPage />} />
+          <Route path="/landing" element={<HomePage />} />
           <Route path="/template" element={<TemplateSelectionPage />} />
           <Route path="/organize" element={<OrganizeContentPage />} />
           <Route path="/autofill" element={<AutoFillPage />} />
