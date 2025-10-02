@@ -23,8 +23,8 @@ export function useScrollPreservation(): ScrollPreservationHook {
       const iframeDocument = iframe.contentDocument || iframe.contentWindow?.document;
       if (iframeDocument) {
         lastScrollPosition.current = {
-          x: iframeDocument.documentElement.scrollLeft || iframeDocument.body.scrollLeft || 0,
-          y: iframeDocument.documentElement.scrollTop || iframeDocument.body.scrollTop || 0
+          x: (iframeDocument.documentElement?.scrollLeft ?? iframeDocument.body?.scrollLeft) ?? 0,
+          y: (iframeDocument.documentElement?.scrollTop ?? iframeDocument.body?.scrollTop) ?? 0
         };
       }
 
@@ -45,41 +45,42 @@ export function useScrollPreservation(): ScrollPreservationHook {
             }
 
             // Update content immediately for real-time synchronization
-            updateTimeoutRef.current = window.setTimeout(() => {
-              if (iframeDocument.body) {
-                iframeDocument.body.innerHTML = newBody.innerHTML;
+            if (iframeDocument.body) {
+              iframeDocument.body.innerHTML = newBody.innerHTML;
 
-                // Update head content if needed (styles, etc.)
-                const newHead = tempDiv.querySelector('head');
-                if (newHead && iframeDocument.head) {
-                  // Only update style elements to avoid disrupting scripts
-                  const newStyles = newHead.querySelectorAll('style, link[rel="stylesheet"]');
-                  const existingStyles = iframeDocument.head.querySelectorAll('style, link[rel="stylesheet"]');
+              // Update head content if needed (styles, etc.)
+              const newHead = tempDiv.querySelector('head');
+              if (newHead && iframeDocument.head) {
+                // Only update style elements to avoid disrupting scripts
+                const newStyles = newHead.querySelectorAll('style, link[rel="stylesheet"]');
+                const existingStyles = iframeDocument.head.querySelectorAll('style, link[rel="stylesheet"]');
 
-                  // Remove old styles
-                  existingStyles.forEach(style => style.remove());
+                // Remove old styles
+                existingStyles.forEach(style => style.remove());
 
-                  // Add new styles
-                  newStyles.forEach(style => {
-                    iframeDocument.head.appendChild(style.cloneNode(true));
-                  });
-                }
-
-                // Restore scroll position immediately after content update
-                requestAnimationFrame(() => {
-                  if (iframeDocument) {
-                    iframeDocument.documentElement.scrollLeft = lastScrollPosition.current.x;
-                    iframeDocument.documentElement.scrollTop = lastScrollPosition.current.y;
-
-                    // Fallback for browsers that use body for scrolling
-                    if (iframeDocument.body) {
-                      iframeDocument.body.scrollLeft = lastScrollPosition.current.x;
-                      iframeDocument.body.scrollTop = lastScrollPosition.current.y;
-                    }
-                  }
+                // Add new styles
+                newStyles.forEach(style => {
+                  iframeDocument.head.appendChild(style.cloneNode(true));
                 });
               }
-            }, 10); // Minimal delay for immediate responsiveness
+
+              // Restore scroll position immediately after content update
+              requestAnimationFrame(() => {
+                if (iframeDocument) {
+                  // Check if documentElement exists before setting scroll
+                  if (iframeDocument.documentElement) {
+                    iframeDocument.documentElement.scrollLeft = lastScrollPosition.current.x;
+                    iframeDocument.documentElement.scrollTop = lastScrollPosition.current.y;
+                  }
+
+                  // Fallback for browsers that use body for scrolling
+                  if (iframeDocument.body) {
+                    iframeDocument.body.scrollLeft = lastScrollPosition.current.x;
+                    iframeDocument.body.scrollTop = lastScrollPosition.current.y;
+                  }
+                }
+              });
+            }
 
             return; // Successfully updated without srcDoc change
           }
@@ -104,8 +105,11 @@ export function useScrollPreservation(): ScrollPreservationHook {
             requestAnimationFrame(() => {
               const doc = iframe.contentDocument || iframe.contentWindow?.document;
               if (doc) {
-                doc.documentElement.scrollLeft = lastScrollPosition.current.x;
-                doc.documentElement.scrollTop = lastScrollPosition.current.y;
+                // Check if documentElement exists before setting scroll
+                if (doc.documentElement) {
+                  doc.documentElement.scrollLeft = lastScrollPosition.current.x;
+                  doc.documentElement.scrollTop = lastScrollPosition.current.y;
+                }
 
                 // Fallback for body scrolling
                 if (doc.body) {

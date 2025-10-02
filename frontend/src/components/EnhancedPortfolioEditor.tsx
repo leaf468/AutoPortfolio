@@ -223,11 +223,18 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                         setDataLoaded(true);
                     }
 
-                    // 데이터가 부족한 경우만 AI로 개선 - 초기 로드 시에만
-                    const needsEnhancement = !actualData.about || actualData.about.length < 50;
+                    // UPDATED: Only enhance if data is truly missing or very short
+                    // Rich HTML extraction should already provide 200-400 character content
+                    const needsEnhancement = (
+                        (!actualData.about || actualData.about.length < 50) &&
+                        (!actualData.projects || actualData.projects.length === 0 ||
+                         actualData.projects.every(p => !p.description || p.description.length < 50))
+                    );
 
                     if (needsEnhancement) {
-                        console.log('데이터 개선 필요 - AI 개선 시작:', needsEnhancement);
+                        console.log('=== 데이터가 부족하여 AI 개선 필요 ===');
+                        console.log('About 길이:', actualData.about?.length || 0);
+                        console.log('프로젝트 수:', actualData.projects?.length || 0);
                         setIsEnhancing(true);
                         try {
                             const enhanced = await portfolioTextEnhancer.enhancePortfolioData(actualData);
@@ -248,6 +255,13 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                             }
                         } finally {
                             setIsEnhancing(false);
+                        }
+                    } else {
+                        console.log('=== 추출된 데이터가 충분함 - AI 개선 건너뛰기 ===');
+                        console.log('About 길이:', actualData.about?.length || 0);
+                        console.log('프로젝트 수:', actualData.projects?.length || 0);
+                        if (actualData.projects && actualData.projects.length > 0) {
+                            console.log('첫 번째 프로젝트 설명 길이:', actualData.projects[0].description?.length || 0);
                         }
                     }
 
@@ -562,6 +576,9 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                     }`}
                     placeholder="자기소개를 입력하세요. AI가 전문적으로 개선해드립니다."
                 />
+                <div className="mt-2 text-xs text-gray-600">
+                    💡 <strong>마크다운 지원:</strong> **굵게**, *기울임*, `코드`, [링크](URL) 사용 가능 | Enter로 줄바꿈
+                </div>
                 {enhancedFields['about'] && (
                     <p className="mt-2 text-xs text-yellow-700">
                         ⚠️ AI가 생성/개선한 내용입니다. 검토 후 필요시 수정해주세요.
@@ -682,13 +699,16 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                         <textarea
                             value={project.description || ''}
                             onChange={(e) => handleUpdateProject(index, 'description', e.target.value)}
-                            className={`w-full p-2 mb-3 border rounded min-h-[80px] ${
+                            className={`w-full p-2 mb-1 border rounded min-h-[80px] ${
                                 enhancedFields[`project_${index}`]
                                     ? 'bg-yellow-50 border-yellow-300 text-yellow-900'
                                     : 'bg-white border-gray-300'
                             }`}
-                            placeholder="프로젝트 설명"
+                            placeholder="프로젝트 설명 (마크다운 지원)"
                         />
+                        <div className="mb-3 text-xs text-gray-500">
+                            💡 **굵게**, *기울임*, `코드`, [링크](URL) 사용 가능
+                        </div>
                         {enhancedFields[`project_${index}`] && (
                             <p className="mb-3 text-xs text-yellow-700">
                                 ⚠️ AI가 생성/개선한 내용입니다. 검토 후 필요시 수정해주세요.
@@ -836,8 +856,11 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                                         ? 'bg-yellow-50 border-yellow-300 text-yellow-900'
                                         : 'border-gray-300'
                                 }`}
-                                placeholder="담당 업무를 입력하세요"
+                                placeholder="담당 업무 (마크다운 지원)"
                             />
+                            <div className="mt-1 text-xs text-gray-500">
+                                💡 **굵게**, *기울임* 사용 가능
+                            </div>
                             {enhancedFields[`experience_${index}_description`] && (
                                 <p className="mt-2 text-xs text-yellow-700">
                                     ⚠️ AI가 생성/개선한 내용입니다. 검토 후 필요시 수정해주세요.

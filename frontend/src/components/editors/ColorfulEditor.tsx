@@ -82,6 +82,7 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
 
     const [currentHtml, setCurrentHtml] = useState<string>('');
     const [isEnhancing, setIsEnhancing] = useState(false);
+    const [enhancingSection, setEnhancingSection] = useState<string | null>(null);
     const [enhancedFields, setEnhancedFields] = useState<Record<string, boolean>>({});
     const [isInitializing, setIsInitializing] = useState(true);
     const [dataLoaded, setDataLoaded] = useState(false);
@@ -212,11 +213,12 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
                         setPortfolioData(actualData);
                         setDataLoaded(true);
 
-                        // 🔧 CRITICAL FIX: Force immediate HTML regeneration with correct template
-                        setTimeout(async () => {
-                            console.log('🔧 ColorfulEditor: Force updating HTML with correct template on initialization');
-                            await updateHtml();
-                        }, 100);
+                        // 🔧 CRITICAL FIX: Immediately trigger HTML update after data is loaded
+                        // Use requestAnimationFrame to ensure state update has completed
+                        requestAnimationFrame(() => {
+                            console.log('🔧 ColorfulEditor: Immediately updating HTML with correct template on initialization');
+                            updateHtml().catch(console.error);
+                        });
                     }
 
                     // 데이터가 부족한 경우 AI로 개선
@@ -253,8 +255,11 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
             }
         };
 
-        initializeData();
-    }, [document, extractPortfolioData, dataLoaded]);
+        // Only run once when document is available
+        if (document && !hasInitialized.current) {
+            initializeData();
+        }
+    }, []); // Empty dependency array - run only once
 
     // HTML 업데이트
     const updateHtml = useCallback(async () => {
@@ -334,11 +339,12 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
             console.log('🔄 ColorfulEditor data changed, updating HTML immediately');
             updateHtml().catch(console.error);
         }
-    }, [portfolioData, sectionTitles, updateHtml, dataLoaded]);
+    }, [portfolioData, sectionTitles, dataLoaded, updateHtml]);
 
     // 자기소개 개선
     const handleEnhanceAbout = async () => {
         setIsEnhancing(true);
+        setEnhancingSection('about');
         try {
             const enhanced = await portfolioTextEnhancer.enhanceAboutMe(portfolioData.about);
             setPortfolioData(prev => ({ ...prev, about: enhanced.enhanced }));
@@ -347,8 +353,42 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
             }
         } catch (error) {
             console.error('자기소개 개선 실패:', error);
+            alert('AI 개선에 실패했습니다. 다시 시도해주세요.');
         } finally {
             setIsEnhancing(false);
+            setEnhancingSection(null);
+        }
+    };
+
+    // 경력 개선
+    const handleEnhanceExperience = async (index: number) => {
+        setIsEnhancing(true);
+        setEnhancingSection(`experience_${index}`);
+        try {
+            const experience = portfolioData.experience[index];
+            const enhanced = await portfolioTextEnhancer.enhanceExperience(experience);
+
+            setPortfolioData(prev => {
+                const updatedExperience = [...prev.experience];
+                updatedExperience[index] = {
+                    position: enhanced.position,
+                    company: enhanced.company,
+                    duration: enhanced.duration,
+                    description: enhanced.description,
+                    achievements: enhanced.achievements || []
+                };
+                return { ...prev, experience: updatedExperience };
+            });
+
+            if (enhanced.enhanced?.isGenerated) {
+                setEnhancedFields(prev => ({ ...prev, [`experience_${index}`]: true }));
+            }
+        } catch (error) {
+            console.error('경력 개선 실패:', error);
+            alert('AI 개선에 실패했습니다. 다시 시도해주세요.');
+        } finally {
+            setIsEnhancing(false);
+            setEnhancingSection(null);
         }
     };
 
@@ -388,6 +428,7 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
 
     const handleEnhanceProject = async (index: number) => {
         setIsEnhancing(true);
+        setEnhancingSection(`project_${index}`);
         try {
             const project = portfolioData.projects[index];
             const enhanced = await portfolioTextEnhancer.enhanceProject(project);
@@ -410,8 +451,10 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
             }
         } catch (error) {
             console.error('프로젝트 개선 실패:', error);
+            alert('AI 개선에 실패했습니다. 다시 시도해주세요.');
         } finally {
             setIsEnhancing(false);
+            setEnhancingSection(null);
         }
     };
 
@@ -662,7 +705,7 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
 
                         {/* About Me 섹션 */}
                         <BlurFade delay={0.1}>
-                            <div className="bg-gradient-to-r from-purple-50 via-pink-50 to-blue-50 rounded-xl border border-purple-200 p-6 shadow-sm">
+                            <div className="bg-white rounded-xl border border-purple-200 p-6 shadow-sm">
                                 <div className="flex items-center justify-between mb-4">
                                     <div className="flex items-center space-x-2">
                                         <input
@@ -729,7 +772,11 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
                                             initial={{ opacity: 0, y: 10 }}
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ delay: index * 0.1 }}
-                                            className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200 hover:shadow-md transition-all"
+                                            className={`p-4 rounded-lg border transition-all hover:shadow-md ${
+                                                enhancedFields[`experience_${index}`]
+                                                    ? 'bg-gradient-to-r from-yellow-50 to-yellow-100 border-yellow-300'
+                                                    : 'bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200'
+                                            }`}
                                         >
                                             <div className="flex items-start justify-between mb-3">
                                                 <input
@@ -739,12 +786,22 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
                                                     className="text-lg font-semibold bg-transparent border-b border-purple-300 focus:border-purple-500 outline-none flex-1 mr-4"
                                                     placeholder="직책"
                                                 />
-                                                <button
-                                                    onClick={() => handleDeleteExperience(index)}
-                                                    className="p-1 text-red-600 hover:bg-red-100 rounded"
-                                                >
-                                                    <XMarkIcon className="w-4 h-4" />
-                                                </button>
+                                                <div className="flex items-center space-x-2">
+                                                    <button
+                                                        onClick={() => handleEnhanceExperience(index)}
+                                                        disabled={isEnhancing}
+                                                        className="p-1 text-purple-600 hover:bg-purple-100 rounded disabled:opacity-50"
+                                                        title="AI로 개선"
+                                                    >
+                                                        <SparklesIcon className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteExperience(index)}
+                                                        className="p-1 text-red-600 hover:bg-red-100 rounded"
+                                                    >
+                                                        <XMarkIcon className="w-4 h-4" />
+                                                    </button>
+                                                </div>
                                             </div>
 
                                             <div className="grid grid-cols-2 gap-2 mb-3">
@@ -809,7 +866,11 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
                                 </div>
 
                                 {portfolioData.projects.map((project, index) => (
-                                    <div key={index} className="mb-4 p-4 bg-gradient-to-r from-pink-50 to-purple-50 rounded-lg border border-purple-200">
+                                    <div key={index} className={`mb-4 p-4 rounded-lg border ${
+                                        enhancedFields[`project_${index}`]
+                                            ? 'bg-yellow-50 border-yellow-300'
+                                            : 'bg-gradient-to-r from-pink-50 to-purple-50 border-purple-200'
+                                    }`}>
                                         <div className="flex items-start justify-between mb-3">
                                             <input
                                                 type="text"
@@ -874,6 +935,11 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
                                                 />
                                             </div>
                                         </div>
+                                        {enhancedFields[`project_${index}`] && (
+                                            <p className="mt-2 text-xs text-yellow-700">
+                                                ⚠️ AI가 생성/개선한 내용입니다. 검토 후 필요시 수정해주세요.
+                                            </p>
+                                        )}
                                     </div>
                                 ))}
 
@@ -1023,6 +1089,31 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
                     </div>
                 </div>
             </div>
+
+            {/* AI 개선 중 로딩 오버레이 */}
+            {isEnhancing && enhancingSection && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white rounded-xl p-8 max-w-md mx-4 shadow-2xl">
+                        <div className="flex flex-col items-center">
+                            <div className="flex space-x-2 mb-4">
+                                <div className="w-3 h-3 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                                <div className="w-3 h-3 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                                <div className="w-3 h-3 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                            </div>
+                            <div className="flex items-center space-x-2 mb-2">
+                                <SparklesIcon className="w-6 h-6 text-purple-600 animate-pulse" />
+                                <h3 className="text-xl font-bold text-gray-900">AI로 개선 중입니다...</h3>
+                            </div>
+                            <p className="text-gray-600 text-center">
+                                {enhancingSection.startsWith('about') && '자기소개를 개선하고 있습니다'}
+                                {enhancingSection.startsWith('project') && '프로젝트 설명을 개선하고 있습니다'}
+                                {enhancingSection.startsWith('experience') && '경력 사항을 개선하고 있습니다'}
+                            </p>
+                            <p className="text-sm text-gray-500 mt-2">잠시만 기다려주세요...</p>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

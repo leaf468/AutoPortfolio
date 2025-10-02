@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
 import {
   CheckCircleIcon,
   DocumentArrowDownIcon,
@@ -39,7 +37,6 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
   const [userRating, setUserRating] = useState<number>(0);
   const [hoverRating, setHoverRating] = useState<number>(0);
   const [ratingSubmitted, setRatingSubmitted] = useState(false);
-  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const portfolioRef = useRef<HTMLDivElement>(null);
 
   // 기존 평가 불러오기
@@ -96,92 +93,59 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
     }
   };
 
-  const handleDownloadPDF = async () => {
-    if (isGeneratingPDF) return;
-
-    setIsGeneratingPDF(true);
-
-    try {
-      // PDF 생성을 위한 임시 div 생성
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = generateTemplatedHTML();
-      tempDiv.style.width = '794px';
-      tempDiv.style.minHeight = '1123px';
-      tempDiv.style.padding = '30px';
-      tempDiv.style.fontSize = '14px';
-      tempDiv.style.lineHeight = '1.5';
-      tempDiv.style.fontFamily = '-apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", sans-serif';
-      tempDiv.style.color = '#333333';
-      tempDiv.style.backgroundColor = '#ffffff';
-      tempDiv.style.boxSizing = 'border-box';
-      tempDiv.style.position = 'absolute';
-      tempDiv.style.top = '-9999px';
-      tempDiv.style.left = '-9999px';
-
-      document.body.appendChild(tempDiv);
-
-      // 잠시 대기하여 DOM 렌더링 완료
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      const canvas = await html2canvas(tempDiv, {
-        scale: 1,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-        width: 794,
-        height: tempDiv.scrollHeight,
-        scrollX: 0,
-        scrollY: 0,
-        removeContainer: true,
-        logging: false
-      });
-
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      });
-
-      const imgWidth = 210; // A4 width in mm
-      const pageHeight = 297; // A4 height in mm
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-
-      let position = 0;
-
-      // 첫 페이지 추가
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-
-      // 여러 페이지가 필요한 경우 추가 페이지 생성
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-      }
-
-      // PDF 다운로드
-      pdf.save(`portfolio-${finalResult.id}.pdf`);
-
-      // 임시 div 제거
-      document.body.removeChild(tempDiv);
-
-    } catch (error) {
-      console.error('PDF 생성 실패:', error);
-      alert('PDF 생성에 실패했습니다.');
-
-      // 오류 발생시에도 임시 div 제거
-      const tempDiv = document.querySelector('div[style*="position: absolute"][style*="top: -9999px"]');
-      if (tempDiv) {
-        document.body.removeChild(tempDiv);
-      }
-    } finally {
-      setIsGeneratingPDF(false);
+  // 브라우저 인쇄 기능을 사용한 PDF 저장
+  const handlePrintToPDF = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) {
+      alert('팝업이 차단되었습니다. 팝업을 허용해주세요.');
+      return;
     }
-  };
 
+    const htmlContent = generateTemplatedHTML();
+
+    // 인쇄 최적화 스타일 추가
+    const printStyles = `
+      <style>
+        @media print {
+          @page {
+            size: A4;
+            margin: 0;
+          }
+          body {
+            margin: 0;
+            padding: 20px;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          /* 페이지 나누기 방지 */
+          * {
+            page-break-inside: avoid;
+          }
+          /* 그림자와 애니메이션 제거 (인쇄 최적화) */
+          * {
+            box-shadow: none !important;
+            animation: none !important;
+            transition: none !important;
+          }
+        }
+      </style>
+    `;
+
+    // HTML에 인쇄 스타일 삽입
+    const modifiedHTML = htmlContent.replace('</head>', printStyles + '</head>');
+
+    printWindow.document.write(modifiedHTML);
+    printWindow.document.close();
+
+    // 콘텐츠 로딩 대기 후 인쇄 다이얼로그 표시
+    printWindow.onload = () => {
+      setTimeout(() => {
+        printWindow.print();
+        // 인쇄 후 창 닫기 (선택사항)
+        // printWindow.close();
+      }, 500);
+    };
+  };
 
   // 별점 평가 핸들러
   const handleRating = (rating: number) => {
@@ -271,14 +235,6 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                 포트폴리오 정보
               </h3>
               <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">단어 수:</span>
-                  <strong className="text-gray-900">{finalResult.metadata.wordCount.toLocaleString()}개</strong>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">예상 읽기시간:</span>
-                  <strong className="text-gray-900">{finalResult.metadata.estimatedReadTime}분</strong>
-                </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">사용된 템플릿:</span>
                   <strong className="text-gray-900 capitalize">{selectedTemplate}</strong>
@@ -409,14 +365,13 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                   <EyeIcon className="w-6 h-6 mr-2" />
                   미리보기
                 </button>
-                
+
                 <button
-                  onClick={handleDownloadPDF}
-                  disabled={isGeneratingPDF}
+                  onClick={handlePrintToPDF}
                   className="group flex items-center justify-center p-6 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-medium hover:from-green-700 hover:to-emerald-700 transition-all duration-200"
                 >
                   <DocumentArrowDownIcon className="w-6 h-6 mr-2" />
-{isGeneratingPDF ? 'PDF 생성 중...' : 'PDF 다운로드'}
+                  PDF 다운로드
                 </button>
               </div>
 
@@ -432,6 +387,9 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                     공유하기
                   </button>
                 </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  💡 <strong>PDF 다운로드</strong>: 브라우저의 인쇄 기능을 사용하여 PDF로 저장합니다. 빠르고 안정적이며, 디자인이 완벽하게 유지됩니다.
+                </p>
               </div>
 
               {/* 하단 액션 */}
@@ -446,31 +404,6 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
               </div>
             </div>
 
-            {/* 개선 제안 */}
-            {finalResult.suggestions.length > 0 && (
-              <div className="mt-6 bg-gradient-to-br from-yellow-50 to-orange-50 border border-yellow-200 rounded-xl p-6">
-                <h3 className="font-bold text-yellow-900 mb-4">💡 전문가 제안</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <h4 className="font-semibold mb-2 text-yellow-800">✅ 강점 포인트</h4>
-                    <ul className="space-y-1">
-                      <li className="text-sm text-yellow-700">• 데이터 기반 성과 지표 활용</li>
-                      <li className="text-sm text-yellow-700">• 프로젝트별 명확한 스토리텔링</li>
-                    </ul>
-                  </div>
-                  <div>
-                    <h4 className="font-semibold mb-2 text-orange-800">🚀 개선 제안</h4>
-                    <ul className="space-y-1">
-                      {finalResult.suggestions.slice(0, 2).map((suggestion, idx) => (
-                        <li key={idx} className="text-sm text-orange-700">
-                          • {suggestion.length > 40 ? suggestion.substring(0, 40) + '...' : suggestion}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </div>
-            )}
           </motion.div>
         </div>
 
@@ -529,15 +462,14 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                 
                 <div className="bg-gray-50 p-4 border-t flex justify-center space-x-3">
                   <button
-                    onClick={handleDownloadPDF}
-                  disabled={isGeneratingPDF}
-                    className="px-6 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-semibold"
+                    onClick={handlePrintToPDF}
+                    className="px-6 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-semibold hover:from-green-700 hover:to-emerald-700 transition-all"
                   >
-  {isGeneratingPDF ? 'PDF 생성 중...' : 'PDF 다운로드'}
+                    PDF 다운로드
                   </button>
                   <button
                     onClick={() => setShowPreview(false)}
-                    className="px-6 py-2.5 bg-gray-200 text-gray-700 rounded-lg font-semibold"
+                    className="px-6 py-2.5 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-all"
                   >
                     닫기
                   </button>

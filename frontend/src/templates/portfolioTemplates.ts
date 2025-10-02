@@ -1,3 +1,40 @@
+// Text processing utilities for line breaks and markdown
+const processTextForDisplay = (text: string | undefined | null): string => {
+    if (!text) return '';
+
+    // Convert line breaks to <br> tags for HTML display
+    // This preserves newlines when users press Enter in textarea
+    return text.replace(/\n/g, '<br>');
+};
+
+// Process text with markdown support
+const processTextWithMarkdown = (text: string | undefined | null): string => {
+    if (!text) return '';
+
+    // First, convert newlines to proper markdown line breaks
+    let processed = text;
+
+    // Handle markdown formatting
+    // Bold: **text** or __text__
+    processed = processed.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    processed = processed.replace(/__(.+?)__/g, '<strong>$1</strong>');
+
+    // Italic: *text* or _text_
+    processed = processed.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    processed = processed.replace(/_(.+?)_/g, '<em>$1</em>');
+
+    // Links: [text](url)
+    processed = processed.replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank" style="color: var(--accent-color); text-decoration: underline;">$1</a>');
+
+    // Code: `code`
+    processed = processed.replace(/`(.+?)`/g, '<code style="background: var(--border-color); padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 0.9em;">$1</code>');
+
+    // Line breaks (must be last to avoid interfering with other patterns)
+    processed = processed.replace(/\n/g, '<br>');
+
+    return processed;
+};
+
 export interface PortfolioTemplate {
     id: string;
     name: string;
@@ -479,7 +516,7 @@ export const minimalTemplate: PortfolioTemplate = {
                 <span class="emoji"></span>
                 <h2>${data.sectionTitles?.about || '개인소개'}</h2>
             </div>
-            <p>${data.about || '안녕하세요, 백엔드와 데이터 처리에 강점을 가진 주니어 개발자입니다.'}</p>
+            <p>${processTextWithMarkdown(data.about) || '안녕하세요, 백엔드와 데이터 처리에 강점을 가진 주니어 개발자입니다.'}</p>
         </section>
 
         <section class="section">
@@ -510,7 +547,7 @@ export const minimalTemplate: PortfolioTemplate = {
                 ${(data.projects || []).map((project: any) => `
                     <div class="card">
                         <h3>${project.name}</h3>
-                        <p style="margin-bottom: 0.75rem;">${project.description}</p>
+                        <p style="margin-bottom: 0.75rem;">${processTextWithMarkdown(project.description)}</p>
                         ${project.role ? `<p style="color: var(--secondary-text); font-weight: 500; margin-bottom: 0.5rem;">역할: ${project.role}</p>` : ''}
                         ${project.results && project.results.length > 0 ? `
                             <div style="margin-bottom: 0.75rem;">
@@ -518,13 +555,6 @@ export const minimalTemplate: PortfolioTemplate = {
                                 <ul style="margin: 0; padding-left: 1.2rem; color: var(--secondary-text);">
                                     ${project.results.map((result: any) => `<li>${result}</li>`).join('')}
                                 </ul>
-                            </div>
-                        ` : ''}
-                        ${project.tech && project.tech.length > 0 ? `
-                            <div class="skill-tags">
-                                ${project.tech.map((tech: any) =>
-                                    `<span class="skill-tag">${tech}</span>`
-                                ).join('')}
                             </div>
                         ` : ''}
                         ${(project.url || project.github || project.demo) ? `
@@ -551,7 +581,7 @@ export const minimalTemplate: PortfolioTemplate = {
                         <p style="color: var(--secondary-text); margin-bottom: 0.5rem;">
                             ${exp.company} • ${exp.duration}
                         </p>
-                        <p style="margin-bottom: 0.75rem;">${exp.description}</p>
+                        <p style="margin-bottom: 0.75rem;">${processTextWithMarkdown(exp.description)}</p>
                         ${exp.achievements && exp.achievements.length > 0 ? `
                             <ul style="margin: 0; padding-left: 1.2rem; color: var(--secondary-text);">
                                 ${exp.achievements.map((achievement: any) => `<li>${achievement}</li>`).join('')}
@@ -575,7 +605,7 @@ export const minimalTemplate: PortfolioTemplate = {
                         <p style="color: var(--secondary-text); margin-bottom: 0.5rem;">
                             ${edu.degree} • ${edu.period}
                         </p>
-                        ${edu.description ? `<p>${edu.description}</p>` : ''}
+                        ${edu.description ? `<p>${processTextWithMarkdown(edu.description)}</p>` : ''}
                     </div>
                 `).join('')}
             </div>
@@ -595,7 +625,7 @@ export const minimalTemplate: PortfolioTemplate = {
                         <p style="color: var(--secondary-text); margin-bottom: 0.5rem;">
                             ${award.organization} • ${award.year}
                         </p>
-                        ${award.description ? `<p>${award.description}</p>` : ''}
+                        ${award.description ? `<p>${processTextWithMarkdown(award.description)}</p>` : ''}
                     </div>
                 `).join('')}
             </div>
@@ -957,7 +987,7 @@ export const cleanTemplate: PortfolioTemplate = {
         <main class="main-content">
             <section id="about" class="section">
                 <h2 class="section-title">${data.sectionTitles?.about || '개인소개'}</h2>
-                <p>${data.about || '안녕하세요, 백엔드와 데이터 처리에 강점을 가진 주니어 개발자입니다.'}</p>
+                <p>${processTextWithMarkdown(data.about) || '안녕하세요, 백엔드와 데이터 처리에 강점을 가진 주니어 개발자입니다.'}</p>
             </section>
 
             <section id="experience" class="section">
@@ -967,7 +997,7 @@ export const cleanTemplate: PortfolioTemplate = {
                         <div class="card">
                             <h3>${exp.position}</h3>
                             <p class="meta">${exp.company} | ${exp.duration}</p>
-                            <p style="margin-bottom: 1rem;">${exp.description}</p>
+                            <p style="margin-bottom: 1rem;">${processTextWithMarkdown(exp.description)}</p>
                             ${exp.achievements && exp.achievements.length > 0 ? `
                                 <div>
                                     <h4 style="color: var(--accent-color); margin-bottom: 0.5rem;">주요 성과</h4>
@@ -987,7 +1017,7 @@ export const cleanTemplate: PortfolioTemplate = {
                     ${(data.projects || []).map((project: any) => `
                         <div class="card">
                             <h3>${project.name}</h3>
-                            <p style="margin-bottom: 1rem;">${project.description}</p>
+                            <p style="margin-bottom: 1rem;">${processTextWithMarkdown(project.description)}</p>
                             ${project.role ? `<p style="color: var(--secondary-text); font-weight: 500; margin-bottom: 0.5rem;">역할: ${project.role}</p>` : ''}
                             ${project.results && project.results.length > 0 ? `
                                 <div style="margin-bottom: 1rem;">
@@ -995,13 +1025,6 @@ export const cleanTemplate: PortfolioTemplate = {
                                     <ul style="margin: 0; padding-left: 1.2rem;">
                                         ${project.results.map((result: any) => `<li>${result}</li>`).join('')}
                                     </ul>
-                                </div>
-                            ` : ''}
-                            ${project.tech && project.tech.length > 0 ? `
-                                <div class="tech-stack">
-                                    ${project.tech.map((tech: any) =>
-                                        `<span class="tech-badge">${tech}</span>`
-                                    ).join('')}
                                 </div>
                             ` : ''}
                             ${(project.url || project.github || project.demo) ? `
@@ -1040,7 +1063,7 @@ export const cleanTemplate: PortfolioTemplate = {
                         <div class="card">
                             <h3>${award.title}</h3>
                             <p class="meta">${award.organization} | ${award.year}</p>
-                            ${award.description ? `<p>${award.description}</p>` : ''}
+                            ${award.description ? `<p>${processTextWithMarkdown(award.description)}</p>` : ''}
                         </div>
                     `).join('')}
                 </div>
@@ -1434,7 +1457,7 @@ export const colorfulTemplate: PortfolioTemplate = {
                 <h2 class="section-title">${data.sectionTitles?.about || 'About Me'}</h2>
             </div>
             <div class="card">
-                <p>${data.about || 'Creative developer passionate about building beautiful and functional applications with modern technologies.'}</p>
+                <p>${processTextWithMarkdown(data.about) || 'Creative developer passionate about building beautiful and functional applications with modern technologies.'}</p>
             </div>
         </section>
 
@@ -1455,7 +1478,7 @@ export const colorfulTemplate: PortfolioTemplate = {
                             <h3>${exp.position}</h3>
                         </div>
                         <p class="card-meta">${exp.company} • ${exp.duration}</p>
-                        <p>${exp.description}</p>
+                        <p>${processTextWithMarkdown(exp.description)}</p>
                     </div>
                 `).join('')}
             </div>
@@ -1473,16 +1496,11 @@ export const colorfulTemplate: PortfolioTemplate = {
                     <div class="card">
                         <div class="card-header">
                             <div class="card-icon" style="background: var(--accent-${(index % 4) + 1});">
-                                
+
                             </div>
                             <h3>${project.name}</h3>
                         </div>
-                        <p>${project.description}</p>
-                        <div class="tags">
-                            ${(project.tech || []).map((tech: any) =>
-                                `<span class="tag">${tech}</span>`
-                            ).join('')}
-                        </div>
+                        <p>${processTextWithMarkdown(project.description)}</p>
                     </div>
                 `).join('')}
             </div>
@@ -2013,7 +2031,7 @@ export const elegantTemplate: PortfolioTemplate = {
             <div class="timeline">
                 <div class="timeline-item">
                     <div class="timeline-content">
-                        <p style="font-size: 1.1rem; line-height: 1.7; color: var(--text-color);">${data.about}</p>
+                        <p style="font-size: 1.1rem; line-height: 1.7; color: var(--text-color);">${processTextWithMarkdown(data.about)}</p>
                     </div>
                 </div>
             </div>
@@ -2029,7 +2047,7 @@ export const elegantTemplate: PortfolioTemplate = {
                         <div class="timeline-content">
                             <h3>${exp.position}</h3>
                             <p class="meta">${exp.company} • ${exp.duration}</p>
-                            <p>${exp.description}</p>
+                            <p>${processTextWithMarkdown(exp.description)}</p>
                         </div>
                     </div>
                 `).join('')}
@@ -2048,12 +2066,7 @@ export const elegantTemplate: PortfolioTemplate = {
                         </div>
                         <div class="project-content">
                             <h3>${project.name}</h3>
-                            <p>${project.description}</p>
-                            <div class="tech-pills">
-                                ${(project.tech || []).map((tech: any) =>
-                                    `<span class="tech-pill">${tech}</span>`
-                                ).join('')}
-                            </div>
+                            <p>${processTextWithMarkdown(project.description)}</p>
                         </div>
                     </div>
                 `).join('')}
