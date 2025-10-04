@@ -13,6 +13,7 @@ export interface OrganizedContent {
     experiences: OrganizedExperience[];
     projects: OrganizedProject[];
     skills: OrganizedSkill[];
+    education: OrganizedEducation[]; // 학력 정보
     achievements: string[]; // 주요 성과 리스트
     keywords: {
         technical: string[]; // 기술 키워드
@@ -58,6 +59,13 @@ export interface OrganizedSkill {
     skills: string[];
     proficiency: "beginner" | "intermediate" | "advanced" | "expert";
     experience: string; // 경험 기간/프로젝트
+}
+
+export interface OrganizedEducation {
+    school: string; // 학교명
+    degree: string; // 학위/전공
+    period: string; // 기간
+    description?: string; // 세부사항 (GPA, 주요 과목 등)
 }
 
 class AIOrganizer {
@@ -133,6 +141,14 @@ class AIOrganizer {
       "experience": "3년, 5개 프로젝트"
     }
   ],
+  "education": [
+    {
+      "school": "학교명",
+      "degree": "학과/전공 (또는 학위)",
+      "period": "2018.03 - 2022.02",
+      "description": "학점, 주요 활동 등 (선택사항)"
+    }
+  ],
   "achievements": ["주요 성과1", "주요 성과2"],
   "keywords": {
     "technical": ["React", "Node.js", "AWS"],
@@ -192,6 +208,7 @@ class AIOrganizer {
                 experiences: [],
                 projects: [],
                 skills: [],
+                education: [],
                 achievements: [],
                 keywords: {
                     technical: [],

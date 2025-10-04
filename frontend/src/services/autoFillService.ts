@@ -401,49 +401,59 @@ ${examplesText}
                 "- 한 정보가 여러 섹션에 걸쳐있으면 주요 섹션에 배치하고 나머지는 참조\n" +
                 "- 빈 섹션이 있어도 괜찮음 (억지로 채우지 말 것)\n" +
                 "- STAR 프레임워크를 적용하여 풍부한 내용으로 확장\n\n" +
-                "**IMPORTANT**: You must respond in JSON format only. Your response must be a valid JSON object with the following structure:\n" +
+                "**⚠️ CRITICAL REQUIREMENT - YOU MUST RETURN BOTH KEYS ⚠️**\n\n" +
+                "당신의 응답은 반드시 다음 두 키를 모두 포함해야 합니다:\n" +
+                "1. portfolioData (사용자 입력 기반 구조화된 데이터)\n" +
+                "2. html_content (완성된 HTML 포트폴리오)\n\n" +
+                "**portfolioData 생성 원칙:**\n" +
+                "- 사용자 입력에서 실제로 언급된 내용만 사용\n" +
+                "- 임의의 데이터를 만들지 말 것\n" +
+                "- 사용자 입력을 분석하여 적절한 섹션에 배치\n" +
+                "- STAR 구조로 풍부하게 확장 (하지만 사용자 입력의 진실성 유지)\n\n" +
+                "필수 JSON 응답 구조:\n" +
                 "{\n" +
                 "  \"portfolioData\": {\n" +
-                "    \"name\": \"이름 (입력에서 추출, 없으면 'Your Name')\",\n" +
-                "    \"title\": \"한 줄 소개 (예: Senior Full-Stack Developer)\",\n" +
-                "    \"email\": \"이메일 (입력에서 추출, 없으면 'youremail@example.com')\",\n" +
-                "    \"phone\": \"전화번호 (입력에서 추출, 없으면 '010-0000-0000')\",\n" +
-                "    \"github\": \"깃허브 (입력에서 추출, 없으면 빈 문자열)\",\n" +
-                "    \"location\": \"위치 (Clean 템플릿용, 입력에서 추출, 없으면 'Seoul, Korea')\",\n" +
-                "    \"about\": \"자기소개 (300-500자의 풍부한 내용, STAR 구조)\",\n" +
-                "    \"skills\": [\"기술1\", \"기술2\", ...] 또는 [{\"category\": \"Frontend\", \"skills\": [...], \"icon\": \"💻\"}],\n" +
+                "    \"name\": \"사용자 입력에서 추출한 이름 (없으면 빈 문자열 또는 placeholder)\",\n" +
+                "    \"title\": \"사용자 입력 분석 결과 기반 한 줄 소개\",\n" +
+                "    \"email\": \"입력에서 추출 (없으면 기본값)\",\n" +
+                "    \"phone\": \"입력에서 추출 (없으면 기본값)\",\n" +
+                "    \"github\": \"입력에서 추출 (없으면 빈 문자열)\",\n" +
+                "    \"location\": \"입력에서 추출 (없으면 기본값)\",\n" +
+                "    \"about\": \"사용자 입력 분석 결과 기반 자기소개 (300-500자, STAR 구조)\",\n" +
+                "    \"skills\": [\"입력 분석 결과 기반 스킬 리스트\"] 또는 카테고리 형식,\n" +
                 "    \"projects\": [\n" +
                 "      {\n" +
-                "        \"name\": \"프로젝트명\",\n" +
-                "        \"description\": \"상세 설명 (200-300자, STAR 구조: 상황-과제-행동-결과-통찰)\",\n" +
-                "        \"role\": \"역할 (예: Frontend Developer, Team Lead)\",\n" +
-                "        \"period\": \"기간 (예: 2023.01 - 2023.06)\",\n" +
-                "        \"company\": \"회사/조직 (선택사항)\",\n" +
-                "        \"tech\": [\"기술1\", \"기술2\"],\n" +
-                "        \"achievements\": [\"성과1 (정량적 지표 포함)\", \"성과2\"]\n" +
+                "        \"name\": \"입력에서 추출한 프로젝트명\",\n" +
+                "        \"description\": \"입력 기반 설명 (200-300자, STAR)\",\n" +
+                "        \"role\": \"역할\",\n" +
+                "        \"period\": \"기간\",\n" +
+                "        \"company\": \"회사/조직\",\n" +
+                "        \"tech\": [\"관련 기술\"],\n" +
+                "        \"achievements\": [\"성과\"]\n" +
                 "      }\n" +
                 "    ],\n" +
                 "    \"experience\": [\n" +
                 "      {\n" +
-                "        \"position\": \"직책\",\n" +
-                "        \"company\": \"회사명\",\n" +
+                "        \"position\": \"입력 기반 직책/활동\",\n" +
+                "        \"company\": \"입력 기반 회사/조직명\",\n" +
                 "        \"duration\": \"기간\",\n" +
-                "        \"description\": \"업무 설명 (150-200자, STAR 구조)\",\n" +
-                "        \"achievements\": [\"성과1 (정량적 지표 포함)\", \"성과2\"],\n" +
-                "        \"technologies\": [\"기술1\", \"기술2\"]\n" +
+                "        \"description\": \"입력 기반 설명 (150-200자, STAR)\",\n" +
+                "        \"achievements\": [\"성과\"],\n" +
+                "        \"technologies\": [\"기술\"]\n" +
                 "      }\n" +
                 "    ],\n" +
                 "    \"education\": [\n" +
                 "      {\n" +
-                "        \"school\": \"학교명\",\n" +
-                "        \"degree\": \"학위/전공\",\n" +
+                "        \"school\": \"입력 기반 학교명\",\n" +
+                "        \"degree\": \"입력 기반 학과/전공\",\n" +
                 "        \"period\": \"기간\",\n" +
-                "        \"description\": \"세부사항 (선택사항)\"\n" +
+                "        \"description\": \"세부사항\"\n" +
                 "      }\n" +
                 "    ]\n" +
                 "  },\n" +
                 "  \"html_content\": \"<완성된 HTML 포트폴리오>\"\n" +
                 "}\n\n" +
+                "⚠️ 반드시 portfolioData와 html_content를 모두 반환해야 합니다. 하나라도 누락하면 안 됩니다.\n\n" +
                 "=== 핵심 철학: STAR+I 프레임워크 ===\n" +
                 "모든 경험은 반드시 다음 구조로 재구성:\n" +
                 "• **S**ituation (상황): 비즈니스 맥락과 해결해야 할 문제의 본질\n" +
@@ -730,14 +740,16 @@ ${examplesText}
                     console.log('첫 번째 경력 설명 길이:', extractedData.experience[0].description.length);
                 }
             } else {
-                console.log('=== portfolioData 없음, 기본값 사용 ===');
+                console.log('=== portfolioData 없음, organizedContent 기반으로 구조화 ===');
+                console.log('organizedContent 내용:', organizedContent);
+
                 extractedData = {
-                    name: 'Your Name',
-                    title: organizedContent?.oneLinerPitch || '소프트웨어 개발자',
-                    email: 'youremail@example.com',
-                    phone: '010-0000-0000',
+                    name: '',
+                    title: organizedContent?.oneLinerPitch || '',
+                    email: '',
+                    phone: '',
                     github: '',
-                    location: 'Seoul, Korea',
+                    location: '',
                     about: organizedContent?.summary || '',
                     skills: organizedContent?.skills?.flatMap((skill: any) => skill.skills || []) || [],
                     skillCategories: organizedContent?.skills || [],
@@ -758,8 +770,10 @@ ${examplesText}
                         achievements: exp.achievements || [],
                         technologies: exp.technologies || []
                     })) || [],
-                    education: []
+                    education: organizedContent?.education || []
                 };
+
+                console.log('organizedContent 기반 extractedData 생성 완료:', extractedData);
             }
 
             console.log('변환된 extractedData:', extractedData);

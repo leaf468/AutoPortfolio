@@ -39,9 +39,7 @@ const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
       experiences: [],
       projects: [],
       skills: [],
-      educations: [],
-      certifications: [],
-      languages: [],
+      education: [],
       achievements: [],
       keywords: {
         technical: [],

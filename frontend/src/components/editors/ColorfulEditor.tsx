@@ -1073,19 +1073,22 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
                                             </div>
 
                                             <div className="flex flex-wrap gap-2 mb-3">
-                                                {category.skills.map((skill, skillIndex) => (
-                                                    <div key={skillIndex} className="group relative">
-                                                        <Badge variant="secondary" className="pr-8 bg-gradient-to-r from-purple-500 to-pink-500 text-white">
-                                                            {skill}
-                                                            <button
-                                                                onClick={() => handleDeleteSkillFromCategory(categoryIndex, skillIndex)}
-                                                                className="absolute right-1 top-1/2 -translate-y-1/2 opacity-60 hover:opacity-100 transition-opacity"
-                                                            >
-                                                                <XMarkIcon className="w-3 h-3 text-white" />
-                                                            </button>
-                                                        </Badge>
-                                                    </div>
-                                                ))}
+                                                {category.skills.map((skill, skillIndex) => {
+                                                    const skillText = typeof skill === 'string' ? skill : (skill as any)?.name || String(skill);
+                                                    return (
+                                                        <div key={skillIndex} className="group relative">
+                                                            <Badge variant="secondary" className="pr-8 bg-gradient-to-r from-purple-500 to-pink-500 text-white">
+                                                                {skillText}
+                                                                <button
+                                                                    onClick={() => handleDeleteSkillFromCategory(categoryIndex, skillIndex)}
+                                                                    className="absolute right-1 top-1/2 -translate-y-1/2 opacity-60 hover:opacity-100 transition-opacity"
+                                                                >
+                                                                    <XMarkIcon className="w-3 h-3 text-white" />
+                                                                </button>
+                                                            </Badge>
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
 
                                             <SkillInput
