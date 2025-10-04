@@ -311,9 +311,9 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                         const autoExpandPromises: Promise<void>[] = [];
                         const newEnhancedFields: Record<string, boolean> = {};
 
-                        // About 필드 자동 확장
-                        if (actualData.about && actualData.about.length > 0 && actualData.about.length < 150) {
-                            console.log('📝 About 필드 짧음 (', actualData.about.length, '자) - 자동 확장 시작');
+                        // About 필드 자동 확장 (길이 제한 없이 모두 확장)
+                        if (actualData.about && actualData.about.length > 0) {
+                            console.log('📝 About 필드 발견 (', actualData.about.length, '자) - 자동 확장 시작');
                             const expandPromise = (async () => {
                                 try {
                                     const autoFillService = (await import('../../services/autoFillService')).default;
@@ -327,14 +327,14 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                             })();
                             autoExpandPromises.push(expandPromise);
                         } else {
-                            console.log('⏭️  About 필드 건너뛰기 (길이:', actualData.about?.length || 0, '자)');
+                            console.log('⏭️  About 필드 비어있음 - 건너뛰기');
                         }
 
-                        // 프로젝트 description 자동 확장
+                        // 프로젝트 description 자동 확장 (길이 제한 없이 모두 확장)
                         if (actualData.projects && actualData.projects.length > 0) {
                             actualData.projects.forEach((project, index) => {
-                                if (project.description && project.description.length > 0 && project.description.length < 150) {
-                                    console.log(`📝 프로젝트 ${index} description 짧음 (${project.description.length}자) - 자동 확장 시작`);
+                                if (project.description && project.description.length > 0) {
+                                    console.log(`📝 프로젝트 ${index} description 발견 (${project.description.length}자) - 자동 확장 시작`);
                                     const expandPromise = (async () => {
                                         try {
                                             const autoFillService = (await import('../../services/autoFillService')).default;
@@ -351,11 +351,11 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                             });
                         }
 
-                        // 경력 description 자동 확장
+                        // 경력 description 자동 확장 (길이 제한 없이 모두 확장)
                         if (actualData.experience && actualData.experience.length > 0) {
                             actualData.experience.forEach((exp, index) => {
-                                if (exp.description && exp.description.length > 0 && exp.description.length < 150) {
-                                    console.log(`📝 경력 ${index} description 짧음 (${exp.description.length}자) - 자동 확장 시작`);
+                                if (exp.description && exp.description.length > 0) {
+                                    console.log(`📝 경력 ${index} description 발견 (${exp.description.length}자) - 자동 확장 시작`);
                                     const expandPromise = (async () => {
                                         try {
                                             const autoFillService = (await import('../../services/autoFillService')).default;
