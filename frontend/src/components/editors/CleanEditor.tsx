@@ -1149,10 +1149,12 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                                                         </div>
                                                     </div>
 
-                                                    <textarea
-                                                        value={exp.description || ''}
-                                                        onChange={(e) => {
-                                                            const newValue = e.target.value;
+                                                    <div
+                                                        contentEditable
+                                                        suppressContentEditableWarning
+                                                        dangerouslySetInnerHTML={{ __html: exp.description || '' }}
+                                                        onInput={(e) => {
+                                                            const newValue = e.currentTarget.innerHTML;
                                                             console.log(`📝 [CleanEditor] Experience ${index} description 필드 변경 감지`);
                                                             console.log(`   입력 텍스트: "${newValue.substring(0, 50)}${newValue.length > 50 ? '...' : ''}" (${newValue.length}자)`);
                                                             handleUpdateExperience(index, 'description', newValue);
@@ -1164,16 +1166,29 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                                                                 });
                                                             }
                                                             setIsAutoExpanding(prev => ({ ...prev, [`experience_${index}_description`]: true }));
-                                                            scheduleExpExpand(newValue);
+                                                            // HTML 태그 제거한 순수 텍스트로 확장 요청
+                                                            const plainText = newValue.replace(/<[^>]*>/g, '').trim();
+                                                            if (plainText.length > 0) {
+                                                                scheduleExpExpand(plainText);
+                                                            }
                                                         }}
-                                                        className={`w-full p-2 border rounded min-h-[60px] text-sm mb-3 ${
+                                                        onBlur={(e) => {
+                                                            const html = e.currentTarget.innerHTML;
+                                                            handleUpdateExperience(index, 'description', html);
+                                                        }}
+                                                        className={`w-full p-2 border rounded min-h-[60px] text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                                                             enhancedFields[`experience_${index}_description`]
                                                                 ? 'bg-yellow-50 border-yellow-300'
                                                                 : isAutoExpanding[`experience_${index}_description`]
                                                                 ? 'bg-blue-50 border-blue-300'
                                                                 : 'border-gray-300'
                                                         }`}
-                                                        placeholder="담당 업무를 입력하세요"
+                                                        data-placeholder="담당 업무를 입력하세요"
+                                                        style={{
+                                                            minHeight: '60px',
+                                                            whiteSpace: 'pre-wrap',
+                                                            wordWrap: 'break-word'
+                                                        }}
                                                     />
                                                     {isAutoExpanding[`experience_${index}_description`] && !enhancedFields[`experience_${index}_description`] && (
                                                         <div className="mb-2 flex items-center space-x-2">
@@ -1282,10 +1297,12 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                                                     </div>
                                                 </div>
 
-                                                <textarea
-                                                    value={project.description || ''}
-                                                    onChange={(e) => {
-                                                        const newValue = e.target.value;
+                                                <div
+                                                    contentEditable
+                                                    suppressContentEditableWarning
+                                                    dangerouslySetInnerHTML={{ __html: project.description || '' }}
+                                                    onInput={(e) => {
+                                                        const newValue = e.currentTarget.innerHTML;
                                                         console.log(`📝 [CleanEditor] Project ${index} description 필드 변경 감지`);
                                                         console.log(`   입력 텍스트: "${newValue.substring(0, 50)}${newValue.length > 50 ? '...' : ''}" (${newValue.length}자)`);
                                                         handleUpdateProject(index, 'description', newValue);
@@ -1297,16 +1314,29 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                                                             });
                                                         }
                                                         setIsAutoExpanding(prev => ({ ...prev, [`project_${index}_description`]: true }));
-                                                        scheduleProjExpand(newValue);
+                                                        // HTML 태그 제거한 순수 텍스트로 확장 요청
+                                                        const plainText = newValue.replace(/<[^>]*>/g, '').trim();
+                                                        if (plainText.length > 0) {
+                                                            scheduleProjExpand(plainText);
+                                                        }
                                                     }}
-                                                    className={`w-full p-2 mb-3 border rounded min-h-[80px] ${
+                                                    onBlur={(e) => {
+                                                        const html = e.currentTarget.innerHTML;
+                                                        handleUpdateProject(index, 'description', html);
+                                                    }}
+                                                    className={`w-full p-2 mb-3 border rounded min-h-[80px] focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                                                         enhancedFields[`project_${index}_description`]
                                                             ? 'bg-yellow-50 border-yellow-300'
                                                             : isAutoExpanding[`project_${index}_description`]
                                                             ? 'bg-blue-50 border-blue-300'
                                                             : 'border-gray-300'
                                                     }`}
-                                                    placeholder="프로젝트 설명"
+                                                    data-placeholder="프로젝트 설명"
+                                                    style={{
+                                                        minHeight: '80px',
+                                                        whiteSpace: 'pre-wrap',
+                                                        wordWrap: 'break-word'
+                                                    }}
                                                 />
                                                 {isAutoExpanding[`project_${index}_description`] && !enhancedFields[`project_${index}_description`] && (
                                                     <div className="mb-2 flex items-center space-x-2">
