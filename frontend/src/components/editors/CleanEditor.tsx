@@ -998,10 +998,12 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                                         {isEnhancing ? 'AI 개선 중...' : 'AI로 개선'}
                                     </button>
                                 </div>
-                                <textarea
-                                    value={portfolioData.about || ''}
-                                    onChange={(e) => {
-                                        const newValue = e.target.value;
+                                <div
+                                    contentEditable
+                                    suppressContentEditableWarning
+                                    dangerouslySetInnerHTML={{ __html: portfolioData.about || '' }}
+                                    onInput={(e) => {
+                                        const newValue = e.currentTarget.innerHTML;
                                         console.log('📝 [CleanEditor] About 필드 변경 감지');
                                         console.log(`   입력 텍스트: "${newValue.substring(0, 50)}${newValue.length > 50 ? '...' : ''}" (${newValue.length}자)`);
                                         setPortfolioData(prev => ({ ...prev, about: newValue }));
@@ -1009,16 +1011,30 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                                             setEnhancedFields(prev => ({ ...prev, about: false }));
                                         }
                                         setIsAutoExpanding(prev => ({ ...prev, about: true }));
-                                        scheduleAboutExpand(newValue);
+                                        // HTML 태그 제거한 순수 텍스트로 확장 요청
+                                        const plainText = newValue.replace(/<[^>]*>/g, '').trim();
+                                        if (plainText.length > 0) {
+                                            scheduleAboutExpand(plainText);
+                                        }
                                     }}
-                                    className={`w-full p-4 border rounded-lg min-h-[150px] ${
+                                    onBlur={(e) => {
+                                        // contentEditable이 포커스를 잃을 때 HTML 정리
+                                        const html = e.currentTarget.innerHTML;
+                                        setPortfolioData(prev => ({ ...prev, about: html }));
+                                    }}
+                                    className={`w-full p-4 border rounded-lg min-h-[150px] focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                                         enhancedFields['about']
-                                            ? 'bg-yellow-50 border-yellow-300 text-yellow-900'
+                                            ? 'bg-yellow-50 border-yellow-300'
                                             : isAutoExpanding['about']
                                             ? 'bg-blue-50 border-blue-300'
                                             : 'bg-white border-gray-300'
                                     }`}
-                                    placeholder="자기소개를 입력하세요. AI가 전문적으로 개선해드립니다."
+                                    data-placeholder="자기소개를 입력하세요. AI가 전문적으로 개선해드립니다."
+                                    style={{
+                                        minHeight: '150px',
+                                        whiteSpace: 'pre-wrap',
+                                        wordWrap: 'break-word'
+                                    }}
                                 />
                                 {isAutoExpanding['about'] && !enhancedFields['about'] && (
                                     <div className="mt-2 flex items-center space-x-2">

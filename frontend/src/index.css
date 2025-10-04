@@ -19,6 +19,25 @@ code {
     monospace;
 }
 
+/* contentEditable placeholder 스타일 */
+[contenteditable][data-placeholder]:empty:before {
+  content: attr(data-placeholder);
+  color: #9ca3af;
+  pointer-events: none;
+  position: absolute;
+}
+
+[contenteditable]:focus {
+  outline: none;
+}
+
+/* AI 추가 내용 스타일 */
+[contenteditable] span[style*="color:orange"],
+[contenteditable] span[style*="color: orange"] {
+  color: #f97316 !important;
+  font-weight: 500;
+}
+
 /* 모던 포트폴리오 디자인을 위한 커스텀 애니메이션 */
 @keyframes blob {
   0% {
