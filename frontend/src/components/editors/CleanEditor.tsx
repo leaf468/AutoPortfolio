@@ -1000,12 +1000,9 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                                     </div>
                                 )}
                                 {enhancedFields['about'] && (
-                                    <div className="mt-2 flex items-center space-x-2">
-                                        <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                            ✨ AI 자동 확장됨
-                                        </span>
+                                    <div className="mt-2">
                                         <p className="text-xs text-yellow-700">
-                                            검토 후 필요시 수정해주세요.
+                                            색이 다른 글씨는 AI가 보충하여 생성한 데이터입니다. 검토 후 필요시 수정해주세요.
                                         </p>
                                     </div>
                                 )}
@@ -1155,9 +1152,9 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                                                     )}
                                                     {enhancedFields[`experience_${index}_description`] && (
                                                         <div className="mb-2">
-                                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                                                ✨ AI 자동 확장됨
-                                                            </span>
+                                                            <p className="text-xs text-yellow-700">
+                                                                색이 다른 글씨는 AI가 보충하여 생성한 데이터입니다. 검토 후 필요시 수정해주세요.
+                                                            </p>
                                                         </div>
                                                     )}
 
@@ -1303,9 +1300,9 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                                                 )}
                                                 {enhancedFields[`project_${index}_description`] && (
                                                     <div className="mb-2">
-                                                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                                                            ✨ AI 자동 확장됨
-                                                        </span>
+                                                        <p className="text-xs text-yellow-700">
+                                                            색이 다른 글씨는 AI가 보충하여 생성한 데이터입니다. 검토 후 필요시 수정해주세요.
+                                                        </p>
                                                     </div>
                                                 )}
 
