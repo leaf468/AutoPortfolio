@@ -446,11 +446,18 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
         const checkAndGenerateDummyData = async () => {
             if (!dataLoaded || isEnhancing) return;
 
+            console.log('🔍 [수상/자격증 자동 생성] 체크 시작');
+            console.log('   - awards 존재:', portfolioData.awards ? '예' : '아니오');
+            console.log('   - awards 길이:', portfolioData.awards?.length || 0);
+            console.log('   - enhancedFields[awards]:', enhancedFields['awards'] ? '예' : '아니오');
+
             const hasAwards = portfolioData.awards && portfolioData.awards.length > 0;
 
             if (!hasAwards && !enhancedFields['awards']) {
+                console.log('✨ [수상/자격증 자동 생성] 자동 생성 시작...');
                 try {
                     const { data: awardsData, isGenerated } = await portfolioTextEnhancer.generateDummyAwards();
+                    console.log('✅ [수상/자격증 자동 생성] 생성 완료:', awardsData.length, '개');
                     setPortfolioData(prev => ({
                         ...prev,
                         awards: awardsData
@@ -459,17 +466,19 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                         setEnhancedFields(prev => ({ ...prev, awards: true }));
                     }
                 } catch (error) {
-                    console.error('더미 수상 데이터 생성 실패:', error);
+                    console.error('❌ [수상/자격증 자동 생성] 실패:', error);
                 }
+            } else {
+                console.log('⏭️  [수상/자격증 자동 생성] 건너뛰기 - 이미 존재하거나 생성됨');
             }
         };
 
         // Only run after data is loaded and not enhancing
-        if (dataLoaded && !isEnhancing && portfolioData.awards !== undefined) {
-            const timer = setTimeout(checkAndGenerateDummyData, 300);
+        if (dataLoaded && !isEnhancing) {
+            const timer = setTimeout(checkAndGenerateDummyData, 1000);
             return () => clearTimeout(timer);
         }
-    }, [dataLoaded, isEnhancing]); // Reduced dependencies
+    }, [dataLoaded, isEnhancing, portfolioData.awards, enhancedFields]);
 
     // HTML 업데이트
     const updateHtml = useCallback(async () => {
