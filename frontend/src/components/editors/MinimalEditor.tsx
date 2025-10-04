@@ -904,13 +904,15 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                                     </button>
                                 </div>
                                 <div className="relative">
-                                    <textarea
-                                        value={portfolioData.about || ''}
-                                        onChange={(e) => {
-                                            const newValue = e.target.value;
+                                    <div
+                                        contentEditable
+                                        suppressContentEditableWarning
+                                        dangerouslySetInnerHTML={{ __html: portfolioData.about || '' }}
+                                        onInput={(e) => {
+                                            const newValue = e.currentTarget.innerHTML;
                                             console.log('');
                                             console.log('📝 [MinimalEditor] About 필드 변경 감지');
-                                            console.log('   입력값:', newValue);
+                                            console.log('   입력값:', newValue.substring(0, 50));
                                             console.log('   길이:', newValue.length, '자');
 
                                             setPortfolioData(prev => ({ ...prev, about: newValue }));
@@ -921,17 +923,29 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                                                 setEnhancedFields(prev => ({ ...prev, about: false }));
                                             }
 
-                                            // 자동 확장 스케줄링
-                                            console.log('🎯 [MinimalEditor] 자동 확장 스케줄링 시작');
-                                            setIsAutoExpanding(prev => ({ ...prev, about: true }));
-                                            scheduleAboutExpand(newValue);
+                                            // 자동 확장 스케줄링 (HTML 태그 제거한 순수 텍스트)
+                                            const plainText = newValue.replace(/<[^>]*>/g, '').trim();
+                                            if (plainText.length > 0) {
+                                                console.log('🎯 [MinimalEditor] 자동 확장 스케줄링 시작');
+                                                setIsAutoExpanding(prev => ({ ...prev, about: true }));
+                                                scheduleAboutExpand(plainText);
+                                            }
                                         }}
-                                        className={`w-full p-4 border rounded-lg min-h-[150px] ${
+                                        onBlur={(e) => {
+                                            const html = e.currentTarget.innerHTML;
+                                            setPortfolioData(prev => ({ ...prev, about: html }));
+                                        }}
+                                        className={`w-full p-4 border rounded-lg min-h-[150px] focus:outline-none focus:ring-2 focus:ring-blue-500 ${
                                             enhancedFields['about']
                                                 ? 'bg-yellow-50 border-yellow-300'
                                                 : 'bg-white border-gray-300'
                                         }`}
-                                        placeholder="자기소개를 입력하세요. 입력을 멈추면 AI가 자동으로 확장해드립니다."
+                                        data-placeholder="자기소개를 입력하세요. 입력을 멈추면 AI가 자동으로 확장해드립니다."
+                                        style={{
+                                            minHeight: '150px',
+                                            whiteSpace: 'pre-wrap',
+                                            wordWrap: 'break-word'
+                                        }}
                                     />
                                     {isAutoExpanding['about'] && !enhancedFields['about'] && (
                                         <div className="absolute top-2 right-2 flex items-center gap-1 bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">
@@ -1085,17 +1099,45 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                                             </div>
                                         </div>
 
-                                        <textarea
-                                            value={project.description || ''}
-                                            onChange={(e) => {
-                                                const newValue = e.target.value;
-                                                handleUpdateProject(index, 'description', newValue);
-                                                // 자동 확장 스케줄링
-                                                scheduleProjectExpand(newValue);
-                                            }}
-                                            className="w-full p-2 mb-3 border border-gray-300 rounded min-h-[80px]"
-                                            placeholder="프로젝트 설명을 입력하세요. 입력을 멈추면 AI가 자동으로 확장해드립니다."
-                                        />
+                                        <div className="relative mb-3">
+                                            <div
+                                                contentEditable
+                                                suppressContentEditableWarning
+                                                dangerouslySetInnerHTML={{ __html: project.description || '' }}
+                                                onInput={(e) => {
+                                                    const newValue = e.currentTarget.innerHTML;
+                                                    handleUpdateProject(index, 'description', newValue);
+
+                                                    if (enhancedFields[`project_${index}_description`]) {
+                                                        setEnhancedFields(prev => ({ ...prev, [`project_${index}_description`]: false }));
+                                                    }
+
+                                                    // 자동 확장 스케줄링 (HTML 태그 제거한 순수 텍스트)
+                                                    const plainText = newValue.replace(/<[^>]*>/g, '').trim();
+                                                    if (plainText.length > 0) {
+                                                        setIsAutoExpanding(prev => ({ ...prev, [`project_${index}_description`]: true }));
+                                                        scheduleProjectExpand(plainText);
+                                                    }
+                                                }}
+                                                onBlur={(e) => {
+                                                    const html = e.currentTarget.innerHTML;
+                                                    handleUpdateProject(index, 'description', html);
+                                                }}
+                                                className={`w-full p-2 border rounded min-h-[80px] focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                                                    enhancedFields[`project_${index}_description`]
+                                                        ? 'bg-yellow-50 border-yellow-300'
+                                                        : isAutoExpanding[`project_${index}_description`]
+                                                        ? 'bg-blue-50 border-blue-300'
+                                                        : 'bg-white border-gray-300'
+                                                }`}
+                                                data-placeholder="프로젝트 설명을 입력하세요. AI가 전문적으로 개선해드립니다."
+                                                style={{
+                                                    minHeight: '80px',
+                                                    whiteSpace: 'pre-wrap',
+                                                    wordWrap: 'break-word'
+                                                }}
+                                            />
+                                        </div>
 
                                         <div className="grid grid-cols-3 gap-2">
                                             <div>
@@ -1227,17 +1269,45 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                                                 </div>
                                             </div>
 
-                                            <textarea
-                                                value={exp.description || ''}
-                                                onChange={(e) => {
-                                                    const newValue = e.target.value;
-                                                    handleUpdateExperience(index, 'description', newValue);
-                                                    // 자동 확장 스케줄링
-                                                    scheduleExperienceExpand(newValue);
-                                                }}
-                                                className="w-full p-2 border border-gray-300 rounded min-h-[60px] text-sm"
-                                                placeholder="담당 업무를 입력하세요. 입력을 멈추면 AI가 자동으로 확장해드립니다."
-                                            />
+                                            <div className="relative">
+                                                <div
+                                                    contentEditable
+                                                    suppressContentEditableWarning
+                                                    dangerouslySetInnerHTML={{ __html: exp.description || '' }}
+                                                    onInput={(e) => {
+                                                        const newValue = e.currentTarget.innerHTML;
+                                                        handleUpdateExperience(index, 'description', newValue);
+
+                                                        if (enhancedFields[`experience_${index}_description`]) {
+                                                            setEnhancedFields(prev => ({ ...prev, [`experience_${index}_description`]: false }));
+                                                        }
+
+                                                        // 자동 확장 스케줄링 (HTML 태그 제거한 순수 텍스트)
+                                                        const plainText = newValue.replace(/<[^>]*>/g, '').trim();
+                                                        if (plainText.length > 0) {
+                                                            setIsAutoExpanding(prev => ({ ...prev, [`experience_${index}_description`]: true }));
+                                                            scheduleExperienceExpand(plainText);
+                                                        }
+                                                    }}
+                                                    onBlur={(e) => {
+                                                        const html = e.currentTarget.innerHTML;
+                                                        handleUpdateExperience(index, 'description', html);
+                                                    }}
+                                                    className={`w-full p-2 border rounded min-h-[60px] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                                                        enhancedFields[`experience_${index}_description`]
+                                                            ? 'bg-yellow-50 border-yellow-300'
+                                                            : isAutoExpanding[`experience_${index}_description`]
+                                                            ? 'bg-blue-50 border-blue-300'
+                                                            : 'bg-white border-gray-300'
+                                                    }`}
+                                                    data-placeholder="담당 업무를 입력하세요. AI가 전문적으로 개선해드립니다."
+                                                    style={{
+                                                        minHeight: '60px',
+                                                        whiteSpace: 'pre-wrap',
+                                                        wordWrap: 'break-word'
+                                                    }}
+                                                />
+                                            </div>
 
                                             <div className="mt-3">
                                                 <label className="block text-xs font-medium text-gray-600 mb-1">주요 성과 (각 줄에 하나씩)</label>

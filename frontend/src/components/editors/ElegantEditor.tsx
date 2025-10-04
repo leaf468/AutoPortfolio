@@ -769,15 +769,32 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
                                         {isEnhancing ? 'AI 개선 중...' : 'AI로 개선'}
                                     </button>
                                 </div>
-                                <textarea
-                                    value={portfolioData.about || ''}
-                                    onChange={(e) => setPortfolioData(prev => ({ ...prev, about: e.target.value }))}
-                                    className={`w-full p-4 border rounded-lg min-h-[150px] resize-none ${
+                                <div
+                                    contentEditable
+                                    suppressContentEditableWarning
+                                    dangerouslySetInnerHTML={{ __html: portfolioData.about || '' }}
+                                    onInput={(e) => {
+                                        const newValue = e.currentTarget.innerHTML;
+                                        setPortfolioData(prev => ({ ...prev, about: newValue }));
+                                        if (enhancedFields['about']) {
+                                            setEnhancedFields(prev => ({ ...prev, about: false }));
+                                        }
+                                    }}
+                                    onBlur={(e) => {
+                                        const html = e.currentTarget.innerHTML;
+                                        setPortfolioData(prev => ({ ...prev, about: html }));
+                                    }}
+                                    className={`w-full p-4 border rounded-lg min-h-[150px] focus:outline-none focus:ring-2 focus:ring-purple-500 ${
                                         enhancedFields['about']
-                                            ? 'bg-yellow-50 border-yellow-300 text-yellow-900'
-                                            : 'bg-white border-purple-200 focus:border-purple-500 focus:ring-2 focus:ring-purple-100 outline-none'
+                                            ? 'bg-yellow-50 border-yellow-300'
+                                            : 'bg-white border-purple-200 focus:border-purple-500'
                                     } transition-colors`}
-                                    placeholder="우아하고 세련된 자기소개를 입력하세요. AI가 더욱 전문적으로 개선해드립니다."
+                                    data-placeholder="우아하고 세련된 자기소개를 입력하세요. AI가 더욱 전문적으로 개선해드립니다."
+                                    style={{
+                                        minHeight: '150px',
+                                        whiteSpace: 'pre-wrap',
+                                        wordWrap: 'break-word'
+                                    }}
                                 />
                                 {enhancedFields['about'] && (
                                     <p className="mt-2 text-xs text-yellow-700">
@@ -869,11 +886,32 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
                                                 </div>
                                             </div>
 
-                                            <textarea
-                                                value={exp.description || ''}
-                                                onChange={(e) => handleUpdateExperience(index, 'description', e.target.value)}
-                                                className="w-full p-3 border border-purple-200 rounded min-h-[80px] text-sm focus:border-purple-500 focus:ring-1 focus:ring-purple-100 outline-none resize-none transition-colors"
-                                                placeholder="담당 업무와 성과를 우아하게 표현해주세요"
+                                            <div
+                                                contentEditable
+                                                suppressContentEditableWarning
+                                                dangerouslySetInnerHTML={{ __html: exp.description || '' }}
+                                                onInput={(e) => {
+                                                    const newValue = e.currentTarget.innerHTML;
+                                                    handleUpdateExperience(index, 'description', newValue);
+                                                    if (enhancedFields[`experience_${index}_description`]) {
+                                                        setEnhancedFields(prev => ({ ...prev, [`experience_${index}_description`]: false }));
+                                                    }
+                                                }}
+                                                onBlur={(e) => {
+                                                    const html = e.currentTarget.innerHTML;
+                                                    handleUpdateExperience(index, 'description', html);
+                                                }}
+                                                className={`w-full p-3 border rounded min-h-[80px] text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                                                    enhancedFields[`experience_${index}_description`]
+                                                        ? 'bg-yellow-50 border-yellow-300'
+                                                        : 'bg-white border-purple-200 focus:border-purple-500'
+                                                } transition-colors`}
+                                                data-placeholder="담당 업무와 성과를 우아하게 표현해주세요"
+                                                style={{
+                                                    minHeight: '80px',
+                                                    whiteSpace: 'pre-wrap',
+                                                    wordWrap: 'break-word'
+                                                }}
                                             />
                                         </motion.div>
                                     ))}
@@ -941,11 +979,32 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
                                             </div>
                                         </div>
 
-                                        <textarea
-                                            value={project.description || ''}
-                                            onChange={(e) => handleUpdateProject(index, 'description', e.target.value)}
-                                            className="w-full p-3 mb-3 border border-purple-200 rounded min-h-[80px] focus:border-purple-500 focus:ring-1 focus:ring-purple-100 outline-none resize-none transition-colors"
-                                            placeholder="프로젝트에 대한 우아한 설명을 입력하세요"
+                                        <div
+                                            contentEditable
+                                            suppressContentEditableWarning
+                                            dangerouslySetInnerHTML={{ __html: project.description || '' }}
+                                            onInput={(e) => {
+                                                const newValue = e.currentTarget.innerHTML;
+                                                handleUpdateProject(index, 'description', newValue);
+                                                if (enhancedFields[`project_${index}_description`]) {
+                                                    setEnhancedFields(prev => ({ ...prev, [`project_${index}_description`]: false }));
+                                                }
+                                            }}
+                                            onBlur={(e) => {
+                                                const html = e.currentTarget.innerHTML;
+                                                handleUpdateProject(index, 'description', html);
+                                            }}
+                                            className={`w-full p-3 mb-3 border rounded min-h-[80px] focus:outline-none focus:ring-2 focus:ring-purple-500 ${
+                                                enhancedFields[`project_${index}_description`]
+                                                    ? 'bg-yellow-50 border-yellow-300'
+                                                    : 'bg-white border-purple-200 focus:border-purple-500'
+                                            } transition-colors`}
+                                            data-placeholder="프로젝트에 대한 우아한 설명을 입력하세요"
+                                            style={{
+                                                minHeight: '80px',
+                                                whiteSpace: 'pre-wrap',
+                                                wordWrap: 'break-word'
+                                            }}
                                         />
 
                                         <div className="grid grid-cols-3 gap-3">
