@@ -69,6 +69,52 @@ export interface GenerateRequest {
     template?: 'minimal' | 'clean' | 'colorful' | 'elegant'; // 템플릿 정보 추가
 }
 
+// ====================================================================
+// 카테고리별 Few-shot 예시 데이터
+// ====================================================================
+const CATEGORY_EXAMPLES = {
+    "Self-introduction": [
+        {
+            input: "저는 프론트엔드 개발자입니다. 사용자 경험에 관심이 많습니다.",
+            output: "저는 프론트엔드 개발자로서 다양한 웹 애플리케이션을 설계하고 개발한 경험이 있습니다. 사용자 경험(UX)에 깊은 관심을 가지고 있으며, <span style=\"color:orange\">React, Vue 등 주요 프론트엔드 프레임워크에 능숙</span>하고, <span style=\"color:orange\">스타트업 환경에서 협업 경험</span>을 통해 문제 해결 능력을 키워왔습니다."
+        },
+        {
+            input: "데이터 분석가로 일해왔습니다.",
+            output: "저는 데이터 분석가로 활동하며 비즈니스 의사결정을 위한 데이터 기반 인사이트를 도출해왔습니다. 특히 <span style=\"color:orange\">SQL, Python, R을 활용한 분석 역량</span>과 <span style=\"color:orange\">A/B 테스트 설계 및 KPI 관리 경험</span>을 통해 기업 성장을 지원했습니다."
+        }
+    ],
+    "Achievements": [
+        {
+            input: "프로젝트에서 매출 향상에 기여했습니다.",
+            output: "A 프로젝트를 통해 신규 기능을 제안하고 구현하여 매출 향상에 기여했습니다. 그 결과 <span style=\"color:orange\">월 매출이 15% 증가</span>하였으며, <span style=\"color:orange\">이 과정에서 기여도는 기획 30%, 개발 70%</span>를 차지했습니다."
+        },
+        {
+            input: "고객 만족도 개선에 도움을 줬습니다.",
+            output: "고객 인터뷰와 설문 분석을 기반으로 UX 개선을 주도하여 고객 만족도를 높였습니다. 특히 <span style=\"color:orange\">NPS(Net Promoter Score)가 20점 상승</span>했고, <span style=\"color:orange\">서비스 이탈률이 10% 감소</span>하는 성과를 달성했습니다."
+        }
+    ],
+    "Projects": [
+        {
+            input: "챗봇 서비스를 만들었습니다.",
+            output: "챗봇 서비스를 기획 및 개발하여 고객 상담 자동화를 구현했습니다. 이 프로젝트에서 <span style=\"color:orange\">팀 리더로서 프로젝트 관리와 백엔드 API 설계를 담당</span>했으며, <span style=\"color:orange\">사용자 응답 시간을 평균 40% 단축</span>시켰습니다."
+        },
+        {
+            input: "웹사이트를 제작했습니다.",
+            output: "기업 홍보용 웹사이트 제작 프로젝트에 참여했습니다. <span style=\"color:orange\">제 역할은 UI/UX 디자인과 프론트엔드 개발</span>이었으며, 이를 통해 <span style=\"color:orange\">사이트 방문자 수가 3개월 내 200% 증가</span>하는 성과를 거두었습니다."
+        }
+    ],
+    "Career": [
+        {
+            input: "스타트업에서 일했습니다.",
+            output: "2021년부터 2023년까지 스타트업에서 근무하며 <span style=\"color:orange\">프로덕트 매니저(직책)</span>로 활동했습니다. <span style=\"color:orange\">서비스 기획, 데이터 기반 개선, 투자 유치 지원</span> 등의 업무를 수행했습니다."
+        },
+        {
+            input: "대기업에서 인턴 경험이 있습니다.",
+            output: "2022년 6월부터 2022년 8월까지 <span style=\"color:orange\">삼성전자 DS부문에서 데이터 엔지니어 인턴</span>으로 근무했습니다. 이 기간 동안 <span style=\"color:orange\">데이터 파이프라인 최적화 및 자동화 업무</span>를 담당했습니다."
+        }
+    ]
+};
+
 class AutoFillService {
     private generateBlockId(): string {
         return 'block_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
@@ -76,6 +122,204 @@ class AutoFillService {
 
     private generateDocId(): string {
         return 'doc_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+
+    /**
+     * 카테고리 감지 함수
+     * 입력된 텍스트가 어떤 카테고리에 속하는지 키워드 기반으로 판단
+     */
+    private detectCategory(text: string): string {
+        const lowerText = text.toLowerCase();
+
+        // 자기소개 키워드
+        const selfIntroKeywords = ['저는', '입니다', '관심', '전공', '좋아합니다', '개발자', '디자이너', '분석가'];
+        // 성과 키워드
+        const achievementKeywords = ['향상', '증가', '개선', '달성', '성과', '기여', '매출', '만족도', 'kpi', 'nps'];
+        // 프로젝트 키워드
+        const projectKeywords = ['프로젝트', '개발', '제작', '구축', '만들', '설계', '구현', '서비스', '앱', '웹사이트'];
+        // 경력 키워드
+        const careerKeywords = ['근무', '회사', '인턴', '경력', '팀', '부서', '담당', '직책', '년부터', '월부터'];
+
+        const countMatches = (keywords: string[]) => {
+            const matches = keywords.filter(keyword => lowerText.includes(keyword));
+            return { count: matches.length, matched: matches };
+        };
+
+        const selfIntro = countMatches(selfIntroKeywords);
+        const achievement = countMatches(achievementKeywords);
+        const project = countMatches(projectKeywords);
+        const career = countMatches(careerKeywords);
+
+        const scores = {
+            'Self-introduction': selfIntro.count,
+            'Achievements': achievement.count,
+            'Projects': project.count,
+            'Career': career.count
+        };
+
+        // 가장 높은 점수의 카테고리 반환
+        const category = Object.entries(scores).reduce((a, b) => a[1] > b[1] ? a : b)[0];
+
+        console.log('');
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('📊 [카테고리 감지] 분석 시작');
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('📝 입력 텍스트:', text);
+        console.log('📏 텍스트 길이:', text.length, '자');
+        console.log('');
+        console.log('🔍 키워드 매칭 결과:');
+        console.log('   자기소개:', selfIntro.count, '개 -', selfIntro.matched.join(', ') || '없음');
+        console.log('   성과:', achievement.count, '개 -', achievement.matched.join(', ') || '없음');
+        console.log('   프로젝트:', project.count, '개 -', project.matched.join(', ') || '없음');
+        console.log('   경력:', career.count, '개 -', career.matched.join(', ') || '없음');
+        console.log('');
+        console.log('🎯 최종 분류:', category);
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+        console.log('');
+
+        return category;
+    }
+
+    /**
+     * 텍스트 자동 확장 함수
+     * 사용자 입력을 받아 카테고리별 Few-shot 학습을 통해 자동으로 확장
+     */
+    async expandText(userInput: string): Promise<string> {
+        try {
+            console.log('');
+            console.log('🚀 ========================================');
+            console.log('🚀 [AUTO EXPAND] 자동 확장 시작');
+            console.log('🚀 ========================================');
+
+            // 카테고리 감지
+            const detectedCategory = this.detectCategory(userInput);
+            const examples = CATEGORY_EXAMPLES[detectedCategory as keyof typeof CATEGORY_EXAMPLES] || [];
+
+            console.log('📚 Few-shot 학습 예시:', examples.length, '개');
+            examples.forEach((ex, idx) => {
+                console.log(`   예시 ${idx + 1}:`);
+                console.log(`     입력: ${ex.input}`);
+                console.log(`     출력: ${ex.output.substring(0, 80)}...`);
+            });
+            console.log('');
+
+            // Few-shot 프롬프트 구성
+            const examplesText = examples.map((ex, idx) =>
+                `예시 ${idx + 1}:\n입력: "${ex.input}"\n출력: "${ex.output}"\n`
+            ).join('\n');
+
+            const systemPrompt = `당신은 포트폴리오 자동 생성 전문가입니다.
+사용자가 짧게 입력한 텍스트를 기반으로, 자기소개(Self-introduction), 성과(Achievements), 프로젝트(Projects), 커리어(Career) 항목을 포트폴리오 문장으로 확장합니다.
+
+## 핵심 지시사항
+1. **원문 보존**: 사용자가 입력한 텍스트는 반드시 포함시키되 문맥상 자연스럽게 녹여 쓰십시오.
+2. **누락 정보 보완**: 기간, 직책, 기여도, 사용 기술, 성과 지표(%, 증가율, 감소율, 지표 변화 등)가 빠져 있다면 합리적으로 추정하여 채우십시오.
+3. **순수 텍스트 출력**: HTML 태그, 마크다운, 특수 문자를 사용하지 말고 순수한 텍스트로만 출력하십시오.
+4. **자연스러운 표현**: 결과 문장은 포트폴리오/이력서에 어울리도록 매끄럽고 전문적으로 표현하십시오.
+5. **정량화 우선**: 가능하다면 정량적 성과(수치, 지표, 기간 등)로 표현하십시오.
+6. **출력 형식**:
+   - 코드 블록, 마크다운, 설명 문구를 출력하지 말고 **최종 완성된 문장만** 출력하십시오.
+   - 입력된 텍스트가 어떤 항목(Self-intro, Achievements, Projects, Career)에 해당하는지 파악하고 해당 형식으로 작성하십시오.
+
+## 카테고리: ${detectedCategory}
+
+참고 예시 (실제 출력에서는 <span> 태그 없이 순수 텍스트로만 출력):
+${examplesText}
+
+이제 다음 입력을 위 예시 스타일로 확장하되, HTML 태그 없이 순수 텍스트로만 출력하십시오:`;
+
+            const userMessage = `입력: "${userInput}"
+출력:`;
+
+            console.log('🤖 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.log('🤖 [AI 요청] OpenAI API 호출 시작');
+            console.log('🤖 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.log('📤 모델:', MODEL);
+            console.log('📤 Temperature:', 0.7);
+            console.log('📤 Max Tokens:', 500);
+            console.log('📤 프롬프트 길이:', systemPrompt.length + userMessage.length, '자');
+            console.log('');
+            console.log('📤 System Prompt (처음 200자):');
+            console.log('   ', systemPrompt.substring(0, 200) + '...');
+            console.log('');
+            console.log('📤 User Message:');
+            console.log('   ', userMessage);
+            console.log('');
+
+            const requestStartTime = Date.now();
+            const response = await openai.chat.completions.create({
+                model: MODEL,
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: userMessage }
+                ],
+                temperature: 0.7,
+                max_tokens: 500
+            });
+            const requestDuration = Date.now() - requestStartTime;
+
+            const expandedText = response.choices[0].message.content?.trim() || userInput;
+
+            console.log('📥 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.log('📥 [AI 응답] OpenAI API 응답 수신');
+            console.log('📥 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+            console.log('⏱️  응답 시간:', requestDuration, 'ms');
+            console.log('📊 토큰 사용량:');
+            console.log('   - Prompt:', response.usage?.prompt_tokens || 'N/A');
+            console.log('   - Completion:', response.usage?.completion_tokens || 'N/A');
+            console.log('   - Total:', response.usage?.total_tokens || 'N/A');
+            console.log('');
+            console.log('📝 원본 텍스트 (입력):');
+            console.log('   ', userInput);
+            console.log('   길이:', userInput.length, '자');
+            console.log('');
+            console.log('✨ 확장된 텍스트 (출력):');
+            console.log('   ', expandedText);
+            console.log('   길이:', expandedText.length, '자');
+            console.log('   증가:', expandedText.length - userInput.length, '자');
+            console.log('');
+
+            // 변화 분석
+            if (expandedText === userInput) {
+                console.log('⚠️  변화 없음: AI가 원본을 그대로 반환했습니다.');
+            } else {
+                console.log('✅ 확장 성공: 텍스트가 성공적으로 확장되었습니다.');
+
+                // 추가된 내용 하이라이트
+                if (expandedText.includes(userInput)) {
+                    console.log('');
+                    console.log('🔍 추가된 내용:');
+                    const addedText = expandedText.replace(userInput, '');
+                    console.log('   ', addedText.trim());
+                } else {
+                    console.log('');
+                    console.log('⚠️  원본이 포함되지 않음: AI가 완전히 새로운 텍스트를 생성했습니다.');
+                }
+            }
+
+            console.log('');
+            console.log('✅ ========================================');
+            console.log('✅ [AUTO EXPAND] 자동 확장 완료');
+            console.log('✅ ========================================');
+            console.log('');
+
+            return expandedText;
+
+        } catch (error) {
+            console.log('');
+            console.log('❌ ========================================');
+            console.log('❌ [AUTO EXPAND] 자동 확장 실패');
+            console.log('❌ ========================================');
+            console.error('❌ 에러 상세:', error);
+            if (error instanceof Error) {
+                console.error('❌ 에러 메시지:', error.message);
+                console.error('❌ 에러 스택:', error.stack);
+            }
+            console.log('🔄 원본 텍스트를 그대로 반환합니다.');
+            console.log('');
+            // 오류 시 원본 텍스트 반환
+            return userInput;
+        }
     }
 
     async generatePortfolio(request: GenerateRequest): Promise<PortfolioDocument> {

@@ -16,6 +16,7 @@ import BlurFade from '../ui/BlurFade';
 import Badge from '../ui/Badge';
 import { BaseEditorProps, ColorfulPortfolioData, ProjectData, ExperienceData, SkillCategory } from './types';
 import { useScrollPreservation } from '../../hooks/useScrollPreservation';
+import { useAutoExpand } from '../../hooks/useAutoExpand';
 import NaturalLanguageModal from '../NaturalLanguageModal';
 import { userFeedbackService } from '../../services/userFeedbackService';
 
