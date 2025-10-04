@@ -263,7 +263,15 @@ ${examplesText}
             });
             const requestDuration = Date.now() - requestStartTime;
 
-            const expandedText = response.choices[0].message.content?.trim() || userInput;
+            let expandedText = response.choices[0].message.content?.trim() || userInput;
+
+            // 텍스트 전후의 따옴표 제거
+            if (expandedText.startsWith('"') && expandedText.endsWith('"')) {
+                expandedText = expandedText.slice(1, -1);
+            }
+            if (expandedText.startsWith("'") && expandedText.endsWith("'")) {
+                expandedText = expandedText.slice(1, -1);
+            }
 
             console.log('📥 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
             console.log('📥 [AI 응답] OpenAI API 응답 수신');
