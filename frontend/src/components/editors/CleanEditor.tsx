@@ -302,97 +302,31 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                         setPortfolioData(actualData);
                         setDataLoaded(true);
 
-                        // 🚀 AUTO-EXPAND: 초기 데이터가 짧으면 자동으로 AI 확장 적용
-                        console.log('');
-                        console.log('🔍 ========================================');
-                        console.log('🔍 [초기 데이터 AUTO-EXPAND 체크]');
-                        console.log('🔍 ========================================');
-
-                        const autoExpandPromises: Promise<void>[] = [];
-                        const newEnhancedFields: Record<string, boolean> = {};
-
-                        // About 필드 자동 확장 (길이 제한 없이 모두 확장)
-                        if (actualData.about && actualData.about.length > 0) {
-                            console.log('📝 About 필드 발견 (', actualData.about.length, '자) - 자동 확장 시작');
-                            const expandPromise = (async () => {
-                                try {
-                                    const autoFillService = (await import('../../services/autoFillService')).default;
-                                    const expandedAbout = await autoFillService.expandText(actualData.about);
-                                    actualData.about = expandedAbout;
-                                    newEnhancedFields['about'] = true;
-                                    console.log('✅ About 필드 자동 확장 완료:', expandedAbout.substring(0, 100) + '...');
-                                } catch (error) {
-                                    console.error('❌ About 자동 확장 실패:', error);
-                                }
-                            })();
-                            autoExpandPromises.push(expandPromise);
-                        } else {
-                            console.log('⏭️  About 필드 비어있음 - 건너뛰기');
-                        }
-
-                        // 프로젝트 description 자동 확장 (길이 제한 없이 모두 확장)
-                        if (actualData.projects && actualData.projects.length > 0) {
-                            actualData.projects.forEach((project, index) => {
-                                if (project.description && project.description.length > 0) {
-                                    console.log(`📝 프로젝트 ${index} description 발견 (${project.description.length}자) - 자동 확장 시작`);
-                                    const expandPromise = (async () => {
-                                        try {
-                                            const autoFillService = (await import('../../services/autoFillService')).default;
-                                            const expanded = await autoFillService.expandText(project.description);
-                                            actualData.projects[index].description = expanded;
-                                            newEnhancedFields[`project_${index}_description`] = true;
-                                            console.log(`✅ 프로젝트 ${index} description 자동 확장 완료`);
-                                        } catch (error) {
-                                            console.error(`❌ 프로젝트 ${index} 자동 확장 실패:`, error);
-                                        }
-                                    })();
-                                    autoExpandPromises.push(expandPromise);
-                                }
-                            });
-                        }
-
-                        // 경력 description 자동 확장 (길이 제한 없이 모두 확장)
-                        if (actualData.experience && actualData.experience.length > 0) {
-                            actualData.experience.forEach((exp, index) => {
-                                if (exp.description && exp.description.length > 0) {
-                                    console.log(`📝 경력 ${index} description 발견 (${exp.description.length}자) - 자동 확장 시작`);
-                                    const expandPromise = (async () => {
-                                        try {
-                                            const autoFillService = (await import('../../services/autoFillService')).default;
-                                            const expanded = await autoFillService.expandText(exp.description);
-                                            actualData.experience[index].description = expanded;
-                                            newEnhancedFields[`experience_${index}_description`] = true;
-                                            console.log(`✅ 경력 ${index} description 자동 확장 완료`);
-                                        } catch (error) {
-                                            console.error(`❌ 경력 ${index} 자동 확장 실패:`, error);
-                                        }
-                                    })();
-                                    autoExpandPromises.push(expandPromise);
-                                }
-                            });
-                        }
-
-                        // 모든 자동 확장 완료 후 데이터 업데이트
-                        if (autoExpandPromises.length > 0) {
-                            console.log(`⏳ 총 ${autoExpandPromises.length}개 필드 자동 확장 중...`);
-                            Promise.all(autoExpandPromises).then(() => {
-                                console.log('🎉 모든 자동 확장 완료! 데이터 업데이트');
-                                setPortfolioData({ ...actualData });
-                                setEnhancedFields(prev => ({ ...prev, ...newEnhancedFields }));
-                                updateHtml().catch(console.error);
-                            }).catch(error => {
-                                console.error('❌ 자동 확장 중 오류:', error);
-                            });
-                        } else {
-                            console.log('ℹ️  자동 확장할 필드 없음');
-                        }
-
                         // 🔧 CRITICAL FIX: Immediately trigger HTML update after data is loaded
                         // Use requestAnimationFrame to ensure state update has completed
                         requestAnimationFrame(() => {
                             console.log('🔧 CleanEditor: Immediately updating HTML with correct template on initialization');
                             updateHtml().catch(console.error);
                         });
+
+                        // AI 확장된 필드 표시 (autoFillService에서 이미 확장됨)
+                        const newEnhancedFields: Record<string, boolean> = {};
+                        if (actualData.about && actualData.about.includes('<span style="color:orange">')) {
+                            newEnhancedFields['about'] = true;
+                        }
+                        actualData.projects?.forEach((project, index) => {
+                            if (project.description && project.description.includes('<span style="color:orange">')) {
+                                newEnhancedFields[`project_${index}_description`] = true;
+                            }
+                        });
+                        actualData.experience?.forEach((exp, index) => {
+                            if (exp.description && exp.description.includes('<span style="color:orange">')) {
+                                newEnhancedFields[`experience_${index}_description`] = true;
+                            }
+                        });
+                        if (Object.keys(newEnhancedFields).length > 0) {
+                            setEnhancedFields(prev => ({ ...prev, ...newEnhancedFields }));
+                        }
                     }
 
                     // 데이터가 부족한 경우 AI로 개선

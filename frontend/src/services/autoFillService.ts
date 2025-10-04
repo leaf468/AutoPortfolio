@@ -756,6 +756,76 @@ ${examplesText}
 
             console.log('변환된 extractedData:', extractedData);
 
+            // 🚀 AUTO-EXPAND: 포트폴리오 생성 시 자동으로 AI 확장 적용
+            console.log('');
+            console.log('🚀 ========================================');
+            console.log('🚀 [포트폴리오 생성 시 AUTO-EXPAND]');
+            console.log('🚀 ========================================');
+
+            const expandPromises: Promise<void>[] = [];
+
+            // About 필드 자동 확장
+            if (extractedData.about && extractedData.about.length > 0) {
+                console.log(`📝 About 필드 발견 (${extractedData.about.length}자) - 자동 확장 시작`);
+                const expandPromise = (async () => {
+                    try {
+                        const expanded = await this.expandText(extractedData.about);
+                        extractedData.about = expanded;
+                        console.log('✅ About 필드 자동 확장 완료');
+                    } catch (error) {
+                        console.error('❌ About 자동 확장 실패:', error);
+                    }
+                })();
+                expandPromises.push(expandPromise);
+            }
+
+            // 프로젝트 description 자동 확장
+            if (extractedData.projects && extractedData.projects.length > 0) {
+                extractedData.projects.forEach((project, index) => {
+                    if (project.description && project.description.length > 0) {
+                        console.log(`📝 프로젝트 ${index} description 발견 (${project.description.length}자) - 자동 확장 시작`);
+                        const expandPromise = (async () => {
+                            try {
+                                const expanded = await this.expandText(project.description);
+                                extractedData.projects[index].description = expanded;
+                                console.log(`✅ 프로젝트 ${index} description 자동 확장 완료`);
+                            } catch (error) {
+                                console.error(`❌ 프로젝트 ${index} 자동 확장 실패:`, error);
+                            }
+                        })();
+                        expandPromises.push(expandPromise);
+                    }
+                });
+            }
+
+            // 경력 description 자동 확장
+            if (extractedData.experience && extractedData.experience.length > 0) {
+                extractedData.experience.forEach((exp, index) => {
+                    if (exp.description && exp.description.length > 0) {
+                        console.log(`📝 경력 ${index} description 발견 (${exp.description.length}자) - 자동 확장 시작`);
+                        const expandPromise = (async () => {
+                            try {
+                                const expanded = await this.expandText(exp.description);
+                                extractedData.experience[index].description = expanded;
+                                console.log(`✅ 경력 ${index} description 자동 확장 완료`);
+                            } catch (error) {
+                                console.error(`❌ 경력 ${index} 자동 확장 실패:`, error);
+                            }
+                        })();
+                        expandPromises.push(expandPromise);
+                    }
+                });
+            }
+
+            // 모든 자동 확장 완료 대기
+            if (expandPromises.length > 0) {
+                console.log(`⏳ 총 ${expandPromises.length}개 필드 자동 확장 중...`);
+                await Promise.all(expandPromises);
+                console.log('🎉 모든 자동 확장 완료!');
+            } else {
+                console.log('ℹ️  자동 확장할 필드 없음');
+            }
+
             const portfolioSection: Section = {
                 section_id: 'portfolio_main',
                 section_title: '포트폴리오',
