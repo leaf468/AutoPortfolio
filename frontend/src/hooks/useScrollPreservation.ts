@@ -19,6 +19,9 @@ export function useScrollPreservation(): ScrollPreservationHook {
     if (!iframe) return;
 
     try {
+      // 실시간 미리보기에서 주황색 AI 추가 표시 제거
+      const cleanHtml = newHtml.replace(/<span style="color:orange">(.*?)<\/span>/g, '$1');
+
       // Store current scroll position before updating
       const iframeDocument = iframe.contentDocument || iframe.contentWindow?.document;
       if (iframeDocument) {
@@ -34,7 +37,7 @@ export function useScrollPreservation(): ScrollPreservationHook {
         try {
           // Parse the new HTML
           const tempDiv = document.createElement('div');
-          tempDiv.innerHTML = newHtml;
+          tempDiv.innerHTML = cleanHtml;
 
           // Update the body content directly
           const newBody = tempDiv.querySelector('body');
@@ -96,8 +99,8 @@ export function useScrollPreservation(): ScrollPreservationHook {
       await new Promise<void>((resolve) => {
         const onLoad = () => {
           iframe.removeEventListener('load', onLoad);
-          // Set the new content
-          iframe.srcdoc = newHtml;
+          // Set the new content (cleanHtml로 변경)
+          iframe.srcdoc = cleanHtml;
 
           // Wait for content to load and then restore scroll
           const onContentLoad = () => {
@@ -129,8 +132,9 @@ export function useScrollPreservation(): ScrollPreservationHook {
 
     } catch (error) {
       console.error('Failed to preserve scroll position during update:', error);
-      // Fallback: just update srcDoc normally
-      iframe.srcdoc = newHtml;
+      // Fallback: just update srcDoc normally (cleanHtml 사용)
+      const cleanHtml = newHtml.replace(/<span style="color:orange">(.*?)<\/span>/g, '$1');
+      iframe.srcdoc = cleanHtml;
     }
   }, []);
 

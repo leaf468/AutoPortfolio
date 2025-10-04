@@ -432,6 +432,11 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                 ? portfolioData.name.split(' ').map(n => n.charAt(0)).join('').toUpperCase()
                 : 'GL';
 
+            // 🔍 스킬셋 디버깅
+            console.log('🎯 [스킬셋 디버깅] portfolioData.skillCategories:', portfolioData.skillCategories);
+            console.log('🎯 [스킬셋 디버깅] skillCategories length:', portfolioData.skillCategories?.length);
+            console.log('🎯 [스킬셋 디버깅] portfolioData.skills:', portfolioData.skills);
+
             const dataForTemplate = {
                 name: portfolioData.name || '포트폴리오 작성자',
                 title: portfolioData.title || '소프트웨어 개발자',
@@ -468,6 +473,10 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                 awards: portfolioData.awards || [],
                 sectionTitles: sectionTitles
             };
+
+            // 🔍 템플릿에 전달되는 데이터 확인
+            console.log('🎯 [스킬셋 디버깅] dataForTemplate.skillCategories:', dataForTemplate.skillCategories);
+            console.log('🎯 [스킬셋 디버깅] dataForTemplate.skills:', dataForTemplate.skills);
 
             // Clean 템플릿에서 sectionTitles를 직접 활용
             const html = template.generateHTML(dataForTemplate);

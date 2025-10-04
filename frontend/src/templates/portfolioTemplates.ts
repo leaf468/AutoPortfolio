@@ -2,17 +2,20 @@
 const processTextForDisplay = (text: string | undefined | null): string => {
     if (!text) return '';
 
+    // 주황색 AI 추가 표시 제거 (실시간 미리보기용)
+    let processed = text.replace(/<span style="color:orange">(.*?)<\/span>/g, '$1');
+
     // Convert line breaks to <br> tags for HTML display
     // This preserves newlines when users press Enter in textarea
-    return text.replace(/\n/g, '<br>');
+    return processed.replace(/\n/g, '<br>');
 };
 
 // Process text with markdown support
 const processTextWithMarkdown = (text: string | undefined | null): string => {
     if (!text) return '';
 
-    // First, convert newlines to proper markdown line breaks
-    let processed = text;
+    // 주황색 AI 추가 표시 제거 (실시간 미리보기용)
+    let processed = text.replace(/<span style="color:orange">(.*?)<\/span>/g, '$1');
 
     // Handle markdown formatting
     // Bold: **text** or __text__
@@ -962,9 +965,19 @@ export const cleanTemplate: PortfolioTemplate = {
                 </div>
                 <h1>${data.name || 'Portfolio Owner'}</h1>
                 <p class="title">${data.title || 'Software Engineer'}</p>
-                <p>${data.location || 'Seoul, Korea'}</p>
+
+                <!-- Contact info directly under name and title -->
+                <div class="contact-info" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color);">
+                    ${data.contact?.email ? `<p style="margin-bottom: 0.5rem; color: var(--text-color); font-size: 0.9rem;">📧 ${data.contact.email}</p>` : ''}
+                    ${data.contact?.phone ? `<p style="margin-bottom: 0.5rem; color: var(--text-color); font-size: 0.9rem;">📱 ${data.contact.phone}</p>` : ''}
+                    ${data.contact?.github ? `<p style="margin-bottom: 0.5rem; color: var(--text-color); font-size: 0.9rem;">🔗 ${data.contact.github}</p>` : ''}
+                    ${data.contact?.blog ? `<p style="margin-bottom: 0.5rem; color: var(--text-color); font-size: 0.9rem;">📝 ${data.contact.blog}</p>` : ''}
+                    ${data.contact?.linkedin ? `<p style="margin-bottom: 0.5rem; color: var(--text-color); font-size: 0.9rem;">💼 ${data.contact.linkedin}</p>` : ''}
+                </div>
+
+                <p style="margin-top: 1rem;">${data.location || 'Seoul, Korea'}</p>
             </div>
-            
+
             <nav>
                 <ul class="nav-menu">
                     <li><a href="#about" onclick="document.getElementById('about').scrollIntoView({behavior: 'smooth'}); return false;">개인소개</a></li>
@@ -975,13 +988,6 @@ export const cleanTemplate: PortfolioTemplate = {
                     <li><a href="#contact" onclick="document.getElementById('contact').scrollIntoView({behavior: 'smooth'}); return false;">연락처</a></li>
                 </ul>
             </nav>
-            
-            <div class="contact-info">
-                ${data.contact?.email ? `<p>${data.contact.email}</p>` : ''}
-                ${data.contact?.github ? `<p>${data.contact.github}</p>` : ''}
-                ${data.contact?.blog ? `<p>${data.contact.blog}</p>` : ''}
-                ${data.contact?.linkedin ? `<p>${data.contact.linkedin}</p>` : ''}
-            </div>
         </aside>
         
         <main class="main-content">
