@@ -14,8 +14,20 @@ const processTextForDisplay = (text: string | undefined | null): string => {
 const processTextWithMarkdown = (text: string | undefined | null): string => {
     if (!text) return '';
 
+    console.log('🔍 [processTextWithMarkdown] 원본 텍스트:', text);
+    console.log('🔍 [processTextWithMarkdown] \\n 포함 여부:', text.includes('\n'));
+
     // 주황색 AI 추가 표시 제거 (실시간 미리보기용)
     let processed = text.replace(/<span style="color:orange">(.*?)<\/span>/g, '$1');
+
+    // Remove unwanted HTML tags (h1-h6, p, div, etc.) but preserve content
+    // This fixes the issue where AI generates HTML tags in text content
+    processed = processed.replace(/<h[1-6][^>]*>(.*?)<\/h[1-6]>/gi, '$1\n\n');
+    processed = processed.replace(/<p[^>]*>(.*?)<\/p>/gi, '$1\n\n');
+    processed = processed.replace(/<div[^>]*>(.*?)<\/div>/gi, '$1\n');
+
+    // Clean up excessive newlines (more than 2 consecutive newlines)
+    processed = processed.replace(/\n{3,}/g, '\n\n');
 
     // Handle markdown formatting
     // Bold: **text** or __text__
@@ -34,6 +46,8 @@ const processTextWithMarkdown = (text: string | undefined | null): string => {
 
     // Line breaks (must be last to avoid interfering with other patterns)
     processed = processed.replace(/\n/g, '<br>');
+
+    console.log('🔍 [processTextWithMarkdown] 변환 후:', processed);
 
     return processed;
 };
@@ -452,6 +466,13 @@ export const minimalTemplate: PortfolioTemplate = {
         .card p {
             color: var(--secondary-text);
             line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        p {
+            white-space: pre-wrap;
+            word-wrap: break-word;
         }
         
         .skill-tags {
@@ -495,9 +516,15 @@ export const minimalTemplate: PortfolioTemplate = {
             height: calc(100% + 1rem);
             background: var(--border-color);
         }
-        
+
         .timeline-item:last-child::after {
             display: none;
+        }
+
+        /* Line break support for all text content */
+        p, .card p, .description {
+            white-space: pre-wrap;
+            word-wrap: break-word;
         }
     </style>
 </head>
@@ -953,6 +980,12 @@ export const cleanTemplate: PortfolioTemplate = {
             background: var(--accent-color);
             border-radius: 4px;
             transition: width 1s ease;
+        }
+
+        /* Line break support for all text content */
+        p, .card p, .description {
+            white-space: pre-wrap;
+            word-wrap: break-word;
         }
     </style>
 </head>
@@ -1444,6 +1477,12 @@ export const colorfulTemplate: PortfolioTemplate = {
             background: var(--primary);
             color: white;
             transform: translateX(10px);
+        }
+
+        /* Line break support for all text content */
+        p, .card p, .description {
+            white-space: pre-wrap;
+            word-wrap: break-word;
         }
     </style>
 </head>
@@ -2013,6 +2052,12 @@ export const elegantTemplate: PortfolioTemplate = {
             content: '✨';
             position: absolute;
             left: 0;
+        }
+
+        /* Line break support for all text content */
+        p, .card p, .description {
+            white-space: pre-wrap;
+            word-wrap: break-word;
         }
     </style>
 </head>

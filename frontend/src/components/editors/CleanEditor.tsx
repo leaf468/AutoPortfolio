@@ -497,7 +497,8 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
             console.log('🔄 CleanEditor data changed, updating HTML immediately');
             updateHtml().catch(console.error);
         }
-    }, [portfolioData, sectionTitles, dataLoaded, updateHtml]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [portfolioData, sectionTitles, dataLoaded]);
 
     // 자기소개 개선
     const handleEnhanceAbout = async () => {

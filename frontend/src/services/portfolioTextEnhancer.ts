@@ -76,7 +76,7 @@ class PortfolioTextEnhancer {
             const response = await openai.chat.completions.create({
                 model: REACT_APP_OPENAI_MODEL,
                 messages: [
-                    { role: "system", content: "You are a professional portfolio writing assistant specialized in HR-approved content." },
+                    { role: "system", content: "You are a professional portfolio writing assistant specialized in HR-approved content. IMPORTANT: You must respond in Korean language only. 반드시 한국어로만 응답하세요." },
                     { role: "user", content: prompt }
                 ],
                 max_tokens: 800,
@@ -387,7 +387,7 @@ ${JSON.stringify(data, null, 2)}
             const response = await openai.chat.completions.create({
                 model: REACT_APP_OPENAI_MODEL,
                 messages: [
-                    { role: "system", content: "You are a professional Korean portfolio writing assistant." },
+                    { role: "system", content: "You are a professional Korean portfolio writing assistant. CRITICAL: You MUST respond in Korean language ONLY. Do NOT generate any English text. 모든 응답은 반드시 한국어로만 작성하세요. 영어로 생성하지 마세요. Also, respond with PLAIN TEXT only, NO HTML tags like <h2>, <p>, <br> etc. Just pure text content." },
                     { role: "user", content: prompt }
                 ],
                 max_tokens: 2000,
