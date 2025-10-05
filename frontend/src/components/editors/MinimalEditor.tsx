@@ -7,7 +7,8 @@ import {
     SwatchIcon,
     PlusIcon,
     XMarkIcon,
-    SparklesIcon
+    SparklesIcon,
+    ChatBubbleLeftRightIcon
 } from '@heroicons/react/24/outline';
 import { portfolioTemplates } from '../../templates/portfolioTemplates';
 import portfolioTextEnhancer from '../../services/portfolioTextEnhancer';
@@ -15,6 +16,9 @@ import BlurFade from '../ui/BlurFade';
 import Badge from '../ui/Badge';
 import { BaseEditorProps, MinimalPortfolioData, ProjectData, ExperienceData, EducationData, SkillCategory } from './types';
 import { useScrollPreservation } from '../../hooks/useScrollPreservation';
+import NaturalLanguageModal from '../NaturalLanguageModal';
+import { userFeedbackService } from '../../services/userFeedbackService';
+import { getButtonClass } from '../../styles/buttonStyles';
 
 // 스킬 입력 컴포넌트
 const SkillInput: React.FC<{
@@ -48,7 +52,7 @@ const SkillInput: React.FC<{
             />
             <button
                 onClick={handleAddSkill}
-                className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors"
+                className={getButtonClass('info', 'sm')}
             >
                 <PlusIcon className="w-4 h-4" />
             </button>
@@ -87,6 +91,7 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
     const [enhancedFields, setEnhancedFields] = useState<Record<string, boolean>>({});
     const [isInitializing, setIsInitializing] = useState(true);
     const [showTemplateSelector, setShowTemplateSelector] = useState(false);
+    const [showNaturalLanguage, setShowNaturalLanguage] = useState(false);
 
     // Minimal 템플릿 전용 섹션 제목
     const [sectionTitles, setSectionTitles] = useState({
@@ -384,6 +389,30 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
         } finally {
             setIsEnhancing(false);
             setEnhancingSection(null);
+        }
+    };
+
+    // 자연어 편집 핸들러
+    const handleNaturalLanguageChange = async (instruction: string): Promise<void> => {
+        try {
+            // 현재 포트폴리오 데이터를 문자열로 변환
+            const currentPortfolio = JSON.stringify(portfolioData);
+
+            // userFeedbackService를 사용하여 자연어 명령 처리
+            const improvedPortfolio = await userFeedbackService.improvePortfolioWithNaturalLanguage(
+                currentPortfolio,
+                instruction
+            );
+
+            // 개선된 포트폴리오 데이터로 업데이트
+            const parsedPortfolio = JSON.parse(improvedPortfolio);
+            setPortfolioData(parsedPortfolio);
+
+            // HTML 재생성을 위해 강제 업데이트
+            await updateHtml();
+        } catch (error) {
+            console.error('자연어 편집 실패:', error);
+            throw error;
         }
     };
 
@@ -697,17 +726,9 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                             </h1>
                         </div>
                         <div className="flex items-center space-x-3">
-                            {onSkipToNaturalEdit && (
-                                <button
-                                    onClick={onSkipToNaturalEdit}
-                                    className="px-4 py-2 text-sm font-medium text-purple-600 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 transition-colors"
-                                >
-                                    자연어 편집으로 건너뛰기
-                                </button>
-                            )}
                             <button
                                 onClick={handleSave}
-                                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+                                className={getButtonClass('primary', 'md')}
                             >
                                 <CheckCircleIcon className="w-4 h-4 mr-2" />
                                 저장
@@ -804,7 +825,7 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                                     <button
                                         onClick={handleEnhanceAbout}
                                         disabled={isEnhancing}
-                                        className="flex items-center px-3 py-1.5 bg-purple-600 text-white text-sm rounded-lg hover:bg-purple-700 disabled:opacity-50 transition-colors"
+                                        className={getButtonClass('primary', 'sm', isEnhancing)}
                                     >
                                         <SparklesIcon className="w-4 h-4 mr-1" />
                                         {isEnhancing ? 'AI 개선 중...' : 'AI로 개선'}
@@ -1327,6 +1348,27 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                     </div>
                 </div>
             )}
+
+            {/* 자연어 편집 플로팅 버튼 - 항상 화면에 고정 */}
+            <motion.button
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.5 }}
+                onClick={() => setShowNaturalLanguage(true)}
+                className="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-5 py-3.5 rounded-full shadow-2xl hover:shadow-3xl hover:scale-105 transition-all duration-200 flex items-center gap-2.5"
+                style={{ position: 'fixed' }}
+            >
+                <ChatBubbleLeftRightIcon className="w-5 h-5" />
+                <span className="font-semibold text-sm">AI 자연어 편집</span>
+            </motion.button>
+
+            {/* 자연어 편집 모달 */}
+            <NaturalLanguageModal
+                isOpen={showNaturalLanguage}
+                onClose={() => setShowNaturalLanguage(false)}
+                onApplyChange={handleNaturalLanguageChange}
+                currentContent={JSON.stringify(portfolioData)}
+            />
         </div>
     );
 };

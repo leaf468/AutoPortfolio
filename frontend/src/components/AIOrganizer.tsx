@@ -18,50 +18,43 @@ const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [showJobPosting, setShowJobPosting] = useState(false);
 
-  const handleOrganize = async () => {
+  const handleOrganize = () => {
     if (!input.trim()) return;
 
-    console.log('=== AI 정리 시작 ===');
+    console.log('=== 사용자 입력 데이터 전달 ===');
     console.log('사용자 입력 데이터:', input);
     console.log('입력 타입:', inputType);
     console.log('채용공고:', jobPosting);
 
-    setIsProcessing(true);
-    try {
-      let organized = await aiOrganizer.organizeContent(input, inputType);
-      console.log('AI 기본 정리 결과:', organized);
-
-      // 채용공고가 있으면 추가 최적화
-      if (jobPosting.trim()) {
-        console.log('채용공고 최적화 실행 중...');
-        organized = await aiOrganizer.enhanceWithJobPosting(organized, jobPosting);
-        console.log('채용공고 최적화 결과:', organized);
-      }
-
-      console.log('=== 최종 AI 정리 결과 ===');
-      console.log(organized);
-
-      // 원본 입력 데이터를 결과에 추가
-      organized.originalInput = {
+    // AI 처리 없이 바로 원본 데이터만 전달 (필수 필드들을 빈 값으로 채움)
+    const rawData = {
+      originalInput: {
         rawText: input,
         inputType: inputType,
         jobPosting: jobPosting.trim() || undefined
-      };
+      },
+      // 필수 필드들을 임시로 빈 값으로 채움
+      oneLinerPitch: '',
+      summary: '',
+      experiences: [],
+      projects: [],
+      skills: [],
+      educations: [],
+      certifications: [],
+      languages: [],
+      achievements: [],
+      keywords: {
+        technical: [],
+        soft: [],
+        industry: [],
+        ats: []
+      },
+      missingFields: [],
+      improvementSuggestions: []
+    };
 
-      // 디버깅: 설정된 originalInput 확인
-      console.log('=== AIOrganizer originalInput 설정 ===');
-      console.log('사용자 입력 텍스트:', input);
-      console.log('입력 타입:', inputType);
-      console.log('채용공고:', jobPosting);
-      console.log('설정된 originalInput:', organized.originalInput);
-      console.log('최종 organized 결과:', organized);
-
-      // 결과 표시 단계를 건너뛰고 바로 완료 처리
-      onComplete(organized);
-    } catch (error) {
-      console.error('AI 정리 중 오류:', error);
-      setIsProcessing(false);
-    }
+    // 즉시 다음 페이지로 이동 (다음 페이지에서 AI 처리 진행)
+    onComplete(rawData);
   };
 
 

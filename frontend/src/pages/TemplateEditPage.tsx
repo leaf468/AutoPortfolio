@@ -104,11 +104,6 @@ export default function TemplateEditPage() {
     navigate('/autofill');
   };
 
-  const handleSkipToNaturalEdit = () => {
-    setCurrentStep('feedback');
-    navigate('/feedback');
-  };
-
   const handleTemplateChange = (newTemplate: TemplateType) => {
     // 새 템플릿으로 라우팅
     navigate(`/edit/${newTemplate}`);
@@ -161,7 +156,6 @@ export default function TemplateEditPage() {
       selectedTemplate: template,
       onSave: handleSave,
       onBack: handleBack,
-      onSkipToNaturalEdit: handleSkipToNaturalEdit,
       onTemplateChange: handleTemplateChange
     };
 
