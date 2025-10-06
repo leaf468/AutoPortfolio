@@ -2,17 +2,32 @@
 const processTextForDisplay = (text: string | undefined | null): string => {
     if (!text) return '';
 
+    // 주황색 AI 추가 표시 제거 (실시간 미리보기용)
+    let processed = text.replace(/<span style="color:orange">(.*?)<\/span>/g, '$1');
+
     // Convert line breaks to <br> tags for HTML display
     // This preserves newlines when users press Enter in textarea
-    return text.replace(/\n/g, '<br>');
+    return processed.replace(/\n/g, '<br>');
 };
 
 // Process text with markdown support
 const processTextWithMarkdown = (text: string | undefined | null): string => {
     if (!text) return '';
 
-    // First, convert newlines to proper markdown line breaks
-    let processed = text;
+    console.log('🔍 [processTextWithMarkdown] 원본 텍스트:', text);
+    console.log('🔍 [processTextWithMarkdown] \\n 포함 여부:', text.includes('\n'));
+
+    // 주황색 AI 추가 표시 제거 (실시간 미리보기용)
+    let processed = text.replace(/<span style="color:orange">(.*?)<\/span>/g, '$1');
+
+    // Remove unwanted HTML tags (h1-h6, p, div, etc.) but preserve content
+    // This fixes the issue where AI generates HTML tags in text content
+    processed = processed.replace(/<h[1-6][^>]*>(.*?)<\/h[1-6]>/gi, '$1\n\n');
+    processed = processed.replace(/<p[^>]*>(.*?)<\/p>/gi, '$1\n\n');
+    processed = processed.replace(/<div[^>]*>(.*?)<\/div>/gi, '$1\n');
+
+    // Clean up excessive newlines (more than 2 consecutive newlines)
+    processed = processed.replace(/\n{3,}/g, '\n\n');
 
     // Handle markdown formatting
     // Bold: **text** or __text__
@@ -31,6 +46,8 @@ const processTextWithMarkdown = (text: string | undefined | null): string => {
 
     // Line breaks (must be last to avoid interfering with other patterns)
     processed = processed.replace(/\n/g, '<br>');
+
+    console.log('🔍 [processTextWithMarkdown] 변환 후:', processed);
 
     return processed;
 };
@@ -449,6 +466,13 @@ export const minimalTemplate: PortfolioTemplate = {
         .card p {
             color: var(--secondary-text);
             line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        p {
+            white-space: pre-wrap;
+            word-wrap: break-word;
         }
         
         .skill-tags {
@@ -492,9 +516,15 @@ export const minimalTemplate: PortfolioTemplate = {
             height: calc(100% + 1rem);
             background: var(--border-color);
         }
-        
+
         .timeline-item:last-child::after {
             display: none;
+        }
+
+        /* Line break support for all text content */
+        p, .card p, .description {
+            white-space: pre-wrap;
+            word-wrap: break-word;
         }
     </style>
 </head>
@@ -951,6 +981,12 @@ export const cleanTemplate: PortfolioTemplate = {
             border-radius: 4px;
             transition: width 1s ease;
         }
+
+        /* Line break support for all text content */
+        p, .card p, .description {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
     </style>
 </head>
 <body>
@@ -962,9 +998,19 @@ export const cleanTemplate: PortfolioTemplate = {
                 </div>
                 <h1>${data.name || 'Portfolio Owner'}</h1>
                 <p class="title">${data.title || 'Software Engineer'}</p>
-                <p>${data.location || 'Seoul, Korea'}</p>
+
+                <!-- Contact info directly under name and title -->
+                <div class="contact-info" style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color);">
+                    ${data.contact?.email ? `<p style="margin-bottom: 0.5rem; color: var(--text-color); font-size: 0.9rem;">📧 ${data.contact.email}</p>` : ''}
+                    ${data.contact?.phone ? `<p style="margin-bottom: 0.5rem; color: var(--text-color); font-size: 0.9rem;">📱 ${data.contact.phone}</p>` : ''}
+                    ${data.contact?.github ? `<p style="margin-bottom: 0.5rem; color: var(--text-color); font-size: 0.9rem;">🔗 ${data.contact.github}</p>` : ''}
+                    ${data.contact?.blog ? `<p style="margin-bottom: 0.5rem; color: var(--text-color); font-size: 0.9rem;">📝 ${data.contact.blog}</p>` : ''}
+                    ${data.contact?.linkedin ? `<p style="margin-bottom: 0.5rem; color: var(--text-color); font-size: 0.9rem;">💼 ${data.contact.linkedin}</p>` : ''}
+                </div>
+
+                <p style="margin-top: 1rem;">${data.location || 'Seoul, Korea'}</p>
             </div>
-            
+
             <nav>
                 <ul class="nav-menu">
                     <li><a href="#about" onclick="document.getElementById('about').scrollIntoView({behavior: 'smooth'}); return false;">개인소개</a></li>
@@ -975,13 +1021,6 @@ export const cleanTemplate: PortfolioTemplate = {
                     <li><a href="#contact" onclick="document.getElementById('contact').scrollIntoView({behavior: 'smooth'}); return false;">연락처</a></li>
                 </ul>
             </nav>
-            
-            <div class="contact-info">
-                ${data.contact?.email ? `<p>${data.contact.email}</p>` : ''}
-                ${data.contact?.github ? `<p>${data.contact.github}</p>` : ''}
-                ${data.contact?.blog ? `<p>${data.contact.blog}</p>` : ''}
-                ${data.contact?.linkedin ? `<p>${data.contact.linkedin}</p>` : ''}
-            </div>
         </aside>
         
         <main class="main-content">
@@ -1438,6 +1477,12 @@ export const colorfulTemplate: PortfolioTemplate = {
             background: var(--primary);
             color: white;
             transform: translateX(10px);
+        }
+
+        /* Line break support for all text content */
+        p, .card p, .description {
+            white-space: pre-wrap;
+            word-wrap: break-word;
         }
     </style>
 </head>
@@ -2007,6 +2052,12 @@ export const elegantTemplate: PortfolioTemplate = {
             content: '✨';
             position: absolute;
             left: 0;
+        }
+
+        /* Line break support for all text content */
+        p, .card p, .description {
+            white-space: pre-wrap;
+            word-wrap: break-word;
         }
     </style>
 </head>

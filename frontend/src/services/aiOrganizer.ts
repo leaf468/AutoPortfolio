@@ -13,6 +13,7 @@ export interface OrganizedContent {
     experiences: OrganizedExperience[];
     projects: OrganizedProject[];
     skills: OrganizedSkill[];
+    education: OrganizedEducation[]; // 학력 정보
     achievements: string[]; // 주요 성과 리스트
     keywords: {
         technical: string[]; // 기술 키워드
@@ -60,6 +61,13 @@ export interface OrganizedSkill {
     experience: string; // 경험 기간/프로젝트
 }
 
+export interface OrganizedEducation {
+    school: string; // 학교명
+    degree: string; // 학위/전공
+    period: string; // 기간
+    description?: string; // 세부사항 (GPA, 주요 과목 등)
+}
+
 class AIOrganizer {
     async organizeContent(
         rawInput: string,
@@ -76,14 +84,34 @@ class AIOrganizer {
 4. **차별화**: 경쟁자 대비 독특한 강점 부각
 5. **스토리텔링**: 성장 과정과 문제해결 과정을 논리적으로 연결
 
+**[매우 중요] 분류 규칙 (절대 준수)**
+
+## Experiences (경력/커리어) - 조직에서의 활동
+다음을 반드시 experiences로 분류:
+- ✅ 회사 근무, 인턴십
+- ✅ 교육 과정 (우아한테크코스, 코드스테이츠, 멋쟁이사자처럼 등)
+- ✅ 동아리/커뮤니티 (GDSC, SOPT, DND, 테크 커뮤니티 등)
+- ✅ 부트캠프, 온라인 강의 수료
+핵심: **어디서 (조직) + 어떤 역할로 활동했는가?**
+
+## Projects (프로젝트) - 개발 결과물
+다음을 반드시 projects로 분류:
+- ✅ 웹사이트, 웹 애플리케이션
+- ✅ 모바일 앱
+- ✅ 시스템, 서비스, API
+- ✅ 챗봇, AI 모델, 데이터 파이프라인
+핵심: **무엇을 (결과물) 만들었는가?**
+
+**절대 금지**: 우아한테크코스, GDSC 같은 조직 활동을 projects로 분류하지 마세요!
+
 출력 형식 (JSON):
 {
   "oneLinerPitch": "30초 엘리베이터 피치 (핵심 가치 제안)",
   "summary": "3-4문장 전문적 요약",
   "experiences": [
     {
-      "company": "회사명",
-      "position": "직책",
+      "company": "회사명 또는 조직명 (예: 우아한테크코스, GDSC, 삼성전자)",
+      "position": "직책 또는 역할 (예: 백엔드 과정 수료생, 코어 멤버, 인턴)",
       "duration": "2023.01 - 2024.01",
       "responsibilities": ["담당업무1", "담당업무2"],
       "achievements": ["구체적 성과 (수치 포함)", "비즈니스 임팩트"],
@@ -93,7 +121,7 @@ class AIOrganizer {
   ],
   "projects": [
     {
-      "name": "프로젝트명",
+      "name": "프로젝트명 (실제 개발한 결과물 이름)",
       "summary": "프로젝트 핵심 설명 (1-2문장)",
       "myRole": "나의 구체적 역할",
       "responsibilities": ["담당업무1", "담당업무2"],
@@ -111,6 +139,14 @@ class AIOrganizer {
       "skills": ["React", "TypeScript"],
       "proficiency": "advanced",
       "experience": "3년, 5개 프로젝트"
+    }
+  ],
+  "education": [
+    {
+      "school": "학교명",
+      "degree": "학과/전공 (또는 학위)",
+      "period": "2018.03 - 2022.02",
+      "description": "학점, 주요 활동 등 (선택사항)"
     }
   ],
   "achievements": ["주요 성과1", "주요 성과2"],
@@ -172,6 +208,7 @@ class AIOrganizer {
                 experiences: [],
                 projects: [],
                 skills: [],
+                education: [],
                 achievements: [],
                 keywords: {
                     technical: [],

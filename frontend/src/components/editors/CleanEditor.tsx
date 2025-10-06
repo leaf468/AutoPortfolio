@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     EyeIcon,
@@ -88,7 +88,8 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
     const [currentHtml, setCurrentHtml] = useState<string>('');
     const [isEnhancing, setIsEnhancing] = useState(false);
     const [enhancingSection, setEnhancingSection] = useState<string | null>(null);
-    const [enhancedFields, setEnhancedFields] = useState<Record<string, boolean>>({});
+    const [initialEnhancedFields, setInitialEnhancedFields] = useState<Record<string, boolean>>({}); // 초기 AI 생성 필드
+    const [userEnhancedFields, setUserEnhancedFields] = useState<Record<string, boolean>>({}); // 사용자가 'AI로 개선' 버튼 눌러서 생성된 필드
     const [isInitializing, setIsInitializing] = useState(true);
     const [showTemplateSelector, setShowTemplateSelector] = useState(false);
     const [dataLoaded, setDataLoaded] = useState(false);
@@ -106,6 +107,12 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
 
     const hasInitialized = useRef(false);
     const { iframeRef, preserveScrollAndUpdate } = useScrollPreservation();
+    const updateDebounceRef = useRef<NodeJS.Timeout | null>(null);
+    const isUserTyping = useRef(false);
+    const aboutEditorRef = useRef<HTMLDivElement>(null);
+    const expDescRefs = useRef<(HTMLDivElement | null)[]>([]);
+    const projDescRefs = useRef<(HTMLDivElement | null)[]>([]);
+
 
     // HTML에서 포트폴리오 데이터 추출
     const extractPortfolioData = useCallback((html: string): CleanPortfolioData => {
@@ -257,6 +264,25 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                             console.log('🔧 CleanEditor: Immediately updating HTML with correct template on initialization');
                             updateHtml().catch(console.error);
                         });
+
+                        // AI 확장된 필드 표시 (autoFillService에서 이미 확장됨)
+                        const newInitialEnhancedFields: Record<string, boolean> = {};
+                        if (actualData.about && actualData.about.includes('<span style="color:orange">')) {
+                            newInitialEnhancedFields['about'] = true;
+                        }
+                        actualData.projects?.forEach((project, index) => {
+                            if (project.description && project.description.includes('<span style="color:orange">')) {
+                                newInitialEnhancedFields[`project_${index}_description`] = true;
+                            }
+                        });
+                        actualData.experience?.forEach((exp, index) => {
+                            if (exp.description && exp.description.includes('<span style="color:orange">')) {
+                                newInitialEnhancedFields[`experience_${index}_description`] = true;
+                            }
+                        });
+                        if (Object.keys(newInitialEnhancedFields).length > 0) {
+                            setInitialEnhancedFields(newInitialEnhancedFields);
+                        }
                     }
 
                     // 데이터가 부족한 경우 AI로 개선
@@ -279,7 +305,7 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                             if (!actualData.location && enhancedCleanData.location) {
                                 generatedFields['location'] = true;
                             }
-                            setEnhancedFields(generatedFields);
+                            setInitialEnhancedFields(prev => ({ ...prev, ...generatedFields }));
                         } catch (error) {
                             console.error('데이터 개선 실패:', error);
                             if (!dataLoaded) {
@@ -310,30 +336,39 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
         const checkAndGenerateDummyData = async () => {
             if (!dataLoaded || isEnhancing) return;
 
+            console.log('🔍 [수상/자격증 자동 생성] 체크 시작');
+            console.log('   - awards 존재:', portfolioData.awards ? '예' : '아니오');
+            console.log('   - awards 길이:', portfolioData.awards?.length || 0);
+            console.log('   - initialEnhancedFields[awards]:', initialEnhancedFields['awards'] ? '예' : '아니오');
+
             const hasAwards = portfolioData.awards && portfolioData.awards.length > 0;
 
-            if (!hasAwards && !enhancedFields['awards']) {
+            if (!hasAwards && !initialEnhancedFields['awards']) {
+                console.log('✨ [수상/자격증 자동 생성] 자동 생성 시작...');
                 try {
                     const { data: awardsData, isGenerated } = await portfolioTextEnhancer.generateDummyAwards();
+                    console.log('✅ [수상/자격증 자동 생성] 생성 완료:', awardsData.length, '개');
                     setPortfolioData(prev => ({
                         ...prev,
                         awards: awardsData
                     }));
                     if (isGenerated) {
-                        setEnhancedFields(prev => ({ ...prev, awards: true }));
+                        setInitialEnhancedFields(prev => ({ ...prev, awards: true }));
                     }
                 } catch (error) {
-                    console.error('더미 수상 데이터 생성 실패:', error);
+                    console.error('❌ [수상/자격증 자동 생성] 실패:', error);
                 }
+            } else {
+                console.log('⏭️  [수상/자격증 자동 생성] 건너뛰기 - 이미 존재하거나 생성됨');
             }
         };
 
         // Only run after data is loaded and not enhancing
-        if (dataLoaded && !isEnhancing && portfolioData.awards !== undefined) {
-            const timer = setTimeout(checkAndGenerateDummyData, 300);
+        if (dataLoaded && !isEnhancing) {
+            const timer = setTimeout(checkAndGenerateDummyData, 1000);
             return () => clearTimeout(timer);
         }
-    }, [dataLoaded, isEnhancing]); // Reduced dependencies
+    }, [dataLoaded, isEnhancing, portfolioData.awards, initialEnhancedFields, userEnhancedFields]);
 
     // HTML 업데이트
     const updateHtml = useCallback(async () => {
@@ -352,6 +387,11 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
             const initials = portfolioData.name
                 ? portfolioData.name.split(' ').map(n => n.charAt(0)).join('').toUpperCase()
                 : 'GL';
+
+            // 🔍 스킬셋 디버깅
+            console.log('🎯 [스킬셋 디버깅] portfolioData.skillCategories:', portfolioData.skillCategories);
+            console.log('🎯 [스킬셋 디버깅] skillCategories length:', portfolioData.skillCategories?.length);
+            console.log('🎯 [스킬셋 디버깅] portfolioData.skills:', portfolioData.skills);
 
             const dataForTemplate = {
                 name: portfolioData.name || '포트폴리오 작성자',
@@ -390,6 +430,10 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                 sectionTitles: sectionTitles
             };
 
+            // 🔍 템플릿에 전달되는 데이터 확인
+            console.log('🎯 [스킬셋 디버깅] dataForTemplate.skillCategories:', dataForTemplate.skillCategories);
+            console.log('🎯 [스킬셋 디버깅] dataForTemplate.skills:', dataForTemplate.skills);
+
             // Clean 템플릿에서 sectionTitles를 직접 활용
             const html = template.generateHTML(dataForTemplate);
             console.log('  - HTML generated with template:', template.name);
@@ -409,7 +453,49 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
             console.log('🔄 CleanEditor data changed, updating HTML immediately');
             updateHtml().catch(console.error);
         }
-    }, [portfolioData, sectionTitles, dataLoaded, updateHtml]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [portfolioData, sectionTitles, dataLoaded]);
+
+    // contentEditable 초기 내용 설정 (커서 점프 방지)
+    useEffect(() => {
+        if (aboutEditorRef.current && !isUserTyping.current) {
+            const currentContent = aboutEditorRef.current.innerHTML;
+            const newContent = portfolioData.about || '';
+
+            // 내용이 다를 때만 업데이트 (무한 루프 방지)
+            if (currentContent !== newContent) {
+                aboutEditorRef.current.innerHTML = newContent;
+            }
+        }
+    }, [portfolioData.about]);
+
+    // Experience description 동기화 (커서 점프 방지)
+    useEffect(() => {
+        portfolioData.experience.forEach((exp, index) => {
+            const ref = expDescRefs.current[index];
+            if (ref && !isUserTyping.current) {
+                const currentContent = ref.innerHTML;
+                const newContent = exp.description || '';
+                if (currentContent !== newContent) {
+                    ref.innerHTML = newContent;
+                }
+            }
+        });
+    }, [portfolioData.experience]);
+
+    // Project description 동기화 (커서 점프 방지)
+    useEffect(() => {
+        portfolioData.projects.forEach((project, index) => {
+            const ref = projDescRefs.current[index];
+            if (ref && !isUserTyping.current) {
+                const currentContent = ref.innerHTML;
+                const newContent = project.description || '';
+                if (currentContent !== newContent) {
+                    ref.innerHTML = newContent;
+                }
+            }
+        });
+    }, [portfolioData.projects]);
 
     // 자기소개 개선
     const handleEnhanceAbout = async () => {
@@ -419,7 +505,8 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
             const enhanced = await portfolioTextEnhancer.enhanceAboutMe(portfolioData.about);
             setPortfolioData(prev => ({ ...prev, about: enhanced.enhanced }));
             if (enhanced.isGenerated) {
-                setEnhancedFields(prev => ({ ...prev, about: true }));
+                setUserEnhancedFields(prev => ({ ...prev, about: true }));
+                setInitialEnhancedFields(prev => ({ ...prev, about: false }));
             }
         } catch (error) {
             console.error('자기소개 개선 실패:', error);
@@ -450,9 +537,15 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                 return { ...prev, experience: updatedExperience };
             });
 
-            if (enhanced.enhanced?.isGenerated) {
-                setEnhancedFields(prev => ({ ...prev, [`experience_${index}`]: true }));
-            }
+            // AI 개선 시 description 필드 추적
+            setUserEnhancedFields(prev => ({
+                ...prev,
+                [`experience_${index}_description`]: true
+            }));
+            setInitialEnhancedFields(prev => ({
+                ...prev,
+                [`experience_${index}_description`]: false
+            }));
         } catch (error) {
             console.error('경력 개선 실패:', error);
             alert('AI 개선에 실패했습니다. 다시 시도해주세요.');
@@ -517,7 +610,8 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
             });
 
             if (enhanced.enhanced?.isGenerated) {
-                setEnhancedFields(prev => ({ ...prev, [`project_${index}`]: true }));
+                setUserEnhancedFields(prev => ({ ...prev, [`project_${index}_description`]: true }));
+                setInitialEnhancedFields(prev => ({ ...prev, [`project_${index}_description`]: false }));
             }
         } catch (error) {
             console.error('프로젝트 개선 실패:', error);
@@ -825,13 +919,13 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                                                 value={portfolioData.location || ''}
                                                 onChange={(e) => setPortfolioData(prev => ({ ...prev, location: e.target.value }))}
                                                 className={`w-full p-2 border rounded-lg ${
-                                                    enhancedFields['location']
+                                                    userEnhancedFields['location']
                                                         ? 'bg-yellow-50 border-yellow-300'
                                                         : 'border-gray-300'
                                                 }`}
                                                 placeholder="Seoul, Korea"
                                             />
-                                            {enhancedFields['location'] && (
+                                            {(initialEnhancedFields['location'] || userEnhancedFields['location']) && (
                                                 <p className="mt-1 text-xs text-yellow-700">⚠️ AI가 자동 생성한 내용입니다.</p>
                                             )}
                                         </div>
@@ -862,21 +956,59 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                                         {isEnhancing ? 'AI 개선 중...' : 'AI로 개선'}
                                     </button>
                                 </div>
-                                <textarea
-                                    value={portfolioData.about || ''}
-                                    onChange={(e) => setPortfolioData(prev => ({ ...prev, about: e.target.value }))}
-                                    className={`w-full p-4 border rounded-lg min-h-[150px] ${
-                                        enhancedFields['about']
-                                            ? 'bg-yellow-50 border-yellow-300 text-yellow-900'
+                                <div
+                                    ref={aboutEditorRef}
+                                    contentEditable
+                                    suppressContentEditableWarning
+                                    onFocus={() => {
+                                        isUserTyping.current = true;
+                                    }}
+                                    onBlur={() => {
+                                        isUserTyping.current = false;
+                                        // Blur 시점에 마지막 변경사항 즉시 적용
+                                        if (updateDebounceRef.current) {
+                                            clearTimeout(updateDebounceRef.current);
+                                            updateDebounceRef.current = null;
+                                        }
+                                    }}
+                                    onInput={(e) => {
+                                        const newValue = e.currentTarget.innerHTML;
+
+                                        // Clear existing timeout
+                                        if (updateDebounceRef.current) {
+                                            clearTimeout(updateDebounceRef.current);
+                                        }
+
+                                        // Debounce state update to prevent cursor jumping
+                                        updateDebounceRef.current = setTimeout(() => {
+                                            setPortfolioData(prev => ({ ...prev, about: newValue }));
+                                            // 사용자가 수정하면 사용자 개선 표시 제거 (초기 AI 생성은 유지)
+                                            if (userEnhancedFields['about']) {
+                                                setUserEnhancedFields(prev => ({ ...prev, about: false }));
+                                            }
+                                        }, 300);
+                                    }}
+                                    className={`w-full p-4 border rounded-lg min-h-[150px] focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                                        userEnhancedFields['about']
+                                            ? 'bg-yellow-50 border-yellow-300'
                                             : 'bg-white border-gray-300'
                                     }`}
-                                    placeholder="자기소개를 입력하세요. AI가 전문적으로 개선해드립니다."
+                                    data-placeholder="자기소개를 입력하세요."
+                                    style={{
+                                        minHeight: '150px',
+                                        whiteSpace: 'pre-wrap',
+                                        wordWrap: 'break-word'
+                                    }}
                                 />
-                                {enhancedFields['about'] && (
+                                {userEnhancedFields['about'] ? (
                                     <p className="mt-2 text-xs text-yellow-700">
                                         ⚠️ AI가 생성/개선한 내용입니다. 검토 후 필요시 수정해주세요.
                                     </p>
-                                )}
+                                ) : initialEnhancedFields['about'] ? (
+                                    <p className="mt-2 text-xs text-yellow-700">
+                                        색이 다른 글씨는 AI가 보충하여 생성한 데이터입니다. 검토 후 필요시 수정해주세요.
+                                    </p>
+                                ) : null}
                             </div>
                         </BlurFade>
 
@@ -910,7 +1042,7 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ delay: index * 0.1 }}
                                             className={`p-4 rounded-lg border transition-all hover:shadow-md ${
-                                                enhancedFields[`experience_${index}`]
+                                                userEnhancedFields[`experience_${index}`]
                                                     ? 'bg-gradient-to-r from-yellow-50 to-yellow-100 border-yellow-300'
                                                     : 'bg-gradient-to-r from-gray-50 to-white border-gray-200'
                                             }`}
@@ -962,14 +1094,62 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                                                 </div>
                                             </div>
 
-                                            <textarea
-                                                value={exp.description || ''}
-                                                onChange={(e) => handleUpdateExperience(index, 'description', e.target.value)}
-                                                className="w-full p-2 border border-gray-300 rounded min-h-[60px] text-sm mb-3"
-                                                placeholder="담당 업무를 입력하세요"
-                                            />
+                                            <div
+                                                ref={(el) => {
+                                                    expDescRefs.current[index] = el;
+                                                }}
+                                                contentEditable
+                                                suppressContentEditableWarning
+                                                onFocus={() => {
+                                                    isUserTyping.current = true;
+                                                }}
+                                                onBlur={() => {
+                                                    isUserTyping.current = false;
+                                                    // Blur 시 마지막 변경사항 즉시 적용
+                                                    if (updateDebounceRef.current) {
+                                                        clearTimeout(updateDebounceRef.current);
+                                                        updateDebounceRef.current = null;
+                                                    }
+                                                }}
+                                                onInput={(e) => {
+                                                    const newValue = e.currentTarget.innerHTML;
 
-                                            <div>
+                                                    // Clear existing timeout
+                                                    if (updateDebounceRef.current) {
+                                                        clearTimeout(updateDebounceRef.current);
+                                                    }
+
+                                                    // Debounce state update to improve performance
+                                                    updateDebounceRef.current = setTimeout(() => {
+                                                        handleUpdateExperience(index, 'description', newValue);
+                                                        if (userEnhancedFields[`experience_${index}_description`]) {
+                                                            setUserEnhancedFields(prev => ({ ...prev, [`experience_${index}_description`]: false }));
+                                                        }
+                                                    }, 300);
+                                                }}
+                                                className={`w-full p-2 border rounded min-h-[60px] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                                                    userEnhancedFields[`experience_${index}_description`]
+                                                        ? 'bg-yellow-50 border-yellow-300'
+                                                        : 'border-gray-300'
+                                                }`}
+                                                data-placeholder="담당 업무를 입력하세요"
+                                                style={{
+                                                    minHeight: '60px',
+                                                    whiteSpace: 'pre-wrap',
+                                                    wordWrap: 'break-word'
+                                                }}
+                                            />
+                                            {userEnhancedFields[`experience_${index}_description`] ? (
+                                                <p className="mt-2 text-xs text-yellow-700">
+                                                    ⚠️ AI가 생성/개선한 내용입니다. 검토 후 필요시 수정해주세요.
+                                                </p>
+                                            ) : initialEnhancedFields[`experience_${index}_description`] ? (
+                                                <p className="mt-2 text-xs text-yellow-700">
+                                                    색이 다른 글씨는 AI가 보충하여 생성한 데이터입니다. 검토 후 필요시 수정해주세요.
+                                                </p>
+                                            ) : null}
+
+                                            <div className="mt-3">
                                                 <label className="block text-xs font-medium text-gray-600 mb-1">주요 성과 (각 줄에 하나씩)</label>
                                                 <textarea
                                                     value={exp.achievements ? exp.achievements.join('\n') : ''}
@@ -1018,7 +1198,7 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
 
                                 {portfolioData.projects.map((project, index) => (
                                     <div key={index} className={`mb-4 p-4 rounded-lg border ${
-                                        enhancedFields[`project_${index}`]
+                                        userEnhancedFields[`project_${index}`]
                                             ? 'bg-yellow-50 border-yellow-300'
                                             : 'bg-gray-50 border-gray-200'
                                     }`}>
@@ -1047,12 +1227,60 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                                             </div>
                                         </div>
 
-                                        <textarea
-                                            value={project.description || ''}
-                                            onChange={(e) => handleUpdateProject(index, 'description', e.target.value)}
-                                            className="w-full p-2 mb-3 border border-gray-300 rounded min-h-[80px]"
-                                            placeholder="프로젝트 설명"
+                                        <div
+                                            ref={(el) => {
+                                                projDescRefs.current[index] = el;
+                                            }}
+                                            contentEditable
+                                            suppressContentEditableWarning
+                                            onFocus={() => {
+                                                isUserTyping.current = true;
+                                            }}
+                                            onBlur={() => {
+                                                isUserTyping.current = false;
+                                                // Blur 시 마지막 변경사항 즉시 적용
+                                                if (updateDebounceRef.current) {
+                                                    clearTimeout(updateDebounceRef.current);
+                                                    updateDebounceRef.current = null;
+                                                }
+                                            }}
+                                            onInput={(e) => {
+                                                const newValue = e.currentTarget.innerHTML;
+
+                                                // Clear existing timeout
+                                                if (updateDebounceRef.current) {
+                                                    clearTimeout(updateDebounceRef.current);
+                                                }
+
+                                                // Debounce state update to improve performance
+                                                updateDebounceRef.current = setTimeout(() => {
+                                                    handleUpdateProject(index, 'description', newValue);
+                                                    if (userEnhancedFields[`project_${index}_description`]) {
+                                                        setUserEnhancedFields(prev => ({ ...prev, [`project_${index}_description`]: false }));
+                                                    }
+                                                }, 300);
+                                            }}
+                                            className={`w-full p-2 mb-3 border rounded min-h-[80px] focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                                                userEnhancedFields[`project_${index}_description`]
+                                                    ? 'bg-yellow-50 border-yellow-300'
+                                                    : 'border-gray-300'
+                                            }`}
+                                            data-placeholder="프로젝트 설명"
+                                            style={{
+                                                minHeight: '80px',
+                                                whiteSpace: 'pre-wrap',
+                                                wordWrap: 'break-word'
+                                            }}
                                         />
+                                        {userEnhancedFields[`project_${index}_description`] ? (
+                                            <p className="mt-2 text-xs text-yellow-700">
+                                                ⚠️ AI가 생성/개선한 내용입니다. 검토 후 필요시 수정해주세요.
+                                            </p>
+                                        ) : initialEnhancedFields[`project_${index}_description`] ? (
+                                            <p className="mt-2 text-xs text-yellow-700">
+                                                색이 다른 글씨는 AI가 보충하여 생성한 데이터입니다. 검토 후 필요시 수정해주세요.
+                                            </p>
+                                        ) : null}
 
                                         <div className="grid grid-cols-3 gap-2">
                                             <div>
@@ -1086,7 +1314,7 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                                                 />
                                             </div>
                                         </div>
-                                        {enhancedFields[`project_${index}`] && (
+                                        {(initialEnhancedFields[`project_${index}`] || userEnhancedFields[`project_${index}`]) && (
                                             <p className="mt-2 text-xs text-yellow-700">
                                                 ⚠️ AI가 생성/개선한 내용입니다. 검토 후 필요시 수정해주세요.
                                             </p>
@@ -1144,19 +1372,22 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                                             </div>
 
                                             <div className="flex flex-wrap gap-2 mb-3">
-                                                {category.skills.map((skill, skillIndex) => (
-                                                    <div key={skillIndex} className="group relative">
-                                                        <Badge variant="secondary" className="pr-8">
-                                                            {skill}
-                                                            <button
-                                                                onClick={() => handleDeleteSkillFromCategory(categoryIndex, skillIndex)}
-                                                                className="absolute right-1 top-1/2 -translate-y-1/2 opacity-60 hover:opacity-100 transition-opacity"
-                                                            >
-                                                                <XMarkIcon className="w-3 h-3" />
-                                                            </button>
-                                                        </Badge>
-                                                    </div>
-                                                ))}
+                                                {category.skills.map((skill, skillIndex) => {
+                                                    const skillText = typeof skill === 'string' ? skill : (skill as any)?.name || String(skill);
+                                                    return (
+                                                        <div key={skillIndex} className="group relative">
+                                                            <Badge variant="secondary" className="pr-8">
+                                                                {skillText}
+                                                                <button
+                                                                    onClick={() => handleDeleteSkillFromCategory(categoryIndex, skillIndex)}
+                                                                    className="absolute right-1 top-1/2 -translate-y-1/2 opacity-60 hover:opacity-100 transition-opacity"
+                                                                >
+                                                                    <XMarkIcon className="w-3 h-3" />
+                                                                </button>
+                                                            </Badge>
+                                                        </div>
+                                                    );
+                                                })}
                                             </div>
 
                                             <SkillInput
@@ -1205,7 +1436,7 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ delay: index * 0.1 }}
                                             className={`p-4 rounded-lg border transition-all hover:shadow-md ${
-                                                enhancedFields['awards']
+                                                userEnhancedFields['awards']
                                                     ? 'bg-gradient-to-r from-yellow-50 to-yellow-100 border-yellow-300'
                                                     : 'bg-gradient-to-r from-orange-50 to-white border-gray-200'
                                             }`}
@@ -1253,7 +1484,7 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                                                 className="w-full p-2 border border-gray-300 rounded min-h-[60px] text-sm"
                                                 placeholder="상세 내용을 입력하세요"
                                             />
-                                            {enhancedFields['awards'] && (
+                                            {(initialEnhancedFields['awards'] || userEnhancedFields['awards']) && (
                                                 <p className="mt-2 text-xs text-yellow-700">
                                                     ⚠️ AI가 생성한 더미 데이터입니다. 검토 후 수정해주세요.
                                                 </p>
@@ -1268,7 +1499,7 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                                     </p>
                                 )}
 
-                                {enhancedFields['awards'] && portfolioData.awards.length > 0 && (
+                                {(initialEnhancedFields['awards'] || userEnhancedFields['awards']) && portfolioData.awards.length > 0 && (
                                     <div className="mt-4 p-3 bg-yellow-50 border border-yellow-300 rounded-lg">
                                         <p className="text-sm text-yellow-800">
                                             ⚠️ 수상/자격증 정보가 없어 AI가 더미 데이터를 생성했습니다. 실제 정보로 수정해주세요.
