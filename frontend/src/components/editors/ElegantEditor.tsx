@@ -845,13 +845,29 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
                                     suppressContentEditableWarning
                                     ref={aboutEditorRef}
                                     onFocus={() => { isUserTyping.current = true; }}
-                                    onBlur={() => { isUserTyping.current = false; }}
+                                    onBlur={() => {
+                                        isUserTyping.current = false;
+                                        // Blur 시 마지막 변경사항 즉시 적용
+                                        if (updateDebounceRef.current) {
+                                            clearTimeout(updateDebounceRef.current);
+                                            updateDebounceRef.current = null;
+                                        }
+                                    }}
                                     onInput={(e) => {
                                         const newValue = e.currentTarget.innerHTML;
-                                        setPortfolioData(prev => ({ ...prev, about: newValue }));
-                                        if (userEnhancedFields['about']) {
-                                            setUserEnhancedFields(prev => ({ ...prev, about: false }));
+
+                                        // Clear existing timeout
+                                        if (updateDebounceRef.current) {
+                                            clearTimeout(updateDebounceRef.current);
                                         }
+
+                                        // Debounce state update to improve performance
+                                        updateDebounceRef.current = setTimeout(() => {
+                                            setPortfolioData(prev => ({ ...prev, about: newValue }));
+                                            if (userEnhancedFields['about']) {
+                                                setUserEnhancedFields(prev => ({ ...prev, about: false }));
+                                            }
+                                        }, 300);
                                     }}
                                     className={`w-full p-4 border rounded-lg min-h-[150px] focus:outline-none focus:ring-2 focus:ring-purple-500 ${
                                         userEnhancedFields['about']
