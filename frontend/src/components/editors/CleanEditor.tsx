@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     EyeIcon,
@@ -16,7 +16,6 @@ import BlurFade from '../ui/BlurFade';
 import Badge from '../ui/Badge';
 import { BaseEditorProps, CleanPortfolioData, ProjectData, ExperienceData, AwardData, SkillCategory } from './types';
 import { useScrollPreservation } from '../../hooks/useScrollPreservation';
-import { useAutoExpand } from '../../hooks/useAutoExpand';
 import NaturalLanguageModal from '../NaturalLanguageModal';
 import { userFeedbackService } from '../../services/userFeedbackService';
 
@@ -89,12 +88,12 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
     const [currentHtml, setCurrentHtml] = useState<string>('');
     const [isEnhancing, setIsEnhancing] = useState(false);
     const [enhancingSection, setEnhancingSection] = useState<string | null>(null);
-    const [enhancedFields, setEnhancedFields] = useState<Record<string, boolean>>({});
+    const [initialEnhancedFields, setInitialEnhancedFields] = useState<Record<string, boolean>>({}); // 초기 AI 생성 필드
+    const [userEnhancedFields, setUserEnhancedFields] = useState<Record<string, boolean>>({}); // 사용자가 'AI로 개선' 버튼 눌러서 생성된 필드
     const [isInitializing, setIsInitializing] = useState(true);
     const [showTemplateSelector, setShowTemplateSelector] = useState(false);
     const [dataLoaded, setDataLoaded] = useState(false);
     const [showNaturalLanguage, setShowNaturalLanguage] = useState(false);
-    const [isAutoExpanding, setIsAutoExpanding] = useState<Record<string, boolean>>({});
 
     // Clean 템플릿 전용 섹션 제목 (education 없음, awards 있음)
     const [sectionTitles, setSectionTitles] = useState({
@@ -108,54 +107,11 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
 
     const hasInitialized = useRef(false);
     const { iframeRef, preserveScrollAndUpdate } = useScrollPreservation();
-
-    // Auto-expand hooks for about field
-    const { scheduleAutoExpand: scheduleAboutExpand } = useAutoExpand(
-        (expandedText, originalText) => {
-            console.log('✨ [CleanEditor] About 자동 확장 완료');
-            setPortfolioData(prev => ({ ...prev, about: expandedText }));
-            setEnhancedFields(prev => ({ ...prev, about: true }));
-            setIsAutoExpanding(prev => ({ ...prev, about: false }));
-            alert(`✨ AI 자동 확장 완료!\n\n원본 (${originalText.length}자):\n${originalText.substring(0, 100)}...\n\n확장 (${expandedText.length}자):\n${expandedText.substring(0, 100)}...`);
-        },
-        { enabled: true, debounceMs: 2000, minLength: 10 }
-    );
-
-    // Create auto-expand callback for project descriptions
-    const createProjectExpandCallback = useCallback((index: number) => {
-        return (expandedText: string, originalText: string) => {
-            console.log(`✨ [CleanEditor] Project ${index} 자동 확장 완료`);
-            setPortfolioData(prev => {
-                const updatedProjects = [...prev.projects];
-                updatedProjects[index] = {
-                    ...updatedProjects[index],
-                    description: expandedText
-                };
-                return { ...prev, projects: updatedProjects };
-            });
-            setEnhancedFields(prev => ({ ...prev, [`project_${index}_description`]: true }));
-            setIsAutoExpanding(prev => ({ ...prev, [`project_${index}_description`]: false }));
-            alert(`✨ 프로젝트 설명 자동 확장 완료!\n\n원본 (${originalText.length}자):\n${originalText.substring(0, 80)}...\n\n확장 (${expandedText.length}자):\n${expandedText.substring(0, 80)}...`);
-        };
-    }, []);
-
-    // Create auto-expand callback for experience descriptions
-    const createExperienceExpandCallback = useCallback((index: number) => {
-        return (expandedText: string, originalText: string) => {
-            console.log(`✨ [CleanEditor] Experience ${index} 자동 확장 완료`);
-            setPortfolioData(prev => {
-                const updatedExperience = [...prev.experience];
-                updatedExperience[index] = {
-                    ...updatedExperience[index],
-                    description: expandedText
-                };
-                return { ...prev, experience: updatedExperience };
-            });
-            setEnhancedFields(prev => ({ ...prev, [`experience_${index}_description`]: true }));
-            setIsAutoExpanding(prev => ({ ...prev, [`experience_${index}_description`]: false }));
-            alert(`✨ 경력 설명 자동 확장 완료!\n\n원본 (${originalText.length}자):\n${originalText.substring(0, 80)}...\n\n확장 (${expandedText.length}자):\n${expandedText.substring(0, 80)}...`);
-        };
-    }, []);
+    const updateDebounceRef = useRef<NodeJS.Timeout | null>(null);
+    const isUserTyping = useRef(false);
+    const aboutEditorRef = useRef<HTMLDivElement>(null);
+    const expDescRefs = useRef<(HTMLDivElement | null)[]>([]);
+    const projDescRefs = useRef<(HTMLDivElement | null)[]>([]);
 
 
     // HTML에서 포트폴리오 데이터 추출
@@ -310,22 +266,22 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                         });
 
                         // AI 확장된 필드 표시 (autoFillService에서 이미 확장됨)
-                        const newEnhancedFields: Record<string, boolean> = {};
+                        const newInitialEnhancedFields: Record<string, boolean> = {};
                         if (actualData.about && actualData.about.includes('<span style="color:orange">')) {
-                            newEnhancedFields['about'] = true;
+                            newInitialEnhancedFields['about'] = true;
                         }
                         actualData.projects?.forEach((project, index) => {
                             if (project.description && project.description.includes('<span style="color:orange">')) {
-                                newEnhancedFields[`project_${index}_description`] = true;
+                                newInitialEnhancedFields[`project_${index}_description`] = true;
                             }
                         });
                         actualData.experience?.forEach((exp, index) => {
                             if (exp.description && exp.description.includes('<span style="color:orange">')) {
-                                newEnhancedFields[`experience_${index}_description`] = true;
+                                newInitialEnhancedFields[`experience_${index}_description`] = true;
                             }
                         });
-                        if (Object.keys(newEnhancedFields).length > 0) {
-                            setEnhancedFields(prev => ({ ...prev, ...newEnhancedFields }));
+                        if (Object.keys(newInitialEnhancedFields).length > 0) {
+                            setInitialEnhancedFields(newInitialEnhancedFields);
                         }
                     }
 
@@ -349,7 +305,7 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                             if (!actualData.location && enhancedCleanData.location) {
                                 generatedFields['location'] = true;
                             }
-                            setEnhancedFields(generatedFields);
+                            setInitialEnhancedFields(prev => ({ ...prev, ...generatedFields }));
                         } catch (error) {
                             console.error('데이터 개선 실패:', error);
                             if (!dataLoaded) {
@@ -383,11 +339,11 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
             console.log('🔍 [수상/자격증 자동 생성] 체크 시작');
             console.log('   - awards 존재:', portfolioData.awards ? '예' : '아니오');
             console.log('   - awards 길이:', portfolioData.awards?.length || 0);
-            console.log('   - enhancedFields[awards]:', enhancedFields['awards'] ? '예' : '아니오');
+            console.log('   - initialEnhancedFields[awards]:', initialEnhancedFields['awards'] ? '예' : '아니오');
 
             const hasAwards = portfolioData.awards && portfolioData.awards.length > 0;
 
-            if (!hasAwards && !enhancedFields['awards']) {
+            if (!hasAwards && !initialEnhancedFields['awards']) {
                 console.log('✨ [수상/자격증 자동 생성] 자동 생성 시작...');
                 try {
                     const { data: awardsData, isGenerated } = await portfolioTextEnhancer.generateDummyAwards();
@@ -397,7 +353,7 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                         awards: awardsData
                     }));
                     if (isGenerated) {
-                        setEnhancedFields(prev => ({ ...prev, awards: true }));
+                        setInitialEnhancedFields(prev => ({ ...prev, awards: true }));
                     }
                 } catch (error) {
                     console.error('❌ [수상/자격증 자동 생성] 실패:', error);
@@ -412,7 +368,7 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
             const timer = setTimeout(checkAndGenerateDummyData, 1000);
             return () => clearTimeout(timer);
         }
-    }, [dataLoaded, isEnhancing, portfolioData.awards, enhancedFields]);
+    }, [dataLoaded, isEnhancing, portfolioData.awards, initialEnhancedFields, userEnhancedFields]);
 
     // HTML 업데이트
     const updateHtml = useCallback(async () => {
@@ -500,6 +456,47 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [portfolioData, sectionTitles, dataLoaded]);
 
+    // contentEditable 초기 내용 설정 (커서 점프 방지)
+    useEffect(() => {
+        if (aboutEditorRef.current && !isUserTyping.current) {
+            const currentContent = aboutEditorRef.current.innerHTML;
+            const newContent = portfolioData.about || '';
+
+            // 내용이 다를 때만 업데이트 (무한 루프 방지)
+            if (currentContent !== newContent) {
+                aboutEditorRef.current.innerHTML = newContent;
+            }
+        }
+    }, [portfolioData.about]);
+
+    // Experience description 동기화 (커서 점프 방지)
+    useEffect(() => {
+        portfolioData.experience.forEach((exp, index) => {
+            const ref = expDescRefs.current[index];
+            if (ref && !isUserTyping.current) {
+                const currentContent = ref.innerHTML;
+                const newContent = exp.description || '';
+                if (currentContent !== newContent) {
+                    ref.innerHTML = newContent;
+                }
+            }
+        });
+    }, [portfolioData.experience]);
+
+    // Project description 동기화 (커서 점프 방지)
+    useEffect(() => {
+        portfolioData.projects.forEach((project, index) => {
+            const ref = projDescRefs.current[index];
+            if (ref && !isUserTyping.current) {
+                const currentContent = ref.innerHTML;
+                const newContent = project.description || '';
+                if (currentContent !== newContent) {
+                    ref.innerHTML = newContent;
+                }
+            }
+        });
+    }, [portfolioData.projects]);
+
     // 자기소개 개선
     const handleEnhanceAbout = async () => {
         setIsEnhancing(true);
@@ -508,7 +505,8 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
             const enhanced = await portfolioTextEnhancer.enhanceAboutMe(portfolioData.about);
             setPortfolioData(prev => ({ ...prev, about: enhanced.enhanced }));
             if (enhanced.isGenerated) {
-                setEnhancedFields(prev => ({ ...prev, about: true }));
+                setUserEnhancedFields(prev => ({ ...prev, about: true }));
+                setInitialEnhancedFields(prev => ({ ...prev, about: false }));
             }
         } catch (error) {
             console.error('자기소개 개선 실패:', error);
@@ -539,9 +537,15 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                 return { ...prev, experience: updatedExperience };
             });
 
-            if (enhanced.enhanced?.isGenerated) {
-                setEnhancedFields(prev => ({ ...prev, [`experience_${index}`]: true }));
-            }
+            // AI 개선 시 description 필드 추적
+            setUserEnhancedFields(prev => ({
+                ...prev,
+                [`experience_${index}_description`]: true
+            }));
+            setInitialEnhancedFields(prev => ({
+                ...prev,
+                [`experience_${index}_description`]: false
+            }));
         } catch (error) {
             console.error('경력 개선 실패:', error);
             alert('AI 개선에 실패했습니다. 다시 시도해주세요.');
@@ -606,7 +610,8 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
             });
 
             if (enhanced.enhanced?.isGenerated) {
-                setEnhancedFields(prev => ({ ...prev, [`project_${index}`]: true }));
+                setUserEnhancedFields(prev => ({ ...prev, [`project_${index}_description`]: true }));
+                setInitialEnhancedFields(prev => ({ ...prev, [`project_${index}_description`]: false }));
             }
         } catch (error) {
             console.error('프로젝트 개선 실패:', error);
@@ -914,13 +919,13 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                                                 value={portfolioData.location || ''}
                                                 onChange={(e) => setPortfolioData(prev => ({ ...prev, location: e.target.value }))}
                                                 className={`w-full p-2 border rounded-lg ${
-                                                    enhancedFields['location']
+                                                    userEnhancedFields['location']
                                                         ? 'bg-yellow-50 border-yellow-300'
                                                         : 'border-gray-300'
                                                 }`}
                                                 placeholder="Seoul, Korea"
                                             />
-                                            {enhancedFields['location'] && (
+                                            {(initialEnhancedFields['location'] || userEnhancedFields['location']) && (
                                                 <p className="mt-1 text-xs text-yellow-700">⚠️ AI가 자동 생성한 내용입니다.</p>
                                             )}
                                         </div>
@@ -952,60 +957,58 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                                     </button>
                                 </div>
                                 <div
+                                    ref={aboutEditorRef}
                                     contentEditable
                                     suppressContentEditableWarning
-                                    dangerouslySetInnerHTML={{ __html: portfolioData.about || '' }}
+                                    onFocus={() => {
+                                        isUserTyping.current = true;
+                                    }}
+                                    onBlur={() => {
+                                        isUserTyping.current = false;
+                                        // Blur 시점에 마지막 변경사항 즉시 적용
+                                        if (updateDebounceRef.current) {
+                                            clearTimeout(updateDebounceRef.current);
+                                            updateDebounceRef.current = null;
+                                        }
+                                    }}
                                     onInput={(e) => {
                                         const newValue = e.currentTarget.innerHTML;
-                                        console.log('📝 [CleanEditor] About 필드 변경 감지');
-                                        console.log(`   입력 텍스트: "${newValue.substring(0, 50)}${newValue.length > 50 ? '...' : ''}" (${newValue.length}자)`);
-                                        setPortfolioData(prev => ({ ...prev, about: newValue }));
-                                        if (enhancedFields['about']) {
-                                            setEnhancedFields(prev => ({ ...prev, about: false }));
+
+                                        // Clear existing timeout
+                                        if (updateDebounceRef.current) {
+                                            clearTimeout(updateDebounceRef.current);
                                         }
-                                        setIsAutoExpanding(prev => ({ ...prev, about: true }));
-                                        // HTML 태그 제거한 순수 텍스트로 확장 요청
-                                        const plainText = newValue.replace(/<[^>]*>/g, '').trim();
-                                        if (plainText.length > 0) {
-                                            scheduleAboutExpand(plainText);
-                                        }
-                                    }}
-                                    onBlur={(e) => {
-                                        // contentEditable이 포커스를 잃을 때 HTML 정리
-                                        const html = e.currentTarget.innerHTML;
-                                        setPortfolioData(prev => ({ ...prev, about: html }));
+
+                                        // Debounce state update to prevent cursor jumping
+                                        updateDebounceRef.current = setTimeout(() => {
+                                            setPortfolioData(prev => ({ ...prev, about: newValue }));
+                                            // 사용자가 수정하면 사용자 개선 표시 제거 (초기 AI 생성은 유지)
+                                            if (userEnhancedFields['about']) {
+                                                setUserEnhancedFields(prev => ({ ...prev, about: false }));
+                                            }
+                                        }, 300);
                                     }}
                                     className={`w-full p-4 border rounded-lg min-h-[150px] focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                                        enhancedFields['about']
+                                        userEnhancedFields['about']
                                             ? 'bg-yellow-50 border-yellow-300'
-                                            : isAutoExpanding['about']
-                                            ? 'bg-blue-50 border-blue-300'
                                             : 'bg-white border-gray-300'
                                     }`}
-                                    data-placeholder="자기소개를 입력하세요. AI가 전문적으로 개선해드립니다."
+                                    data-placeholder="자기소개를 입력하세요."
                                     style={{
                                         minHeight: '150px',
                                         whiteSpace: 'pre-wrap',
                                         wordWrap: 'break-word'
                                     }}
                                 />
-                                {isAutoExpanding['about'] && !enhancedFields['about'] && (
-                                    <div className="mt-2 flex items-center space-x-2">
-                                        <div className="flex space-x-1">
-                                            <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                                            <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                                            <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                                        </div>
-                                        <p className="text-xs text-blue-700">AI가 자동 확장을 준비 중입니다...</p>
-                                    </div>
-                                )}
-                                {enhancedFields['about'] && (
-                                    <div className="mt-2">
-                                        <p className="text-xs text-yellow-700">
-                                            색이 다른 글씨는 AI가 보충하여 생성한 데이터입니다. 검토 후 필요시 수정해주세요.
-                                        </p>
-                                    </div>
-                                )}
+                                {userEnhancedFields['about'] ? (
+                                    <p className="mt-2 text-xs text-yellow-700">
+                                        ⚠️ AI가 생성/개선한 내용입니다. 검토 후 필요시 수정해주세요.
+                                    </p>
+                                ) : initialEnhancedFields['about'] ? (
+                                    <p className="mt-2 text-xs text-yellow-700">
+                                        색이 다른 글씨는 AI가 보충하여 생성한 데이터입니다. 검토 후 필요시 수정해주세요.
+                                    </p>
+                                ) : null}
                             </div>
                         </BlurFade>
 
@@ -1032,150 +1035,135 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                                 </div>
 
                                 <div className="space-y-3">
-                                    {portfolioData.experience.map((exp, index) => {
-                                        // Create auto-expand hook for this experience item
-                                        const ExperienceItem = () => {
-                                            const { scheduleAutoExpand: scheduleExpExpand } = useAutoExpand(
-                                                createExperienceExpandCallback(index),
-                                                { enabled: true, debounceMs: 2000, minLength: 10 }
-                                            );
+                                    {portfolioData.experience.map((exp, index) => (
+                                        <motion.div
+                                            key={index}
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: index * 0.1 }}
+                                            className={`p-4 rounded-lg border transition-all hover:shadow-md ${
+                                                userEnhancedFields[`experience_${index}`]
+                                                    ? 'bg-gradient-to-r from-yellow-50 to-yellow-100 border-yellow-300'
+                                                    : 'bg-gradient-to-r from-gray-50 to-white border-gray-200'
+                                            }`}
+                                        >
+                                            <div className="flex items-start justify-between mb-3">
+                                                <input
+                                                    type="text"
+                                                    value={exp.position || ''}
+                                                    onChange={(e) => handleUpdateExperience(index, 'position', e.target.value)}
+                                                    className="text-lg font-semibold bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none flex-1 mr-4"
+                                                    placeholder="직책"
+                                                />
+                                                <div className="flex items-center space-x-2">
+                                                    <button
+                                                        onClick={() => handleEnhanceExperience(index)}
+                                                        disabled={isEnhancing}
+                                                        className="p-1 text-purple-600 hover:bg-purple-100 rounded disabled:opacity-50"
+                                                        title="AI로 개선"
+                                                    >
+                                                        <SparklesIcon className="w-4 h-4" />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteExperience(index)}
+                                                        className="p-1 text-red-600 hover:bg-red-100 rounded"
+                                                    >
+                                                        <XMarkIcon className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            </div>
 
-                                            return (
-                                                <motion.div
-                                                    key={index}
-                                                    initial={{ opacity: 0, y: 10 }}
-                                                    animate={{ opacity: 1, y: 0 }}
-                                                    transition={{ delay: index * 0.1 }}
-                                                    className={`p-4 rounded-lg border transition-all hover:shadow-md ${
-                                                        enhancedFields[`experience_${index}`]
-                                                            ? 'bg-gradient-to-r from-yellow-50 to-yellow-100 border-yellow-300'
-                                                            : 'bg-gradient-to-r from-gray-50 to-white border-gray-200'
-                                                    }`}
-                                                >
-                                                    <div className="flex items-start justify-between mb-3">
-                                                        <input
-                                                            type="text"
-                                                            value={exp.position || ''}
-                                                            onChange={(e) => handleUpdateExperience(index, 'position', e.target.value)}
-                                                            className="text-lg font-semibold bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none flex-1 mr-4"
-                                                            placeholder="직책"
-                                                        />
-                                                        <div className="flex items-center space-x-2">
-                                                            <button
-                                                                onClick={() => handleEnhanceExperience(index)}
-                                                                disabled={isEnhancing}
-                                                                className="p-1 text-purple-600 hover:bg-purple-100 rounded disabled:opacity-50"
-                                                                title="AI로 개선"
-                                                            >
-                                                                <SparklesIcon className="w-4 h-4" />
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleDeleteExperience(index)}
-                                                                className="p-1 text-red-600 hover:bg-red-100 rounded"
-                                                            >
-                                                                <XMarkIcon className="w-4 h-4" />
-                                                            </button>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="grid grid-cols-2 gap-2 mb-3">
-                                                        <div>
-                                                            <input
-                                                                type="text"
-                                                                value={exp.company || ''}
-                                                                onChange={(e) => handleUpdateExperience(index, 'company', e.target.value)}
-                                                                className="w-full p-2 border border-gray-300 rounded text-sm"
-                                                                placeholder="회사명"
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <input
-                                                                type="text"
-                                                                value={exp.duration || ''}
-                                                                onChange={(e) => handleUpdateExperience(index, 'duration', e.target.value)}
-                                                                className="w-full p-2 border border-gray-300 rounded text-sm"
-                                                                placeholder="기간 (예: 2022.01 - 2023.12)"
-                                                            />
-                                                        </div>
-                                                    </div>
-
-                                                    <div
-                                                        contentEditable
-                                                        suppressContentEditableWarning
-                                                        dangerouslySetInnerHTML={{ __html: exp.description || '' }}
-                                                        onInput={(e) => {
-                                                            const newValue = e.currentTarget.innerHTML;
-                                                            console.log(`📝 [CleanEditor] Experience ${index} description 필드 변경 감지`);
-                                                            console.log(`   입력 텍스트: "${newValue.substring(0, 50)}${newValue.length > 50 ? '...' : ''}" (${newValue.length}자)`);
-                                                            handleUpdateExperience(index, 'description', newValue);
-                                                            if (enhancedFields[`experience_${index}_description`]) {
-                                                                setEnhancedFields(prev => {
-                                                                    const updated = { ...prev };
-                                                                    delete updated[`experience_${index}_description`];
-                                                                    return updated;
-                                                                });
-                                                            }
-                                                            setIsAutoExpanding(prev => ({ ...prev, [`experience_${index}_description`]: true }));
-                                                            // HTML 태그 제거한 순수 텍스트로 확장 요청
-                                                            const plainText = newValue.replace(/<[^>]*>/g, '').trim();
-                                                            if (plainText.length > 0) {
-                                                                scheduleExpExpand(plainText);
-                                                            }
-                                                        }}
-                                                        onBlur={(e) => {
-                                                            const html = e.currentTarget.innerHTML;
-                                                            handleUpdateExperience(index, 'description', html);
-                                                        }}
-                                                        className={`w-full p-2 border rounded min-h-[60px] text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                                                            enhancedFields[`experience_${index}_description`]
-                                                                ? 'bg-yellow-50 border-yellow-300'
-                                                                : isAutoExpanding[`experience_${index}_description`]
-                                                                ? 'bg-blue-50 border-blue-300'
-                                                                : 'border-gray-300'
-                                                        }`}
-                                                        data-placeholder="담당 업무를 입력하세요"
-                                                        style={{
-                                                            minHeight: '60px',
-                                                            whiteSpace: 'pre-wrap',
-                                                            wordWrap: 'break-word'
-                                                        }}
+                                            <div className="grid grid-cols-2 gap-2 mb-3">
+                                                <div>
+                                                    <input
+                                                        type="text"
+                                                        value={exp.company || ''}
+                                                        onChange={(e) => handleUpdateExperience(index, 'company', e.target.value)}
+                                                        className="w-full p-2 border border-gray-300 rounded text-sm"
+                                                        placeholder="회사명"
                                                     />
-                                                    {isAutoExpanding[`experience_${index}_description`] && !enhancedFields[`experience_${index}_description`] && (
-                                                        <div className="mb-2 flex items-center space-x-2">
-                                                            <div className="flex space-x-1">
-                                                                <div className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                                                                <div className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                                                                <div className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                                                            </div>
-                                                            <p className="text-xs text-blue-700">AI 자동 확장 준비 중...</p>
-                                                        </div>
-                                                    )}
-                                                    {enhancedFields[`experience_${index}_description`] && (
-                                                        <div className="mb-2">
-                                                            <p className="text-xs text-yellow-700">
-                                                                색이 다른 글씨는 AI가 보충하여 생성한 데이터입니다. 검토 후 필요시 수정해주세요.
-                                                            </p>
-                                                        </div>
-                                                    )}
+                                                </div>
+                                                <div>
+                                                    <input
+                                                        type="text"
+                                                        value={exp.duration || ''}
+                                                        onChange={(e) => handleUpdateExperience(index, 'duration', e.target.value)}
+                                                        className="w-full p-2 border border-gray-300 rounded text-sm"
+                                                        placeholder="기간 (예: 2022.01 - 2023.12)"
+                                                    />
+                                                </div>
+                                            </div>
 
-                                                    <div>
-                                                        <label className="block text-xs font-medium text-gray-600 mb-1">주요 성과 (각 줄에 하나씩)</label>
-                                                        <textarea
-                                                            value={exp.achievements ? exp.achievements.join('\n') : ''}
-                                                            onChange={(e) => handleUpdateExperience(index, 'achievements',
-                                                                e.target.value.split('\n').filter((achievement: string) => achievement.trim())
-                                                            )}
-                                                            className="w-full p-2 border border-gray-300 rounded min-h-[60px] text-sm"
-                                                            placeholder="• 매출 20% 증가에 기여
+                                            <div
+                                                ref={(el) => {
+                                                    expDescRefs.current[index] = el;
+                                                }}
+                                                contentEditable
+                                                suppressContentEditableWarning
+                                                onFocus={() => {
+                                                    isUserTyping.current = true;
+                                                }}
+                                                onBlur={() => {
+                                                    isUserTyping.current = false;
+                                                    // Blur 시 마지막 변경사항 즉시 적용
+                                                    if (updateDebounceRef.current) {
+                                                        clearTimeout(updateDebounceRef.current);
+                                                        updateDebounceRef.current = null;
+                                                    }
+                                                }}
+                                                onInput={(e) => {
+                                                    const newValue = e.currentTarget.innerHTML;
+
+                                                    // Clear existing timeout
+                                                    if (updateDebounceRef.current) {
+                                                        clearTimeout(updateDebounceRef.current);
+                                                    }
+
+                                                    // Debounce state update to improve performance
+                                                    updateDebounceRef.current = setTimeout(() => {
+                                                        handleUpdateExperience(index, 'description', newValue);
+                                                        if (userEnhancedFields[`experience_${index}_description`]) {
+                                                            setUserEnhancedFields(prev => ({ ...prev, [`experience_${index}_description`]: false }));
+                                                        }
+                                                    }, 300);
+                                                }}
+                                                className={`w-full p-2 border rounded min-h-[60px] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                                                    userEnhancedFields[`experience_${index}_description`]
+                                                        ? 'bg-yellow-50 border-yellow-300'
+                                                        : 'border-gray-300'
+                                                }`}
+                                                data-placeholder="담당 업무를 입력하세요"
+                                                style={{
+                                                    minHeight: '60px',
+                                                    whiteSpace: 'pre-wrap',
+                                                    wordWrap: 'break-word'
+                                                }}
+                                            />
+                                            {userEnhancedFields[`experience_${index}_description`] ? (
+                                                <p className="mt-2 text-xs text-yellow-700">
+                                                    ⚠️ AI가 생성/개선한 내용입니다. 검토 후 필요시 수정해주세요.
+                                                </p>
+                                            ) : initialEnhancedFields[`experience_${index}_description`] ? (
+                                                <p className="mt-2 text-xs text-yellow-700">
+                                                    색이 다른 글씨는 AI가 보충하여 생성한 데이터입니다. 검토 후 필요시 수정해주세요.
+                                                </p>
+                                            ) : null}
+
+                                            <div className="mt-3">
+                                                <label className="block text-xs font-medium text-gray-600 mb-1">주요 성과 (각 줄에 하나씩)</label>
+                                                <textarea
+                                                    value={exp.achievements ? exp.achievements.join('\n') : ''}
+                                                    onChange={(e) => handleUpdateExperience(index, 'achievements',
+                                                        e.target.value.split('\n').filter((achievement: string) => achievement.trim())
+                                                    )}
+                                                    className="w-full p-2 border border-gray-300 rounded min-h-[60px] text-sm"
+                                                    placeholder="• 매출 20% 증가에 기여
 • 시스템 성능 30% 개선
 • 팀 생산성 향상을 위한 자동화 도구 개발"
-                                                        />
-                                                    </div>
-                                                </motion.div>
-                                            );
-                                        };
-                                        return <ExperienceItem key={index} />;
-                                    })}
+                                                />
+                                            </div>
+                                        </motion.div>
+                                    ))}
                                 </div>
 
                                 {portfolioData.experience.length === 0 && (
@@ -1208,103 +1196,91 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                                     </button>
                                 </div>
 
-                                {portfolioData.projects.map((project, index) => {
-                                    // Create auto-expand hook for this project item
-                                    const ProjectItem = () => {
-                                        const { scheduleAutoExpand: scheduleProjExpand } = useAutoExpand(
-                                            createProjectExpandCallback(index),
-                                            { enabled: true, debounceMs: 2000, minLength: 10 }
-                                        );
+                                {portfolioData.projects.map((project, index) => (
+                                    <div key={index} className={`mb-4 p-4 rounded-lg border ${
+                                        userEnhancedFields[`project_${index}`]
+                                            ? 'bg-yellow-50 border-yellow-300'
+                                            : 'bg-gray-50 border-gray-200'
+                                    }`}>
+                                        <div className="flex items-start justify-between mb-3">
+                                            <input
+                                                type="text"
+                                                value={project.name || ''}
+                                                onChange={(e) => handleUpdateProject(index, 'name', e.target.value)}
+                                                className="text-lg font-semibold bg-transparent border-b border-gray-300 focus:border-purple-500 outline-none"
+                                            />
+                                            <div className="flex items-center space-x-2">
+                                                <button
+                                                    onClick={() => handleEnhanceProject(index)}
+                                                    disabled={isEnhancing}
+                                                    className="p-1 text-purple-600 hover:bg-purple-100 rounded"
+                                                    title="AI로 개선"
+                                                >
+                                                    <SparklesIcon className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteProject(index)}
+                                                    className="p-1 text-red-600 hover:bg-red-100 rounded"
+                                                >
+                                                    <XMarkIcon className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </div>
 
-                                        return (
-                                            <div key={index} className={`mb-4 p-4 rounded-lg border ${
-                                                enhancedFields[`project_${index}`]
+                                        <div
+                                            ref={(el) => {
+                                                projDescRefs.current[index] = el;
+                                            }}
+                                            contentEditable
+                                            suppressContentEditableWarning
+                                            onFocus={() => {
+                                                isUserTyping.current = true;
+                                            }}
+                                            onBlur={() => {
+                                                isUserTyping.current = false;
+                                                // Blur 시 마지막 변경사항 즉시 적용
+                                                if (updateDebounceRef.current) {
+                                                    clearTimeout(updateDebounceRef.current);
+                                                    updateDebounceRef.current = null;
+                                                }
+                                            }}
+                                            onInput={(e) => {
+                                                const newValue = e.currentTarget.innerHTML;
+
+                                                // Clear existing timeout
+                                                if (updateDebounceRef.current) {
+                                                    clearTimeout(updateDebounceRef.current);
+                                                }
+
+                                                // Debounce state update to improve performance
+                                                updateDebounceRef.current = setTimeout(() => {
+                                                    handleUpdateProject(index, 'description', newValue);
+                                                    if (userEnhancedFields[`project_${index}_description`]) {
+                                                        setUserEnhancedFields(prev => ({ ...prev, [`project_${index}_description`]: false }));
+                                                    }
+                                                }, 300);
+                                            }}
+                                            className={`w-full p-2 mb-3 border rounded min-h-[80px] focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                                                userEnhancedFields[`project_${index}_description`]
                                                     ? 'bg-yellow-50 border-yellow-300'
-                                                    : 'bg-gray-50 border-gray-200'
-                                            }`}>
-                                                <div className="flex items-start justify-between mb-3">
-                                                    <input
-                                                        type="text"
-                                                        value={project.name || ''}
-                                                        onChange={(e) => handleUpdateProject(index, 'name', e.target.value)}
-                                                        className="text-lg font-semibold bg-transparent border-b border-gray-300 focus:border-purple-500 outline-none"
-                                                    />
-                                                    <div className="flex items-center space-x-2">
-                                                        <button
-                                                            onClick={() => handleEnhanceProject(index)}
-                                                            disabled={isEnhancing}
-                                                            className="p-1 text-purple-600 hover:bg-purple-100 rounded"
-                                                            title="AI로 개선"
-                                                        >
-                                                            <SparklesIcon className="w-4 h-4" />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDeleteProject(index)}
-                                                            className="p-1 text-red-600 hover:bg-red-100 rounded"
-                                                        >
-                                                            <XMarkIcon className="w-4 h-4" />
-                                                        </button>
-                                                    </div>
-                                                </div>
-
-                                                <div
-                                                    contentEditable
-                                                    suppressContentEditableWarning
-                                                    dangerouslySetInnerHTML={{ __html: project.description || '' }}
-                                                    onInput={(e) => {
-                                                        const newValue = e.currentTarget.innerHTML;
-                                                        console.log(`📝 [CleanEditor] Project ${index} description 필드 변경 감지`);
-                                                        console.log(`   입력 텍스트: "${newValue.substring(0, 50)}${newValue.length > 50 ? '...' : ''}" (${newValue.length}자)`);
-                                                        handleUpdateProject(index, 'description', newValue);
-                                                        if (enhancedFields[`project_${index}_description`]) {
-                                                            setEnhancedFields(prev => {
-                                                                const updated = { ...prev };
-                                                                delete updated[`project_${index}_description`];
-                                                                return updated;
-                                                            });
-                                                        }
-                                                        setIsAutoExpanding(prev => ({ ...prev, [`project_${index}_description`]: true }));
-                                                        // HTML 태그 제거한 순수 텍스트로 확장 요청
-                                                        const plainText = newValue.replace(/<[^>]*>/g, '').trim();
-                                                        if (plainText.length > 0) {
-                                                            scheduleProjExpand(plainText);
-                                                        }
-                                                    }}
-                                                    onBlur={(e) => {
-                                                        const html = e.currentTarget.innerHTML;
-                                                        handleUpdateProject(index, 'description', html);
-                                                    }}
-                                                    className={`w-full p-2 mb-3 border rounded min-h-[80px] focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                                                        enhancedFields[`project_${index}_description`]
-                                                            ? 'bg-yellow-50 border-yellow-300'
-                                                            : isAutoExpanding[`project_${index}_description`]
-                                                            ? 'bg-blue-50 border-blue-300'
-                                                            : 'border-gray-300'
-                                                    }`}
-                                                    data-placeholder="프로젝트 설명"
-                                                    style={{
-                                                        minHeight: '80px',
-                                                        whiteSpace: 'pre-wrap',
-                                                        wordWrap: 'break-word'
-                                                    }}
-                                                />
-                                                {isAutoExpanding[`project_${index}_description`] && !enhancedFields[`project_${index}_description`] && (
-                                                    <div className="mb-2 flex items-center space-x-2">
-                                                        <div className="flex space-x-1">
-                                                            <div className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                                                            <div className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                                                            <div className="w-1.5 h-1.5 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                                                        </div>
-                                                        <p className="text-xs text-blue-700">AI 자동 확장 준비 중...</p>
-                                                    </div>
-                                                )}
-                                                {enhancedFields[`project_${index}_description`] && (
-                                                    <div className="mb-2">
-                                                        <p className="text-xs text-yellow-700">
-                                                            색이 다른 글씨는 AI가 보충하여 생성한 데이터입니다. 검토 후 필요시 수정해주세요.
-                                                        </p>
-                                                    </div>
-                                                )}
+                                                    : 'border-gray-300'
+                                            }`}
+                                            data-placeholder="프로젝트 설명"
+                                            style={{
+                                                minHeight: '80px',
+                                                whiteSpace: 'pre-wrap',
+                                                wordWrap: 'break-word'
+                                            }}
+                                        />
+                                        {userEnhancedFields[`project_${index}_description`] ? (
+                                            <p className="mt-2 text-xs text-yellow-700">
+                                                ⚠️ AI가 생성/개선한 내용입니다. 검토 후 필요시 수정해주세요.
+                                            </p>
+                                        ) : initialEnhancedFields[`project_${index}_description`] ? (
+                                            <p className="mt-2 text-xs text-yellow-700">
+                                                색이 다른 글씨는 AI가 보충하여 생성한 데이터입니다. 검토 후 필요시 수정해주세요.
+                                            </p>
+                                        ) : null}
 
                                         <div className="grid grid-cols-3 gap-2">
                                             <div>
@@ -1338,16 +1314,13 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                                                 />
                                             </div>
                                         </div>
-                                                {enhancedFields[`project_${index}`] && (
-                                                    <p className="mt-2 text-xs text-yellow-700">
-                                                        ⚠️ AI가 생성/개선한 내용입니다. 검토 후 필요시 수정해주세요.
-                                                    </p>
-                                                )}
-                                            </div>
-                                        );
-                                    };
-                                    return <ProjectItem key={index} />;
-                                })}
+                                        {(initialEnhancedFields[`project_${index}`] || userEnhancedFields[`project_${index}`]) && (
+                                            <p className="mt-2 text-xs text-yellow-700">
+                                                ⚠️ AI가 생성/개선한 내용입니다. 검토 후 필요시 수정해주세요.
+                                            </p>
+                                        )}
+                                    </div>
+                                ))}
 
                                 {portfolioData.projects.length === 0 && (
                                     <p className="text-gray-500 text-center py-8">
@@ -1463,7 +1436,7 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ delay: index * 0.1 }}
                                             className={`p-4 rounded-lg border transition-all hover:shadow-md ${
-                                                enhancedFields['awards']
+                                                userEnhancedFields['awards']
                                                     ? 'bg-gradient-to-r from-yellow-50 to-yellow-100 border-yellow-300'
                                                     : 'bg-gradient-to-r from-orange-50 to-white border-gray-200'
                                             }`}
@@ -1511,7 +1484,7 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                                                 className="w-full p-2 border border-gray-300 rounded min-h-[60px] text-sm"
                                                 placeholder="상세 내용을 입력하세요"
                                             />
-                                            {enhancedFields['awards'] && (
+                                            {(initialEnhancedFields['awards'] || userEnhancedFields['awards']) && (
                                                 <p className="mt-2 text-xs text-yellow-700">
                                                     ⚠️ AI가 생성한 더미 데이터입니다. 검토 후 수정해주세요.
                                                 </p>
@@ -1526,7 +1499,7 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                                     </p>
                                 )}
 
-                                {enhancedFields['awards'] && portfolioData.awards.length > 0 && (
+                                {(initialEnhancedFields['awards'] || userEnhancedFields['awards']) && portfolioData.awards.length > 0 && (
                                     <div className="mt-4 p-3 bg-yellow-50 border border-yellow-300 rounded-lg">
                                         <p className="text-sm text-yellow-800">
                                             ⚠️ 수상/자격증 정보가 없어 AI가 더미 데이터를 생성했습니다. 실제 정보로 수정해주세요.

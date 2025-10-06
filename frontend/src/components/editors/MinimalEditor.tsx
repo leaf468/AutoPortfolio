@@ -16,7 +16,6 @@ import BlurFade from '../ui/BlurFade';
 import Badge from '../ui/Badge';
 import { BaseEditorProps, MinimalPortfolioData, ProjectData, ExperienceData, EducationData, SkillCategory } from './types';
 import { useScrollPreservation } from '../../hooks/useScrollPreservation';
-import { useAutoExpand } from '../../hooks/useAutoExpand';
 import NaturalLanguageModal from '../NaturalLanguageModal';
 import { userFeedbackService } from '../../services/userFeedbackService';
 import { getButtonClass } from '../../styles/buttonStyles';
@@ -89,8 +88,8 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
     const [currentHtml, setCurrentHtml] = useState<string>('');
     const [isEnhancing, setIsEnhancing] = useState(false);
     const [enhancingSection, setEnhancingSection] = useState<string | null>(null);
-    const [enhancedFields, setEnhancedFields] = useState<Record<string, boolean>>({});
-    const [isAutoExpanding, setIsAutoExpanding] = useState<Record<string, boolean>>({});
+    const [initialEnhancedFields, setInitialEnhancedFields] = useState<Record<string, boolean>>({}); // 초기 AI 생성 필드
+    const [userEnhancedFields, setUserEnhancedFields] = useState<Record<string, boolean>>({}); // 사용자가 'AI로 개선' 버튼 눌러서 생성된 필드
     const [isInitializing, setIsInitializing] = useState(true);
     const [showTemplateSelector, setShowTemplateSelector] = useState(false);
     const [showNaturalLanguage, setShowNaturalLanguage] = useState(false);
@@ -108,76 +107,12 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
     const hasInitialized = useRef(false);
     const isDataReady = useRef(false);
     const { iframeRef, preserveScrollAndUpdate } = useScrollPreservation();
-
-    // 자동 확장 Hook - About
-    const { scheduleAutoExpand: scheduleAboutExpand } = useAutoExpand(
-        (expandedText, originalText) => {
-            console.log('✨ [MinimalEditor] About 자동 확장 완료');
-            console.log('   원본:', originalText);
-            console.log('   확장:', expandedText);
-
-            setPortfolioData(prev => ({ ...prev, about: expandedText }));
-            setEnhancedFields(prev => ({ ...prev, about: true }));
-            setIsAutoExpanding(prev => ({ ...prev, about: false }));
-
-            // 사용자에게 알림
-            alert(`✨ AI 자동 확장 완료!\n\n원본 (${originalText.length}자):\n${originalText.substring(0, 80)}${originalText.length > 80 ? '...' : ''}\n\n확장 (${expandedText.length}자):\n${expandedText.substring(0, 80)}${expandedText.length > 80 ? '...' : ''}`);
-        },
-        {
-            enabled: true,
-            debounceMs: 2000,
-            minLength: 10
-        }
-    );
-
-    // 자동 확장 Hook - Project Description
-    const { scheduleAutoExpand: scheduleProjectExpand } = useAutoExpand(
-        (expandedText, originalText) => {
-            console.log('✨ Project 자동 확장 완료');
-            // 확장된 텍스트에서 어떤 프로젝트를 업데이트해야 하는지 찾기
-            const projectIndex = portfolioData.projects.findIndex(p => p.description === originalText);
-            if (projectIndex !== -1) {
-                setPortfolioData(prev => {
-                    const updatedProjects = [...prev.projects];
-                    updatedProjects[projectIndex] = {
-                        ...updatedProjects[projectIndex],
-                        description: expandedText
-                    };
-                    return { ...prev, projects: updatedProjects };
-                });
-                setEnhancedFields(prev => ({ ...prev, [`project_${projectIndex}`]: true }));
-            }
-        },
-        {
-            enabled: true,
-            debounceMs: 2000,
-            minLength: 10
-        }
-    );
-
-    // 자동 확장 Hook - Experience Description
-    const { scheduleAutoExpand: scheduleExperienceExpand } = useAutoExpand(
-        (expandedText, originalText) => {
-            console.log('✨ Experience 자동 확장 완료');
-            const expIndex = portfolioData.experience.findIndex(e => e.description === originalText);
-            if (expIndex !== -1) {
-                setPortfolioData(prev => {
-                    const updatedExperience = [...prev.experience];
-                    updatedExperience[expIndex] = {
-                        ...updatedExperience[expIndex],
-                        description: expandedText
-                    };
-                    return { ...prev, experience: updatedExperience };
-                });
-                setEnhancedFields(prev => ({ ...prev, [`experience_${expIndex}`]: true }));
-            }
-        },
-        {
-            enabled: true,
-            debounceMs: 2000,
-            minLength: 10
-        }
-    );
+    const isUserTyping = useRef(false);
+    const updateDebounceRef = useRef<NodeJS.Timeout | null>(null);
+    const aboutEditorRef = useRef<HTMLDivElement>(null);
+    const expDescRefs = useRef<(HTMLDivElement | null)[]>([]);
+    const projDescRefs = useRef<(HTMLDivElement | null)[]>([]);
+    const eduDescRefs = useRef<(HTMLDivElement | null)[]>([]);
 
     // HTML에서 포트폴리오 데이터 추출
     const extractPortfolioData = useCallback((html: string): MinimalPortfolioData => {
@@ -316,6 +251,25 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                         updateHtml().catch(console.error);
                     });
 
+                    // AI 확장된 필드 표시 (autoFillService에서 이미 확장됨)
+                    const newInitialEnhancedFields: Record<string, boolean> = {};
+                    if (actualData.about && actualData.about.includes('<span style="color:orange">')) {
+                        newInitialEnhancedFields['about'] = true;
+                    }
+                    actualData.projects?.forEach((project, index) => {
+                        if (project.description && project.description.includes('<span style="color:orange">')) {
+                            newInitialEnhancedFields[`project_${index}_description`] = true;
+                        }
+                    });
+                    actualData.experience?.forEach((exp, index) => {
+                        if (exp.description && exp.description.includes('<span style="color:orange">')) {
+                            newInitialEnhancedFields[`experience_${index}_description`] = true;
+                        }
+                    });
+                    if (Object.keys(newInitialEnhancedFields).length > 0) {
+                        setInitialEnhancedFields(newInitialEnhancedFields);
+                    }
+
                     // AI 개선은 초기 데이터가 부족한 경우에만 수행
                     if (!actualData.about || actualData.about.length < 50) {
                         setIsEnhancing(true);
@@ -324,7 +278,7 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                             setPortfolioData(enhanced);
 
                             if (!actualData.about && enhanced.about) {
-                                setEnhancedFields(prev => ({ ...prev, about: true }));
+                                setInitialEnhancedFields(prev => ({ ...prev, about: true }));
                             }
                         } catch (error) {
                             console.error('데이터 개선 실패:', error);
@@ -353,7 +307,7 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
 
             const hasEducation = portfolioData.education && portfolioData.education.length > 0;
 
-            if (!hasEducation && !enhancedFields['education']) {
+            if (!hasEducation && !initialEnhancedFields['education'] && !userEnhancedFields['education']) {
                 try {
                     const { data: educationData, isGenerated } = await portfolioTextEnhancer.generateDummyEducation();
                     setPortfolioData(prev => ({
@@ -361,7 +315,7 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                         education: educationData
                     }));
                     if (isGenerated) {
-                        setEnhancedFields(prev => ({ ...prev, education: true }));
+                        setInitialEnhancedFields(prev => ({ ...prev, education: true }));
                     }
                 } catch (error) {
                     console.error('더미 학력 데이터 생성 실패:', error);
@@ -445,6 +399,61 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
         }
     }, [portfolioData, sectionTitles, isInitializing, updateHtml]);
 
+    // About 섹션 동기화 (커서 점프 방지)
+    useEffect(() => {
+        if (aboutEditorRef.current && !isUserTyping.current) {
+            const currentContent = aboutEditorRef.current.innerHTML;
+            const newContent = portfolioData.about || '';
+
+            // 내용이 다를 때만 업데이트 (무한 루프 방지)
+            if (currentContent !== newContent) {
+                aboutEditorRef.current.innerHTML = newContent;
+            }
+        }
+    }, [portfolioData.about]);
+
+    // Experience description 동기화 (커서 점프 방지)
+    useEffect(() => {
+        portfolioData.experience.forEach((exp, index) => {
+            const ref = expDescRefs.current[index];
+            if (ref && !isUserTyping.current) {
+                const currentContent = ref.innerHTML;
+                const newContent = exp.description || '';
+                if (currentContent !== newContent) {
+                    ref.innerHTML = newContent;
+                }
+            }
+        });
+    }, [portfolioData.experience]);
+
+    // Project description 동기화 (커서 점프 방지)
+    useEffect(() => {
+        portfolioData.projects.forEach((project, index) => {
+            const ref = projDescRefs.current[index];
+            if (ref && !isUserTyping.current) {
+                const currentContent = ref.innerHTML;
+                const newContent = project.description || '';
+                if (currentContent !== newContent) {
+                    ref.innerHTML = newContent;
+                }
+            }
+        });
+    }, [portfolioData.projects]);
+
+    // Education description 동기화 (커서 점프 방지)
+    useEffect(() => {
+        portfolioData.education.forEach((edu, index) => {
+            const ref = eduDescRefs.current[index];
+            if (ref && !isUserTyping.current) {
+                const currentContent = ref.innerHTML;
+                const newContent = edu.description || '';
+                if (currentContent !== newContent) {
+                    ref.innerHTML = newContent;
+                }
+            }
+        });
+    }, [portfolioData.education]);
+
     // 자기소개 개선
     const handleEnhanceAbout = async () => {
         setIsEnhancing(true);
@@ -453,7 +462,8 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
             const enhanced = await portfolioTextEnhancer.enhanceAboutMe(portfolioData.about);
             setPortfolioData(prev => ({ ...prev, about: enhanced.enhanced }));
             if (enhanced.isGenerated) {
-                setEnhancedFields(prev => ({ ...prev, about: true }));
+                setUserEnhancedFields(prev => ({ ...prev, about: true }));
+                setInitialEnhancedFields(prev => ({ ...prev, about: false }));
             }
         } catch (error) {
             console.error('자기소개 개선 실패:', error);
@@ -508,9 +518,15 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                 return { ...prev, experience: updatedExperience };
             });
 
-            if (enhanced.enhanced?.isGenerated) {
-                setEnhancedFields(prev => ({ ...prev, [`experience_${index}`]: true }));
-            }
+            // AI 개선 시 description 필드 추적
+            setUserEnhancedFields(prev => ({
+                ...prev,
+                [`experience_${index}_description`]: true
+            }));
+            setInitialEnhancedFields(prev => ({
+                ...prev,
+                [`experience_${index}_description`]: false
+            }));
         } catch (error) {
             console.error('경력 개선 실패:', error);
             alert('AI 개선에 실패했습니다. 다시 시도해주세요.');
@@ -540,7 +556,8 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
             });
 
             if (enhanced.enhanced?.isGenerated) {
-                setEnhancedFields(prev => ({ ...prev, [`education_${index}`]: true }));
+                setUserEnhancedFields(prev => ({ ...prev, [`education_${index}_description`]: true }));
+                setInitialEnhancedFields(prev => ({ ...prev, [`education_${index}_description`]: false }));
             }
         } catch (error) {
             console.error('학력 개선 실패:', error);
@@ -606,7 +623,8 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
             });
 
             if (enhanced.enhanced?.isGenerated) {
-                setEnhancedFields(prev => ({ ...prev, [`project_${index}`]: true }));
+                setUserEnhancedFields(prev => ({ ...prev, [`project_${index}_description`]: true }));
+                setInitialEnhancedFields(prev => ({ ...prev, [`project_${index}_description`]: false }));
             }
         } catch (error) {
             console.error('프로젝트 개선 실패:', error);
@@ -903,73 +921,60 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                                         {isEnhancing ? 'AI 개선 중...' : 'AI로 개선'}
                                     </button>
                                 </div>
-                                <div className="relative">
-                                    <div
-                                        contentEditable
-                                        suppressContentEditableWarning
-                                        dangerouslySetInnerHTML={{ __html: portfolioData.about || '' }}
-                                        onInput={(e) => {
-                                            const newValue = e.currentTarget.innerHTML;
-                                            console.log('');
-                                            console.log('📝 [MinimalEditor] About 필드 변경 감지');
-                                            console.log('   입력값:', newValue.substring(0, 50));
-                                            console.log('   길이:', newValue.length, '자');
+                                <div
+                                    ref={aboutEditorRef}
+                                    contentEditable
+                                    suppressContentEditableWarning
+                                    onFocus={() => {
+                                        isUserTyping.current = true;
+                                    }}
+                                    onBlur={() => {
+                                        isUserTyping.current = false;
+                                        // Blur 시 마지막 변경사항 즉시 적용
+                                        if (updateDebounceRef.current) {
+                                            clearTimeout(updateDebounceRef.current);
+                                            updateDebounceRef.current = null;
+                                        }
+                                    }}
+                                    onInput={(e) => {
+                                        const newValue = e.currentTarget.innerHTML;
 
+                                        // Clear existing timeout
+                                        if (updateDebounceRef.current) {
+                                            clearTimeout(updateDebounceRef.current);
+                                        }
+
+                                        // Debounce state update to improve performance
+                                        updateDebounceRef.current = setTimeout(() => {
                                             setPortfolioData(prev => ({ ...prev, about: newValue }));
 
-                                            // AI가 확장한 내용을 사용자가 수정하면 enhancedFields 해제
-                                            if (enhancedFields['about']) {
-                                                console.log('🔄 [MinimalEditor] AI 확장 플래그 해제 - 사용자가 수정함');
-                                                setEnhancedFields(prev => ({ ...prev, about: false }));
+                                            // AI가 확장한 내용을 사용자가 수정하면 userEnhancedFields 해제 (initialEnhancedFields는 유지)
+                                            if (userEnhancedFields['about']) {
+                                                setUserEnhancedFields(prev => ({ ...prev, about: false }));
                                             }
-
-                                            // 자동 확장 스케줄링 (HTML 태그 제거한 순수 텍스트)
-                                            const plainText = newValue.replace(/<[^>]*>/g, '').trim();
-                                            if (plainText.length > 0) {
-                                                console.log('🎯 [MinimalEditor] 자동 확장 스케줄링 시작');
-                                                setIsAutoExpanding(prev => ({ ...prev, about: true }));
-                                                scheduleAboutExpand(plainText);
-                                            }
-                                        }}
-                                        onBlur={(e) => {
-                                            const html = e.currentTarget.innerHTML;
-                                            setPortfolioData(prev => ({ ...prev, about: html }));
-                                        }}
-                                        className={`w-full p-4 border rounded-lg min-h-[150px] focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                                            enhancedFields['about']
-                                                ? 'bg-yellow-50 border-yellow-300'
-                                                : 'bg-white border-gray-300'
-                                        }`}
-                                        data-placeholder="자기소개를 입력하세요. 입력을 멈추면 AI가 자동으로 확장해드립니다."
-                                        style={{
-                                            minHeight: '150px',
-                                            whiteSpace: 'pre-wrap',
-                                            wordWrap: 'break-word'
-                                        }}
-                                    />
-                                    {isAutoExpanding['about'] && !enhancedFields['about'] && (
-                                        <div className="absolute top-2 right-2 flex items-center gap-1 bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">
-                                            <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                            </svg>
-                                            AI 확장 대기 중...
-                                        </div>
-                                    )}
-                                </div>
-                                {enhancedFields['about'] && (
-                                    <div className="mt-2 flex items-center gap-2 text-xs">
-                                        <span className="bg-green-100 text-green-700 px-2 py-1 rounded flex items-center gap-1">
-                                            ✨ AI가 자동으로 확장한 내용입니다
-                                        </span>
-                                        <button
-                                            onClick={() => setEnhancedFields(prev => ({ ...prev, about: false }))}
-                                            className="text-gray-500 hover:text-gray-700"
-                                        >
-                                            닫기
-                                        </button>
-                                    </div>
-                                )}
+                                        }, 300);
+                                    }}
+                                    className={`w-full p-4 border rounded-lg min-h-[150px] focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                                        userEnhancedFields['about']
+                                            ? 'bg-yellow-50 border-yellow-300'
+                                            : 'bg-white border-gray-300'
+                                    }`}
+                                    data-placeholder="자기소개를 입력하세요."
+                                    style={{
+                                        minHeight: '150px',
+                                        whiteSpace: 'pre-wrap',
+                                        wordWrap: 'break-word'
+                                    }}
+                                />
+                                {userEnhancedFields['about'] ? (
+                                    <p className="mt-2 text-xs text-yellow-700">
+                                        ⚠️ AI가 생성/개선한 내용입니다. 검토 후 필요시 수정해주세요.
+                                    </p>
+                                ) : initialEnhancedFields['about'] ? (
+                                    <p className="mt-2 text-xs text-yellow-700">
+                                        색이 다른 글씨는 AI가 보충하여 생성한 데이터입니다. 검토 후 필요시 수정해주세요.
+                                    </p>
+                                ) : null}
                             </div>
                         </BlurFade>
 
@@ -1073,7 +1078,7 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
 
                                 {portfolioData.projects.map((project, index) => (
                                     <div key={index} className={`mb-4 p-4 rounded-lg border ${
-                                        enhancedFields[`project_${index}`]
+                                        userEnhancedFields[`project_${index}`]
                                             ? 'bg-yellow-50 border-yellow-300'
                                             : 'bg-gray-50 border-gray-200'
                                     }`}>
@@ -1102,45 +1107,56 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                                             </div>
                                         </div>
 
-                                        <div className="relative mb-3">
-                                            <div
-                                                contentEditable
-                                                suppressContentEditableWarning
-                                                dangerouslySetInnerHTML={{ __html: project.description || '' }}
-                                                onInput={(e) => {
-                                                    const newValue = e.currentTarget.innerHTML;
+                                        <div
+                                            ref={(el) => { projDescRefs.current[index] = el; }}
+                                            contentEditable
+                                            suppressContentEditableWarning
+                                            onFocus={() => { isUserTyping.current = true; }}
+                                            onBlur={() => {
+                                                isUserTyping.current = false;
+                                                // Blur 시 마지막 변경사항 즉시 적용
+                                                if (updateDebounceRef.current) {
+                                                    clearTimeout(updateDebounceRef.current);
+                                                    updateDebounceRef.current = null;
+                                                }
+                                            }}
+                                            onInput={(e) => {
+                                                const newValue = e.currentTarget.innerHTML;
+
+                                                // Clear existing timeout
+                                                if (updateDebounceRef.current) {
+                                                    clearTimeout(updateDebounceRef.current);
+                                                }
+
+                                                // Debounce state update to improve performance
+                                                updateDebounceRef.current = setTimeout(() => {
                                                     handleUpdateProject(index, 'description', newValue);
-
-                                                    if (enhancedFields[`project_${index}_description`]) {
-                                                        setEnhancedFields(prev => ({ ...prev, [`project_${index}_description`]: false }));
+                                                    if (userEnhancedFields[`project_${index}_description`]) {
+                                                        setUserEnhancedFields(prev => ({ ...prev, [`project_${index}_description`]: false }));
                                                     }
-
-                                                    // 자동 확장 스케줄링 (HTML 태그 제거한 순수 텍스트)
-                                                    const plainText = newValue.replace(/<[^>]*>/g, '').trim();
-                                                    if (plainText.length > 0) {
-                                                        setIsAutoExpanding(prev => ({ ...prev, [`project_${index}_description`]: true }));
-                                                        scheduleProjectExpand(plainText);
-                                                    }
-                                                }}
-                                                onBlur={(e) => {
-                                                    const html = e.currentTarget.innerHTML;
-                                                    handleUpdateProject(index, 'description', html);
-                                                }}
-                                                className={`w-full p-2 border rounded min-h-[80px] focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                                                    enhancedFields[`project_${index}_description`]
-                                                        ? 'bg-yellow-50 border-yellow-300'
-                                                        : isAutoExpanding[`project_${index}_description`]
-                                                        ? 'bg-blue-50 border-blue-300'
-                                                        : 'bg-white border-gray-300'
-                                                }`}
-                                                data-placeholder="프로젝트 설명을 입력하세요. AI가 전문적으로 개선해드립니다."
-                                                style={{
-                                                    minHeight: '80px',
-                                                    whiteSpace: 'pre-wrap',
-                                                    wordWrap: 'break-word'
-                                                }}
-                                            />
-                                        </div>
+                                                }, 300);
+                                            }}
+                                            className={`w-full p-2 border rounded min-h-[80px] mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                                                userEnhancedFields[`project_${index}_description`]
+                                                    ? 'bg-yellow-50 border-yellow-300'
+                                                    : 'bg-white border-gray-300'
+                                            }`}
+                                            data-placeholder="프로젝트 설명을 입력하세요."
+                                            style={{
+                                                minHeight: '80px',
+                                                whiteSpace: 'pre-wrap',
+                                                wordWrap: 'break-word'
+                                            }}
+                                        />
+                                        {userEnhancedFields[`project_${index}_description`] ? (
+                                            <p className="mt-2 text-xs text-yellow-700">
+                                                ⚠️ AI가 생성/개선한 내용입니다. 검토 후 필요시 수정해주세요.
+                                            </p>
+                                        ) : initialEnhancedFields[`project_${index}_description`] ? (
+                                            <p className="mt-2 text-xs text-yellow-700">
+                                                색이 다른 글씨는 AI가 보충하여 생성한 데이터입니다. 검토 후 필요시 수정해주세요.
+                                            </p>
+                                        ) : null}
 
                                         <div className="grid grid-cols-3 gap-2">
                                             <div>
@@ -1174,7 +1190,7 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                                                 />
                                             </div>
                                         </div>
-                                        {enhancedFields[`project_${index}`] && (
+                                        {(initialEnhancedFields[`project_${index}`] || userEnhancedFields[`project_${index}`]) && (
                                             <p className="mt-2 text-xs text-yellow-700">
                                                 ⚠️ AI가 생성/개선한 내용입니다. 검토 후 필요시 수정해주세요.
                                             </p>
@@ -1220,7 +1236,7 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ delay: index * 0.1 }}
                                             className={`p-4 rounded-lg border transition-all hover:shadow-md ${
-                                                enhancedFields[`experience_${index}`]
+                                                userEnhancedFields[`experience_${index}`]
                                                     ? 'bg-gradient-to-r from-yellow-50 to-yellow-100 border-yellow-300'
                                                     : 'bg-gradient-to-r from-gray-50 to-white border-gray-200'
                                             }`}
@@ -1272,45 +1288,56 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                                                 </div>
                                             </div>
 
-                                            <div className="relative">
-                                                <div
-                                                    contentEditable
-                                                    suppressContentEditableWarning
-                                                    dangerouslySetInnerHTML={{ __html: exp.description || '' }}
-                                                    onInput={(e) => {
-                                                        const newValue = e.currentTarget.innerHTML;
+                                            <div
+                                                ref={(el) => { expDescRefs.current[index] = el; }}
+                                                contentEditable
+                                                suppressContentEditableWarning
+                                                onFocus={() => { isUserTyping.current = true; }}
+                                                onBlur={() => {
+                                                    isUserTyping.current = false;
+                                                    // Blur 시 마지막 변경사항 즉시 적용
+                                                    if (updateDebounceRef.current) {
+                                                        clearTimeout(updateDebounceRef.current);
+                                                        updateDebounceRef.current = null;
+                                                    }
+                                                }}
+                                                onInput={(e) => {
+                                                    const newValue = e.currentTarget.innerHTML;
+
+                                                    // Clear existing timeout
+                                                    if (updateDebounceRef.current) {
+                                                        clearTimeout(updateDebounceRef.current);
+                                                    }
+
+                                                    // Debounce state update to improve performance
+                                                    updateDebounceRef.current = setTimeout(() => {
                                                         handleUpdateExperience(index, 'description', newValue);
-
-                                                        if (enhancedFields[`experience_${index}_description`]) {
-                                                            setEnhancedFields(prev => ({ ...prev, [`experience_${index}_description`]: false }));
+                                                        if (userEnhancedFields[`experience_${index}_description`]) {
+                                                            setUserEnhancedFields(prev => ({ ...prev, [`experience_${index}_description`]: false }));
                                                         }
-
-                                                        // 자동 확장 스케줄링 (HTML 태그 제거한 순수 텍스트)
-                                                        const plainText = newValue.replace(/<[^>]*>/g, '').trim();
-                                                        if (plainText.length > 0) {
-                                                            setIsAutoExpanding(prev => ({ ...prev, [`experience_${index}_description`]: true }));
-                                                            scheduleExperienceExpand(plainText);
-                                                        }
-                                                    }}
-                                                    onBlur={(e) => {
-                                                        const html = e.currentTarget.innerHTML;
-                                                        handleUpdateExperience(index, 'description', html);
-                                                    }}
-                                                    className={`w-full p-2 border rounded min-h-[60px] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                                                        enhancedFields[`experience_${index}_description`]
-                                                            ? 'bg-yellow-50 border-yellow-300'
-                                                            : isAutoExpanding[`experience_${index}_description`]
-                                                            ? 'bg-blue-50 border-blue-300'
-                                                            : 'bg-white border-gray-300'
-                                                    }`}
-                                                    data-placeholder="담당 업무를 입력하세요. AI가 전문적으로 개선해드립니다."
-                                                    style={{
-                                                        minHeight: '60px',
-                                                        whiteSpace: 'pre-wrap',
-                                                        wordWrap: 'break-word'
-                                                    }}
-                                                />
-                                            </div>
+                                                    }, 300);
+                                                }}
+                                                className={`w-full p-2 border rounded min-h-[60px] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                                                    userEnhancedFields[`experience_${index}_description`]
+                                                        ? 'bg-yellow-50 border-yellow-300'
+                                                        : 'bg-white border-gray-300'
+                                                }`}
+                                                data-placeholder="담당 업무를 입력하세요."
+                                                style={{
+                                                    minHeight: '60px',
+                                                    whiteSpace: 'pre-wrap',
+                                                    wordWrap: 'break-word'
+                                                }}
+                                            />
+                                            {userEnhancedFields[`experience_${index}_description`] ? (
+                                                <p className="mt-2 text-xs text-yellow-700">
+                                                    ⚠️ AI가 생성/개선한 내용입니다. 검토 후 필요시 수정해주세요.
+                                                </p>
+                                            ) : initialEnhancedFields[`experience_${index}_description`] ? (
+                                                <p className="mt-2 text-xs text-yellow-700">
+                                                    색이 다른 글씨는 AI가 보충하여 생성한 데이터입니다. 검토 후 필요시 수정해주세요.
+                                                </p>
+                                            ) : null}
 
                                             <div className="mt-3">
                                                 <label className="block text-xs font-medium text-gray-600 mb-1">주요 성과 (각 줄에 하나씩)</label>
@@ -1367,7 +1394,7 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ delay: index * 0.1 }}
                                             className={`p-4 rounded-lg border transition-all hover:shadow-md ${
-                                                enhancedFields['education']
+                                                userEnhancedFields['education']
                                                     ? 'bg-gradient-to-r from-yellow-50 to-yellow-100 border-yellow-300'
                                                     : 'bg-gradient-to-r from-indigo-50 to-white border-gray-200'
                                             }`}
@@ -1419,17 +1446,55 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                                                 </div>
                                             </div>
 
-                                            <textarea
-                                                value={edu.description || ''}
-                                                onChange={(e) => handleUpdateEducation(index, 'description', e.target.value)}
-                                                className="w-full p-2 border border-gray-300 rounded min-h-[60px] text-sm"
-                                                placeholder="전공 내용이나 특이사항을 입력하세요"
+                                            <div
+                                                ref={(el) => { eduDescRefs.current[index] = el; }}
+                                                contentEditable
+                                                suppressContentEditableWarning
+                                                onFocus={() => { isUserTyping.current = true; }}
+                                                onBlur={() => {
+                                                    isUserTyping.current = false;
+                                                    // Blur 시 마지막 변경사항 즉시 적용
+                                                    if (updateDebounceRef.current) {
+                                                        clearTimeout(updateDebounceRef.current);
+                                                        updateDebounceRef.current = null;
+                                                    }
+                                                }}
+                                                onInput={(e) => {
+                                                    const newValue = e.currentTarget.innerHTML;
+
+                                                    // Clear existing timeout
+                                                    if (updateDebounceRef.current) {
+                                                        clearTimeout(updateDebounceRef.current);
+                                                    }
+
+                                                    // Debounce state update to improve performance
+                                                    updateDebounceRef.current = setTimeout(() => {
+                                                        handleUpdateEducation(index, 'description', newValue);
+                                                        if (userEnhancedFields[`education_${index}_description`]) {
+                                                            setUserEnhancedFields(prev => ({ ...prev, [`education_${index}_description`]: false }));
+                                                        }
+                                                    }, 300);
+                                                }}
+                                                className={`w-full p-2 border rounded min-h-[60px] text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                                                    userEnhancedFields[`education_${index}_description`]
+                                                        ? 'bg-yellow-50 border-yellow-300'
+                                                        : 'bg-white border-gray-300'
+                                                }`}
+                                                style={{
+                                                    minHeight: '60px',
+                                                    whiteSpace: 'pre-wrap',
+                                                    wordWrap: 'break-word'
+                                                }}
                                             />
-                                            {enhancedFields['education'] && (
+                                            {userEnhancedFields[`education_${index}_description`] ? (
                                                 <p className="mt-2 text-xs text-yellow-700">
-                                                    ⚠️ AI가 생성한 더미 데이터입니다. 검토 후 수정해주세요.
+                                                    ⚠️ AI가 생성/개선한 내용입니다. 검토 후 필요시 수정해주세요.
                                                 </p>
-                                            )}
+                                            ) : initialEnhancedFields[`education_${index}_description`] ? (
+                                                <p className="mt-2 text-xs text-yellow-700">
+                                                    색이 다른 글씨는 AI가 보충하여 생성한 데이터입니다. 검토 후 필요시 수정해주세요.
+                                                </p>
+                                            ) : null}
                                         </motion.div>
                                     ))}
                                 </div>
@@ -1440,7 +1505,7 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                                     </p>
                                 )}
 
-                                {enhancedFields['education'] && portfolioData.education.length > 0 && (
+                                {(initialEnhancedFields['education'] || userEnhancedFields['education']) && portfolioData.education.length > 0 && (
                                     <div className="mt-4 p-3 bg-yellow-50 border border-yellow-300 rounded-lg">
                                         <p className="text-sm text-yellow-800">
                                             ⚠️ 학력 정보가 없어 AI가 더미 데이터를 생성했습니다. 실제 학력 정보로 수정해주세요.
