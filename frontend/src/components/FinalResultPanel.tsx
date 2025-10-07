@@ -581,10 +581,6 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                     }
 
                     /* 섹션별 페이지 나누기 */
-                    header {
-                        page-break-after: always;
-                    }
-
                     .section {
                         page-break-inside: avoid;
                         margin-bottom: 1.5rem !important;
@@ -643,6 +639,59 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                         p + p {
                             display: block !important;
                             margin-top: 0.5em !important;
+                        }
+
+                        /* Clean 템플릿 레이아웃 수정: 사이드바와 메인을 세로로 배치 */
+                        .layout {
+                            display: block !important;
+                            flex-direction: column !important;
+                        }
+
+                        .sidebar {
+                            position: relative !important;
+                            width: 100% !important;
+                            height: auto !important;
+                            border-right: none !important;
+                            page-break-after: avoid !important;
+                            padding: 2rem !important;
+                            background: white !important;
+                            border: none !important;
+                            margin-bottom: 1.5rem !important;
+                        }
+
+                        .main-content {
+                            margin-left: 0 !important;
+                            padding: 0 !important;
+                        }
+
+                        /* 프로필 섹션과 개인소개를 같은 페이지에 */
+                        .profile-section {
+                            page-break-after: avoid !important;
+                            margin-bottom: 0 !important;
+                        }
+
+                        #about {
+                            page-break-before: avoid !important;
+                            padding: 1.5rem !important;
+                            border: 2px solid #ddd !important;
+                            border-radius: 8px !important;
+                            background: white !important;
+                        }
+
+                        /* 네비게이션 메뉴 숨기기 */
+                        nav,
+                        .nav-menu {
+                            display: none !important;
+                        }
+
+                        /* 프로젝트를 세로로 배치 */
+                        .grid {
+                            display: block !important;
+                            grid-template-columns: none !important;
+                        }
+
+                        .grid .card {
+                            margin-bottom: 1.5rem !important;
                         }
                     }
                 </style>
