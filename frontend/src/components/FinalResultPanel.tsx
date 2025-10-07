@@ -122,56 +122,40 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                 }
             });
         } else {
-            // 프로젝트를 4개씩 분할
-            const projectChunks: any[][] = [];
-            for (let i = 0; i < projects.length; i += 4) {
-                projectChunks.push(projects.slice(i, i + 4));
-            }
-
-            // 첫 번째 프로젝트 페이지
-            if (projectChunks.length > 0) {
-                pages.push({
-                    type: 'projects',
-                    data: { projects: projectChunks[0] }
-                });
-            }
-
-            // 나머지 프로젝트 + 커리어
-            let remainingProjects = projectChunks.slice(1).flat();
-            let remainingExperience = [...experience];
-
-            while (remainingProjects.length > 0 || remainingExperience.length > 0) {
-                const pageItems: any = { projects: [], experience: [] };
-                let itemCount = 0;
-
-                // 최대 4개까지 추가
-                while (itemCount < 4 && remainingProjects.length > 0) {
-                    pageItems.projects.push(remainingProjects.shift());
-                    itemCount++;
-                }
-
-                while (itemCount < 4 && remainingExperience.length > 0) {
-                    pageItems.experience.push(remainingExperience.shift());
-                    itemCount++;
-                }
-
-                if (pageItems.projects.length > 0 || pageItems.experience.length > 0) {
+            // 프로젝트가 많으면 별도 페이지로
+            if (projects.length > 0) {
+                // 프로젝트를 2개씩 분할 (한 페이지에 2개씩만)
+                for (let i = 0; i < projects.length; i += 2) {
+                    const chunk = projects.slice(i, i + 2);
                     pages.push({
-                        type: 'mixed',
-                        data: pageItems
+                        type: 'projects',
+                        data: { projects: chunk }
+                    });
+                }
+            }
+
+            // 경력을 별도 페이지로 (2개씩)
+            if (experience.length > 0) {
+                for (let i = 0; i < experience.length; i += 2) {
+                    const chunk = experience.slice(i, i + 2);
+                    pages.push({
+                        type: 'experience',
+                        data: { experience: chunk }
                     });
                 }
             }
         }
 
         // 마지막 페이지: 스킬셋 + 수상내역
-        pages.push({
-            type: 'skills_awards',
-            data: {
-                skills: skills,
-                awards: awards,
-            }
-        });
+        if (skills.length > 0 || awards.length > 0) {
+            pages.push({
+                type: 'skills_awards',
+                data: {
+                    skills: skills,
+                    awards: awards,
+                }
+            });
+        }
 
         return pages;
     };
@@ -182,23 +166,27 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
         const colors = template.designSystem.colors;
 
         if (type === 'profile') {
+            // 연락처 정보 배열 생성
+            const contactItems = [];
+            if (data.contact?.email) contactItems.push(`📧 ${data.contact.email}`);
+            if (data.contact?.phone) contactItems.push(`📱 ${data.contact.phone}`);
+            if (data.contact?.github) contactItems.push(`💻 GitHub`);
+            if (data.contact?.linkedin) contactItems.push(`🔗 LinkedIn`);
+
             return `
                 <div class="page-content">
-                    <div style="text-align: center; margin-bottom: 40px;">
-                        <h1 style="font-size: 36px; margin-bottom: 10px; color: ${colors.primary};">${data.name || ''}</h1>
-                        <p style="font-size: 20px; color: ${colors.secondary}; margin-bottom: 20px;">${data.title || ''}</p>
-                        ${data.contact ? `
-                            <div style="display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; font-size: 14px; color: ${colors.text};">
-                                ${data.contact.email ? `<span>📧 ${data.contact.email}</span>` : ''}
-                                ${data.contact.phone ? `<span>📱 ${data.contact.phone}</span>` : ''}
-                                ${data.contact.github ? `<span>💻 ${data.contact.github}</span>` : ''}
-                                ${data.contact.linkedin ? `<span>🔗 ${data.contact.linkedin}</span>` : ''}
+                    <div style="text-align: center; margin-bottom: 50px; padding: 30px 0;">
+                        <h1 style="font-size: 42px; font-weight: 700; margin-bottom: 12px; color: ${colors.primary};">${data.name || ''}</h1>
+                        <p style="font-size: 22px; color: ${colors.secondary}; margin-bottom: 25px; font-weight: 500;">${data.title || ''}</p>
+                        ${contactItems.length > 0 ? `
+                            <div style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; font-size: 15px; color: ${colors.text}; margin-top: 20px;">
+                                ${contactItems.map(item => `<span style="padding: 8px 16px; background: ${colors.background}; border-radius: 20px; border: 1px solid ${colors.border};">${item}</span>`).join('')}
                             </div>
                         ` : ''}
                     </div>
-                    <div style="border-top: 2px solid ${colors.border}; padding-top: 30px;">
-                        <h2 style="font-size: 24px; margin-bottom: 15px; color: ${colors.primary};">자기소개</h2>
-                        <p style="line-height: 1.8; color: ${colors.text};">${data.about || ''}</p>
+                    <div style="border-top: 3px solid ${colors.primary}; padding-top: 35px;">
+                        <h2 style="font-size: 28px; margin-bottom: 20px; color: ${colors.primary}; font-weight: 600;">자기소개</h2>
+                        <p style="line-height: 2; color: ${colors.text}; font-size: 16px; text-align: justify; white-space: pre-wrap; word-break: keep-all;">${data.about || ''}</p>
                     </div>
                 </div>
             `;
@@ -208,15 +196,15 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
             return `
                 <div class="page-content">
                     ${data.projects.length > 0 ? `
-                        <div style="margin-bottom: 40px;">
-                            <h2 style="font-size: 24px; margin-bottom: 20px; color: ${colors.primary}; border-bottom: 2px solid ${colors.border}; padding-bottom: 10px;">프로젝트</h2>
+                        <div style="margin-bottom: 50px;">
+                            <h2 style="font-size: 28px; margin-bottom: 25px; color: ${colors.primary}; border-bottom: 3px solid ${colors.primary}; padding-bottom: 12px; font-weight: 600;">프로젝트</h2>
                             ${data.projects.map((proj: any) => `
-                                <div style="margin-bottom: 25px; padding: 15px; border-left: 3px solid ${colors.accent}; background: ${colors.background};">
-                                    <h3 style="font-size: 18px; margin-bottom: 8px; color: ${colors.primary};">${proj.name || ''}</h3>
-                                    <p style="color: ${colors.text}; margin-bottom: 10px;">${proj.description || ''}</p>
+                                <div style="margin-bottom: 30px; padding: 20px; border-left: 4px solid ${colors.accent}; background: ${colors.background}; border-radius: 0 8px 8px 0;">
+                                    <h3 style="font-size: 20px; margin-bottom: 12px; color: ${colors.primary}; font-weight: 600;">${proj.name || ''}</h3>
+                                    <p style="color: ${colors.text}; margin-bottom: 12px; line-height: 1.8; font-size: 15px; white-space: pre-wrap;">${proj.description || ''}</p>
                                     ${proj.tech && proj.tech.length > 0 ? `
-                                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                                            ${proj.tech.map((t: string) => `<span style="background: ${colors.accent}; color: white; padding: 4px 10px; border-radius: 12px; font-size: 12px;">${t}</span>`).join('')}
+                                        <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px;">
+                                            ${proj.tech.map((t: string) => `<span style="background: ${colors.accent}; color: white; padding: 6px 12px; border-radius: 14px; font-size: 13px; font-weight: 500;">${t}</span>`).join('')}
                                         </div>
                                     ` : ''}
                                 </div>
@@ -225,12 +213,12 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                     ` : ''}
                     ${data.experience.length > 0 ? `
                         <div>
-                            <h2 style="font-size: 24px; margin-bottom: 20px; color: ${colors.primary}; border-bottom: 2px solid ${colors.border}; padding-bottom: 10px;">경력</h2>
+                            <h2 style="font-size: 28px; margin-bottom: 25px; color: ${colors.primary}; border-bottom: 3px solid ${colors.primary}; padding-bottom: 12px; font-weight: 600;">경력</h2>
                             ${data.experience.map((exp: any) => `
-                                <div style="margin-bottom: 25px; padding: 15px; border-left: 3px solid ${colors.accent}; background: ${colors.background};">
-                                    <h3 style="font-size: 18px; margin-bottom: 5px; color: ${colors.primary};">${exp.position || ''}</h3>
-                                    <p style="color: ${colors.secondary}; margin-bottom: 10px;">${exp.company || ''} | ${exp.duration || ''}</p>
-                                    <p style="color: ${colors.text};">${exp.description || ''}</p>
+                                <div style="margin-bottom: 30px; padding: 20px; border-left: 4px solid ${colors.accent}; background: ${colors.background}; border-radius: 0 8px 8px 0;">
+                                    <h3 style="font-size: 20px; margin-bottom: 8px; color: ${colors.primary}; font-weight: 600;">${exp.position || ''}</h3>
+                                    <p style="color: ${colors.secondary}; margin-bottom: 12px; font-size: 14px; font-weight: 500;">${exp.company || ''} • ${exp.duration || ''}</p>
+                                    <p style="color: ${colors.text}; line-height: 1.8; font-size: 15px; white-space: pre-wrap;">${exp.description || ''}</p>
                                 </div>
                             `).join('')}
                         </div>
@@ -242,16 +230,31 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
         if (type === 'projects') {
             return `
                 <div class="page-content">
-                    <h2 style="font-size: 24px; margin-bottom: 20px; color: ${colors.primary}; border-bottom: 2px solid ${colors.border}; padding-bottom: 10px;">프로젝트</h2>
+                    <h2 style="font-size: 28px; margin-bottom: 25px; color: ${colors.primary}; border-bottom: 3px solid ${colors.primary}; padding-bottom: 12px; font-weight: 600;">프로젝트</h2>
                     ${data.projects.map((proj: any) => `
-                        <div style="margin-bottom: 25px; padding: 15px; border-left: 3px solid ${colors.accent}; background: ${colors.background};">
-                            <h3 style="font-size: 18px; margin-bottom: 8px; color: ${colors.primary};">${proj.name || ''}</h3>
-                            <p style="color: ${colors.text}; margin-bottom: 10px;">${proj.description || ''}</p>
+                        <div style="margin-bottom: 30px; padding: 20px; border-left: 4px solid ${colors.accent}; background: ${colors.background}; border-radius: 0 8px 8px 0;">
+                            <h3 style="font-size: 20px; margin-bottom: 12px; color: ${colors.primary}; font-weight: 600;">${proj.name || ''}</h3>
+                            <p style="color: ${colors.text}; margin-bottom: 12px; line-height: 1.8; font-size: 15px; white-space: pre-wrap;">${proj.description || ''}</p>
                             ${proj.tech && proj.tech.length > 0 ? `
-                                <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                                    ${proj.tech.map((t: string) => `<span style="background: ${colors.accent}; color: white; padding: 4px 10px; border-radius: 12px; font-size: 12px;">${t}</span>`).join('')}
+                                <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px;">
+                                    ${proj.tech.map((t: string) => `<span style="background: ${colors.accent}; color: white; padding: 6px 12px; border-radius: 14px; font-size: 13px; font-weight: 500;">${t}</span>`).join('')}
                                 </div>
                             ` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        if (type === 'experience') {
+            return `
+                <div class="page-content">
+                    <h2 style="font-size: 28px; margin-bottom: 25px; color: ${colors.primary}; border-bottom: 3px solid ${colors.primary}; padding-bottom: 12px; font-weight: 600;">경력</h2>
+                    ${data.experience.map((exp: any) => `
+                        <div style="margin-bottom: 30px; padding: 20px; border-left: 4px solid ${colors.accent}; background: ${colors.background}; border-radius: 0 8px 8px 0;">
+                            <h3 style="font-size: 20px; margin-bottom: 8px; color: ${colors.primary}; font-weight: 600;">${exp.position || ''}</h3>
+                            <p style="color: ${colors.secondary}; margin-bottom: 12px; font-size: 14px; font-weight: 500;">${exp.company || ''} • ${exp.duration || ''}</p>
+                            <p style="color: ${colors.text}; line-height: 1.8; font-size: 15px; white-space: pre-wrap;">${exp.description || ''}</p>
                         </div>
                     `).join('')}
                 </div>
@@ -262,15 +265,15 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
             return `
                 <div class="page-content">
                     ${data.projects.length > 0 ? `
-                        <div style="margin-bottom: 40px;">
-                            <h2 style="font-size: 24px; margin-bottom: 20px; color: ${colors.primary}; border-bottom: 2px solid ${colors.border}; padding-bottom: 10px;">프로젝트 (계속)</h2>
+                        <div style="margin-bottom: 50px;">
+                            <h2 style="font-size: 28px; margin-bottom: 25px; color: ${colors.primary}; border-bottom: 3px solid ${colors.primary}; padding-bottom: 12px; font-weight: 600;">프로젝트 (계속)</h2>
                             ${data.projects.map((proj: any) => `
-                                <div style="margin-bottom: 25px; padding: 15px; border-left: 3px solid ${colors.accent}; background: ${colors.background};">
-                                    <h3 style="font-size: 18px; margin-bottom: 8px; color: ${colors.primary};">${proj.name || ''}</h3>
-                                    <p style="color: ${colors.text}; margin-bottom: 10px;">${proj.description || ''}</p>
+                                <div style="margin-bottom: 30px; padding: 20px; border-left: 4px solid ${colors.accent}; background: ${colors.background}; border-radius: 0 8px 8px 0;">
+                                    <h3 style="font-size: 20px; margin-bottom: 12px; color: ${colors.primary}; font-weight: 600;">${proj.name || ''}</h3>
+                                    <p style="color: ${colors.text}; margin-bottom: 12px; line-height: 1.8; font-size: 15px; white-space: pre-wrap;">${proj.description || ''}</p>
                                     ${proj.tech && proj.tech.length > 0 ? `
-                                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                                            ${proj.tech.map((t: string) => `<span style="background: ${colors.accent}; color: white; padding: 4px 10px; border-radius: 12px; font-size: 12px;">${t}</span>`).join('')}
+                                        <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px;">
+                                            ${proj.tech.map((t: string) => `<span style="background: ${colors.accent}; color: white; padding: 6px 12px; border-radius: 14px; font-size: 13px; font-weight: 500;">${t}</span>`).join('')}
                                         </div>
                                     ` : ''}
                                 </div>
@@ -279,12 +282,12 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                     ` : ''}
                     ${data.experience.length > 0 ? `
                         <div>
-                            <h2 style="font-size: 24px; margin-bottom: 20px; color: ${colors.primary}; border-bottom: 2px solid ${colors.border}; padding-bottom: 10px;">경력${data.projects.length > 0 ? ' (계속)' : ''}</h2>
+                            <h2 style="font-size: 28px; margin-bottom: 25px; color: ${colors.primary}; border-bottom: 3px solid ${colors.primary}; padding-bottom: 12px; font-weight: 600;">경력${data.projects.length > 0 ? ' (계속)' : ''}</h2>
                             ${data.experience.map((exp: any) => `
-                                <div style="margin-bottom: 25px; padding: 15px; border-left: 3px solid ${colors.accent}; background: ${colors.background};">
-                                    <h3 style="font-size: 18px; margin-bottom: 5px; color: ${colors.primary};">${exp.position || ''}</h3>
-                                    <p style="color: ${colors.secondary}; margin-bottom: 10px;">${exp.company || ''} | ${exp.duration || ''}</p>
-                                    <p style="color: ${colors.text};">${exp.description || ''}</p>
+                                <div style="margin-bottom: 30px; padding: 20px; border-left: 4px solid ${colors.accent}; background: ${colors.background}; border-radius: 0 8px 8px 0;">
+                                    <h3 style="font-size: 20px; margin-bottom: 8px; color: ${colors.primary}; font-weight: 600;">${exp.position || ''}</h3>
+                                    <p style="color: ${colors.secondary}; margin-bottom: 12px; font-size: 14px; font-weight: 500;">${exp.company || ''} • ${exp.duration || ''}</p>
+                                    <p style="color: ${colors.text}; line-height: 1.8; font-size: 15px; white-space: pre-wrap;">${exp.description || ''}</p>
                                 </div>
                             `).join('')}
                         </div>
@@ -297,15 +300,15 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
             return `
                 <div class="page-content">
                     ${data.skills && data.skills.length > 0 ? `
-                        <div style="margin-bottom: 40px;">
-                            <h2 style="font-size: 24px; margin-bottom: 20px; color: ${colors.primary}; border-bottom: 2px solid ${colors.border}; padding-bottom: 10px;">스킬</h2>
-                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+                        <div style="margin-bottom: 50px;">
+                            <h2 style="font-size: 28px; margin-bottom: 25px; color: ${colors.primary}; border-bottom: 3px solid ${colors.primary}; padding-bottom: 12px; font-weight: 600;">스킬</h2>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px;">
                                 ${data.skills.map((skillCat: any) => `
-                                    <div style="padding: 15px; background: ${colors.background}; border-radius: 8px;">
-                                        <h3 style="font-size: 16px; margin-bottom: 10px; color: ${colors.primary};">${skillCat.category || ''}</h3>
-                                        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                                    <div style="padding: 20px; background: ${colors.background}; border-radius: 10px; border: 1px solid ${colors.border};">
+                                        <h3 style="font-size: 18px; margin-bottom: 14px; color: ${colors.primary}; font-weight: 600;">${skillCat.category || ''}</h3>
+                                        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
                                             ${(skillCat.skills || []).map((skill: string) => `
-                                                <span style="background: ${colors.accent}; color: white; padding: 3px 8px; border-radius: 10px; font-size: 11px;">${skill}</span>
+                                                <span style="background: ${colors.accent}; color: white; padding: 6px 12px; border-radius: 12px; font-size: 13px; font-weight: 500;">${skill}</span>
                                             `).join('')}
                                         </div>
                                     </div>
@@ -315,12 +318,12 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                     ` : ''}
                     ${data.awards && data.awards.length > 0 ? `
                         <div>
-                            <h2 style="font-size: 24px; margin-bottom: 20px; color: ${colors.primary}; border-bottom: 2px solid ${colors.border}; padding-bottom: 10px;">수상 내역</h2>
+                            <h2 style="font-size: 28px; margin-bottom: 25px; color: ${colors.primary}; border-bottom: 3px solid ${colors.primary}; padding-bottom: 12px; font-weight: 600;">수상 내역</h2>
                             ${data.awards.map((award: any) => `
-                                <div style="margin-bottom: 20px; padding: 15px; background: ${colors.background}; border-left: 3px solid ${colors.accent};">
-                                    <h3 style="font-size: 18px; margin-bottom: 5px; color: ${colors.primary};">${award.title || ''}</h3>
-                                    <p style="color: ${colors.secondary};">${award.organization || ''} | ${award.year || ''}</p>
-                                    ${award.description ? `<p style="color: ${colors.text}; margin-top: 8px;">${award.description}</p>` : ''}
+                                <div style="margin-bottom: 25px; padding: 20px; background: ${colors.background}; border-left: 4px solid ${colors.accent}; border-radius: 0 8px 8px 0;">
+                                    <h3 style="font-size: 20px; margin-bottom: 8px; color: ${colors.primary}; font-weight: 600;">${award.title || ''}</h3>
+                                    <p style="color: ${colors.secondary}; font-size: 14px; font-weight: 500;">${award.organization || ''} • ${award.year || ''}</p>
+                                    ${award.description ? `<p style="color: ${colors.text}; margin-top: 12px; line-height: 1.8; font-size: 15px;">${award.description}</p>` : ''}
                                 </div>
                             `).join('')}
                         </div>
