@@ -19,6 +19,7 @@ import { useScrollPreservation } from '../../hooks/useScrollPreservation';
 import { useAutoExpand } from '../../hooks/useAutoExpand';
 import NaturalLanguageModal from '../NaturalLanguageModal';
 import { userFeedbackService } from '../../services/userFeedbackService';
+import { portfolioTranslator } from '../../services/portfolioTranslator';
 
 // 스킬 입력 컴포넌트
 const SkillInput: React.FC<{
@@ -95,6 +96,8 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
     const [dataLoaded, setDataLoaded] = useState(false);
     const [showNaturalLanguage, setShowNaturalLanguage] = useState(false);
     const [isAutoExpanding, setIsAutoExpanding] = useState<Record<string, boolean>>({});
+    const [language, setLanguage] = useState<'ko' | 'en'>('ko'); // 언어 설정 (기본값: 한글)
+    const [isTranslating, setIsTranslating] = useState(false);
 
     // Clean 템플릿 전용 섹션 제목 (education 없음, awards 있음)
     const [sectionTitles, setSectionTitles] = useState({
@@ -733,6 +736,31 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
     };
 
     // 저장 처리
+    // 한/영 전환 핸들러
+    const handleLanguageSwitch = async (targetLang: 'ko' | 'en') => {
+        if (targetLang === language || isTranslating) return;
+
+        setIsTranslating(true);
+        try {
+            console.log(`🌐 언어 전환 시작: ${language} → ${targetLang}`);
+
+            const translatedData = await portfolioTranslator.translatePortfolio({
+                portfolioData,
+                targetLanguage: targetLang
+            });
+
+            setPortfolioData(translatedData);
+            setLanguage(targetLang);
+
+            console.log('✅ 언어 전환 완료');
+        } catch (error) {
+            console.error('❌ 언어 전환 실패:', error);
+            alert('언어 전환 중 오류가 발생했습니다. 다시 시도해주세요.');
+        } finally {
+            setIsTranslating(false);
+        }
+    };
+
     const handleSave = async () => {
         const updatedHtml = await updateHtml();
         const updatedDocument = {
@@ -825,8 +853,42 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                             <h1 className="text-xl font-semibold text-gray-900">
                                 Clean 템플릿 편집 - 기업형 스타일
                             </h1>
+                            {isTranslating && (
+                                <span className="ml-3 text-sm text-blue-600 flex items-center">
+                                    <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    번역 중...
+                                </span>
+                            )}
                         </div>
                         <div className="flex items-center space-x-3">
+                            {/* 한/영 전환 버튼 */}
+                            <div className="flex items-center space-x-2 bg-gray-100 rounded-lg p-1">
+                                <button
+                                    onClick={() => handleLanguageSwitch('ko')}
+                                    disabled={isTranslating}
+                                    className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                                        language === 'ko'
+                                            ? 'bg-white text-blue-600 shadow-sm'
+                                            : 'text-gray-600 hover:text-gray-900'
+                                    } ${isTranslating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                >
+                                    한글
+                                </button>
+                                <button
+                                    onClick={() => handleLanguageSwitch('en')}
+                                    disabled={isTranslating}
+                                    className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
+                                        language === 'en'
+                                            ? 'bg-white text-blue-600 shadow-sm'
+                                            : 'text-gray-600 hover:text-gray-900'
+                                    } ${isTranslating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                >
+                                    English
+                                </button>
+                            </div>
                             <button
                                 onClick={handleSave}
                                 className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 transition-colors flex items-center"
