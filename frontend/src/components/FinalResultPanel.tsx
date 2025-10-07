@@ -9,12 +9,16 @@ import {
     ChartBarIcon,
     SparklesIcon,
     ArrowPathIcon,
+    DocumentTextIcon,
+    ClipboardDocumentIcon,
+    CodeBracketIcon,
 } from "@heroicons/react/24/outline";
 import { StarIcon as StarIconSolid } from "@heroicons/react/24/solid";
 import { GenerationResult } from "../services/oneClickGenerator";
 import { BoostResult } from "../services/interactiveBooster";
 import { FeedbackResult } from "../services/userFeedbackService";
 import { portfolioTemplates } from "../templates/portfolioTemplates";
+import { htmlToMarkdownConverter } from "../services/htmlToMarkdownConverter";
 
 type TemplateType = "minimal" | "clean" | "colorful" | "elegant";
 
@@ -37,6 +41,7 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
     const [userRating, setUserRating] = useState<number>(0);
     const [hoverRating, setHoverRating] = useState<number>(0);
     const [ratingSubmitted, setRatingSubmitted] = useState(false);
+    const [copySuccess, setCopySuccess] = useState<string>('');
     const portfolioRef = useRef<HTMLDivElement>(null);
 
     // 기존 평가 불러오기
@@ -735,6 +740,56 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
         }
     };
 
+    // Markdown 다운로드
+    const handleDownloadMarkdown = () => {
+        try {
+            const htmlContent = generateTemplatedHTML();
+            const markdown = htmlToMarkdownConverter.convertToMarkdown(htmlContent);
+            htmlToMarkdownConverter.downloadMarkdown(markdown, `${finalResult.id}_portfolio.md`);
+        } catch (error) {
+            console.error("Markdown 다운로드 실패:", error);
+            alert("Markdown 다운로드에 실패했습니다.");
+        }
+    };
+
+    // Markdown 클립보드 복사
+    const handleCopyMarkdown = async () => {
+        try {
+            const htmlContent = generateTemplatedHTML();
+            const markdown = htmlToMarkdownConverter.convertToMarkdown(htmlContent);
+            const success = await htmlToMarkdownConverter.copyToClipboard(markdown);
+
+            if (success) {
+                setCopySuccess('Markdown이 클립보드에 복사되었습니다!');
+                setTimeout(() => setCopySuccess(''), 3000);
+            } else {
+                alert("클립보드 복사에 실패했습니다.");
+            }
+        } catch (error) {
+            console.error("Markdown 복사 실패:", error);
+            alert("Markdown 복사에 실패했습니다.");
+        }
+    };
+
+    // HTML 다운로드
+    const handleDownloadHTML = () => {
+        try {
+            const htmlContent = generateTemplatedHTML();
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${finalResult.id}_portfolio.html`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error("HTML 다운로드 실패:", error);
+            alert("HTML 다운로드에 실패했습니다.");
+        }
+    };
+
     // 별점 평가 핸들러
     const handleRating = (rating: number) => {
         setUserRating(rating);
@@ -1042,7 +1097,28 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                                 <h3 className="font-semibold text-gray-700">
                                     추가 옵션
                                 </h3>
-                                <div className="grid grid-cols-1 gap-3">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <button
+                                        onClick={handleDownloadMarkdown}
+                                        className="flex items-center justify-center p-4 border border-gray-300 text-gray-700 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-all"
+                                    >
+                                        <DocumentTextIcon className="w-5 h-5 mr-2" />
+                                        Markdown 다운로드
+                                    </button>
+                                    <button
+                                        onClick={handleCopyMarkdown}
+                                        className="flex items-center justify-center p-4 border border-gray-300 text-gray-700 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-all"
+                                    >
+                                        <ClipboardDocumentIcon className="w-5 h-5 mr-2" />
+                                        Markdown 복사
+                                    </button>
+                                    <button
+                                        onClick={handleDownloadHTML}
+                                        className="flex items-center justify-center p-4 border border-gray-300 text-gray-700 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-all"
+                                    >
+                                        <CodeBracketIcon className="w-5 h-5 mr-2" />
+                                        HTML 다운로드
+                                    </button>
                                     <button
                                         onClick={handleShare}
                                         className="flex items-center justify-center p-4 border border-gray-300 text-gray-700 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-all"
@@ -1051,11 +1127,13 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                                         공유하기
                                     </button>
                                 </div>
+                                {copySuccess && (
+                                    <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-2 rounded-lg text-sm">
+                                        {copySuccess}
+                                    </div>
+                                )}
                                 <p className="text-xs text-gray-500 mt-2">
-                                    💡 <strong>PDF 다운로드</strong>: 브라우저의
-                                    인쇄 기능을 사용하여 PDF로 저장합니다.
-                                    빠르고 안정적이며, 디자인이 완벽하게
-                                    유지됩니다.
+                                    💡 <strong>다양한 형식 지원</strong>: PDF, Markdown, HTML 형식으로 포트폴리오를 다운로드할 수 있습니다.
                                 </p>
                             </div>
 
