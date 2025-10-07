@@ -549,12 +549,18 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
 
             console.log("=== PDF 생성 디버깅 ===");
             console.log("HTML 길이:", htmlContent.length);
-            console.log("HTML 샘플 (처음 500자):", htmlContent.substring(0, 500));
+            console.log("HTML 샘플 (처음 1000자):", htmlContent.substring(0, 1000));
 
             // HTML에서 데이터 추출
             let portfolioData = extractPortfolioDataFromHTML(htmlContent);
 
-            console.log("추출된 데이터:", portfolioData);
+            console.log("📊 추출된 데이터 전체:", portfolioData);
+            console.log("👤 이름:", portfolioData?.name);
+            console.log("💼 직책:", portfolioData?.title);
+            console.log("📧 연락처:", portfolioData?.contact);
+            console.log("📝 프로젝트 개수:", portfolioData?.projects?.length);
+            console.log("💻 경력 개수:", portfolioData?.experience?.length);
+            console.log("🎯 스킬 개수:", portfolioData?.skillCategories?.length);
 
             const template = portfolioTemplates[selectedTemplate];
             if (!template) {
