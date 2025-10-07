@@ -561,6 +561,23 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                     body {
                         -webkit-print-color-adjust: exact;
                         print-color-adjust: exact;
+                        line-height: 1.5 !important;
+                    }
+
+                    /* 목차 숨기기 */
+                    nav,
+                    .nav,
+                    .navigation,
+                    .menu,
+                    .toc,
+                    [role="navigation"] {
+                        display: none !important;
+                    }
+
+                    /* 줄 간격 조정 */
+                    p {
+                        line-height: 1.5 !important;
+                        margin-bottom: 0.5em !important;
                     }
 
                     /* 섹션별 페이지 나누기 */
@@ -570,6 +587,15 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
 
                     .section {
                         page-break-inside: avoid;
+                        margin-bottom: 1.5rem !important;
+                    }
+
+                    /* 프로젝트/경력 카드 깨짐 방지 */
+                    .project-card,
+                    .timeline-item,
+                    .card {
+                        page-break-inside: avoid !important;
+                        margin-bottom: 1rem !important;
                     }
 
                     /* 프로젝트 카드 2개마다 페이지 나누기 */
@@ -582,12 +608,41 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                         page-break-after: always;
                     }
 
+                    /* 스킬셋 간격 조정 */
+                    .skills-container,
+                    .skill-category {
+                        gap: 0.8rem !important;
+                        margin-bottom: 0.8rem !important;
+                    }
+
+                    .skill-category {
+                        padding: 1rem !important;
+                    }
+
+                    .skill-list li {
+                        padding: 0.3rem 0 !important;
+                    }
+
                     /* 인쇄 시 그림자/애니메이션 제거 */
                     @media print {
                         * {
                             box-shadow: none !important;
                             animation: none !important;
                             transition: none !important;
+                        }
+
+                        /* 줄바꿈 제거 (연속된 텍스트로) */
+                        br {
+                            display: none !important;
+                        }
+
+                        p {
+                            display: inline !important;
+                        }
+
+                        p + p {
+                            display: block !important;
+                            margin-top: 0.5em !important;
                         }
                     }
                 </style>
