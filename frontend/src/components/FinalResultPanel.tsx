@@ -374,10 +374,11 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
             extractedData.title = titleElement.textContent?.trim() || '';
         }
 
-        // 연락처 추출 (.social-links 안의 링크들)
-        const socialLinks = doc.querySelectorAll('.social-links a[href], .social-link[href]');
-        socialLinks.forEach(el => {
+        // 연락처 추출 (.social-links 안의 링크들 + 일반 링크)
+        const allLinks = doc.querySelectorAll('a[href]');
+        allLinks.forEach(el => {
             const href = el.getAttribute('href') || '';
+            const text = el.textContent?.trim() || '';
 
             if (href.startsWith('mailto:')) {
                 extractedData.contact.email = href.replace('mailto:', '');
@@ -389,6 +390,8 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                 extractedData.contact.linkedin = href;
             }
         });
+
+        console.log("📧 추출된 연락처:", extractedData.contact);
 
         // About 추출 - section 안에서 찾기
         const sections = doc.querySelectorAll('section.section, section');
