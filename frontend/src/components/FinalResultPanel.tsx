@@ -693,6 +693,14 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                         .grid .card {
                             margin-bottom: 1.5rem !important;
                         }
+
+                        /* 스킬셋은 가로로 배치 (3개씩 한 줄) */
+                        #skills .grid,
+                        .skills-container {
+                            display: grid !important;
+                            grid-template-columns: repeat(3, 1fr) !important;
+                            gap: 1rem !important;
+                        }
                     }
                 </style>
             `;
