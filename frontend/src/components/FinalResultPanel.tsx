@@ -9,12 +9,17 @@ import {
     ChartBarIcon,
     SparklesIcon,
     ArrowPathIcon,
+    DocumentTextIcon,
+    ClipboardDocumentIcon,
+    CodeBracketIcon,
 } from "@heroicons/react/24/outline";
 import { StarIcon as StarIconSolid } from "@heroicons/react/24/solid";
 import { GenerationResult } from "../services/oneClickGenerator";
 import { BoostResult } from "../services/interactiveBooster";
 import { FeedbackResult } from "../services/userFeedbackService";
 import { portfolioTemplates } from "../templates/portfolioTemplates";
+import { htmlToMarkdownConverter } from "../services/htmlToMarkdownConverter";
+import { pdfGenerator } from "../services/pdfGenerator";
 
 type TemplateType = "minimal" | "clean" | "colorful" | "elegant";
 
@@ -37,6 +42,8 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
     const [userRating, setUserRating] = useState<number>(0);
     const [hoverRating, setHoverRating] = useState<number>(0);
     const [ratingSubmitted, setRatingSubmitted] = useState(false);
+    const [copySuccess, setCopySuccess] = useState<string>('');
+    const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
     const portfolioRef = useRef<HTMLDivElement>(null);
 
     // 기존 평가 불러오기
@@ -92,7 +99,7 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
         }
     };
 
-    // 브라우저 인쇄 기능을 사용한 PDF 저장
+    // 브라우저 인쇄 기능을 사용한 PDF 저장 (빠른 방법)
     const handlePrintToPDF = () => {
         const printWindow = window.open("", "_blank");
         if (!printWindow) {
@@ -101,52 +108,35 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
         }
 
         const htmlContent = generateTemplatedHTML();
+        const optimizedHTML = pdfGenerator.generatePrintOptimizedHTML(htmlContent);
 
-        // 인쇄 최적화 스타일 추가
-        const printStyles = `
-      <style>
-        @media print {
-          @page {
-            size: A4;
-            margin: 0;
-          }
-          body {
-            margin: 0;
-            padding: 20px;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-          /* 페이지 나누기 방지 */
-          * {
-            page-break-inside: avoid;
-          }
-          /* 그림자와 애니메이션 제거 (인쇄 최적화) */
-          * {
-            box-shadow: none !important;
-            animation: none !important;
-            transition: none !important;
-          }
-        }
-      </style>
-    `;
-
-        // HTML에 인쇄 스타일 삽입
-        const modifiedHTML = htmlContent.replace(
-            "</head>",
-            printStyles + "</head>"
-        );
-
-        printWindow.document.write(modifiedHTML);
+        printWindow.document.write(optimizedHTML);
         printWindow.document.close();
 
         // 콘텐츠 로딩 대기 후 인쇄 다이얼로그 표시
         printWindow.onload = () => {
             setTimeout(() => {
                 printWindow.print();
-                // 인쇄 후 창 닫기 (선택사항)
-                // printWindow.close();
             }, 500);
         };
+    };
+
+    // 고품질 PDF 생성 (섹션별 페이지 구분)
+    const handleDownloadHighQualityPDF = async () => {
+        try {
+            setIsGeneratingPDF(true);
+            const htmlContent = generateTemplatedHTML();
+            await pdfGenerator.generatePDF(htmlContent, 'portfolio.pdf', {
+                quality: 2,
+                format: 'a4',
+                orientation: 'portrait',
+            });
+        } catch (error) {
+            console.error('고품질 PDF 생성 실패:', error);
+            alert('PDF 생성에 실패했습니다. 다시 시도해주세요.');
+        } finally {
+            setIsGeneratingPDF(false);
+        }
     };
 
     // 별점 평가 핸들러
@@ -200,6 +190,56 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                 console.error("클립보드 복사 실패:", error);
                 alert("클립보드 복사에 실패했습니다.");
             }
+        }
+    };
+
+    // Markdown 다운로드 핸들러
+    const handleDownloadMarkdown = () => {
+        try {
+            const htmlContent = generateTemplatedHTML();
+            const markdown = htmlToMarkdownConverter.convertToMarkdown(htmlContent);
+            htmlToMarkdownConverter.downloadMarkdown(markdown, 'portfolio.md');
+        } catch (error) {
+            console.error('Markdown 변환 실패:', error);
+            alert('Markdown 변환에 실패했습니다.');
+        }
+    };
+
+    // Markdown 클립보드 복사 핸들러
+    const handleCopyMarkdown = async () => {
+        try {
+            const htmlContent = generateTemplatedHTML();
+            const markdown = htmlToMarkdownConverter.convertToMarkdown(htmlContent);
+            const success = await htmlToMarkdownConverter.copyToClipboard(markdown);
+
+            if (success) {
+                setCopySuccess('Markdown이 클립보드에 복사되었습니다!');
+                setTimeout(() => setCopySuccess(''), 3000);
+            } else {
+                alert('클립보드 복사에 실패했습니다.');
+            }
+        } catch (error) {
+            console.error('Markdown 복사 실패:', error);
+            alert('Markdown 복사에 실패했습니다.');
+        }
+    };
+
+    // HTML 파일 다운로드 핸들러
+    const handleDownloadHTML = () => {
+        try {
+            const htmlContent = generateTemplatedHTML();
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'portfolio.html';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error('HTML 다운로드 실패:', error);
+            alert('HTML 다운로드에 실패했습니다.');
         }
     };
 
@@ -433,7 +473,7 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                             </h2>
 
                             {/* 메인 액션 버튼들 */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                                 <button
                                     onClick={() => setShowPreview(true)}
                                     className="group flex items-center justify-center p-6 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-xl font-medium hover:from-blue-700 hover:to-cyan-700 shadow-md hover:shadow-lg transition-all duration-200"
@@ -444,19 +484,64 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
 
                                 <button
                                     onClick={handlePrintToPDF}
-                                    className="group flex items-center justify-center p-6 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-medium hover:from-blue-700 hover:to-indigo-700 shadow-md hover:shadow-lg transition-all duration-200"
+                                    className="group flex items-center justify-center p-6 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-medium hover:from-green-700 hover:to-emerald-700 shadow-md hover:shadow-lg transition-all duration-200"
                                 >
                                     <DocumentArrowDownIcon className="w-6 h-6 mr-2" />
-                                    PDF 다운로드
+                                    빠른 인쇄
+                                </button>
+
+                                <button
+                                    onClick={handleDownloadHighQualityPDF}
+                                    disabled={isGeneratingPDF}
+                                    className="group flex items-center justify-center p-6 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-medium hover:from-purple-700 hover:to-indigo-700 shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isGeneratingPDF ? (
+                                        <>
+                                            <svg className="animate-spin w-6 h-6 mr-2" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                            </svg>
+                                            생성 중...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <DocumentArrowDownIcon className="w-6 h-6 mr-2" />
+                                            고품질 PDF
+                                        </>
+                                    )}
                                 </button>
                             </div>
 
-                            {/* 추가 옵션 */}
+                            {/* 다운로드 옵션 */}
                             <div className="space-y-4 mb-8">
                                 <h3 className="font-semibold text-gray-700">
-                                    추가 옵션
+                                    다운로드 형식
                                 </h3>
-                                <div className="grid grid-cols-1 gap-3">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <button
+                                        onClick={handleDownloadMarkdown}
+                                        className="flex items-center justify-center p-4 border-2 border-blue-300 bg-blue-50 text-blue-700 rounded-lg hover:border-blue-400 hover:bg-blue-100 transition-all"
+                                    >
+                                        <DocumentTextIcon className="w-5 h-5 mr-2" />
+                                        Markdown 다운로드
+                                    </button>
+
+                                    <button
+                                        onClick={handleDownloadHTML}
+                                        className="flex items-center justify-center p-4 border-2 border-green-300 bg-green-50 text-green-700 rounded-lg hover:border-green-400 hover:bg-green-100 transition-all"
+                                    >
+                                        <CodeBracketIcon className="w-5 h-5 mr-2" />
+                                        HTML 다운로드
+                                    </button>
+
+                                    <button
+                                        onClick={handleCopyMarkdown}
+                                        className="flex items-center justify-center p-4 border border-gray-300 text-gray-700 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-all"
+                                    >
+                                        <ClipboardDocumentIcon className="w-5 h-5 mr-2" />
+                                        Markdown 복사
+                                    </button>
+
                                     <button
                                         onClick={handleShare}
                                         className="flex items-center justify-center p-4 border border-gray-300 text-gray-700 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-all"
@@ -465,12 +550,25 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                                         공유하기
                                     </button>
                                 </div>
-                                <p className="text-xs text-gray-500 mt-2">
-                                    💡 <strong>PDF 다운로드</strong>: 브라우저의
-                                    인쇄 기능을 사용하여 PDF로 저장합니다.
-                                    빠르고 안정적이며, 디자인이 완벽하게
-                                    유지됩니다.
-                                </p>
+
+                                {/* 복사 성공 메시지 */}
+                                {copySuccess && (
+                                    <div className="text-sm text-green-600 font-medium text-center bg-green-50 p-2 rounded-lg">
+                                        ✓ {copySuccess}
+                                    </div>
+                                )}
+
+                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                                    <p className="text-xs text-blue-800">
+                                        <strong>💡 다운로드 형식 안내</strong>
+                                    </p>
+                                    <ul className="text-xs text-blue-700 mt-2 space-y-1 list-disc list-inside">
+                                        <li><strong>빠른 인쇄</strong>: 브라우저 인쇄 기능으로 빠르게 PDF 저장. 섹션별 페이지 구분 최적화.</li>
+                                        <li><strong>고품질 PDF</strong>: HTML을 이미지로 변환하여 PDF 생성. 섹션(기본정보+소개, 경험, 프로젝트 등)이 각각 별도 페이지로 구성. 디자인 완벽 보존.</li>
+                                        <li><strong>Markdown</strong>: 텍스트 기반 형식으로 콘텐츠 구조 유지. GitHub, Notion 등에서 사용 가능.</li>
+                                        <li><strong>HTML</strong>: 완전한 웹 페이지 파일. 브라우저에서 직접 열어 확인 가능.</li>
+                                    </ul>
+                                </div>
                             </div>
 
                             {/* 하단 액션 */}
