@@ -535,7 +535,7 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
         return extractedData;
     };
 
-    // 브라우저 인쇄 기능을 사용한 PDF 저장 (페이징 적용)
+    // 브라우저 인쇄 기능을 사용한 PDF 저장 (미리보기 HTML 그대로 사용)
     const handlePrintToPDF = () => {
         const printWindow = window.open("", "_blank");
         if (!printWindow) {
@@ -544,108 +544,65 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
         }
 
         try {
-            // 미리보기와 동일한 HTML 생성 로직 사용
+            // 미리보기와 동일한 HTML 생성 (데이터 추출 없이 바로 사용)
             const htmlContent = generateTemplatedHTML();
 
-            console.log("=== PDF 생성 디버깅 ===");
+            console.log("=== PDF 생성 (미리보기 HTML 사용) ===");
             console.log("HTML 길이:", htmlContent.length);
-            console.log("HTML 샘플 (처음 1000자):", htmlContent.substring(0, 1000));
 
-            // HTML에서 데이터 추출
-            let portfolioData = extractPortfolioDataFromHTML(htmlContent);
+            // CSS를 추가하여 페이지 나누기 적용
+            const printStyles = `
+                <style>
+                    @page {
+                        size: A4;
+                        margin: 20mm;
+                    }
 
-            console.log("📊 추출된 데이터 전체:", portfolioData);
-            console.log("👤 이름:", portfolioData?.name);
-            console.log("💼 직책:", portfolioData?.title);
-            console.log("📧 연락처:", portfolioData?.contact);
-            console.log("📝 프로젝트 개수:", portfolioData?.projects?.length);
-            console.log("💻 경력 개수:", portfolioData?.experience?.length);
-            console.log("🎯 스킬 개수:", portfolioData?.skillCategories?.length);
+                    body {
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                    }
 
-            const template = portfolioTemplates[selectedTemplate];
-            if (!template) {
-                alert("템플릿을 찾을 수 없습니다.");
-                return;
-            }
+                    /* 섹션별 페이지 나누기 */
+                    header {
+                        page-break-after: always;
+                    }
 
-            // 데이터 추출 실패 시 샘플 데이터 사용
-            if (!portfolioData || !portfolioData.name) {
-                console.warn("⚠️ 데이터 추출 실패, 템플릿 샘플 데이터 사용");
-                portfolioData = template.sampleData;
-            }
+                    .section {
+                        page-break-inside: avoid;
+                    }
 
-            console.log("최종 사용될 데이터:", portfolioData);
+                    /* 프로젝트 카드 2개마다 페이지 나누기 */
+                    .project-card:nth-child(2n) {
+                        page-break-after: always;
+                    }
 
-            const colors = template.designSystem.colors;
+                    /* 경력 카드 2개마다 페이지 나누기 */
+                    .timeline-item:nth-child(2n) {
+                        page-break-after: always;
+                    }
 
-            // 페이지 분할
-            const pages = splitDataIntoPages(portfolioData);
-            console.log("페이지 분할 결과:", pages.length, "페이지");
-
-            // 전체 HTML 생성
-            const pagesHTML = pages.map(page => generatePageHTML(page, portfolioData, template)).join('');
-
-            const fullHTML = `
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${portfolioData.name || 'Portfolio'} - Portfolio</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        @page {
-            size: A4;
-            margin: 20mm;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            line-height: 1.6;
-            color: ${colors.text};
-            background: white;
-        }
-
-        .page-content {
-            page-break-after: always;
-            min-height: 257mm; /* A4 height - margins */
-            padding: 20px 0;
-        }
-
-        .page-content:last-child {
-            page-break-after: auto;
-        }
-
-        @media print {
-            body {
-                -webkit-print-color-adjust: exact;
-                print-color-adjust: exact;
-            }
-
-            .page-content {
-                page-break-inside: avoid;
-            }
-
-            * {
-                box-shadow: none !important;
-                animation: none !important;
-                transition: none !important;
-            }
-        }
-    </style>
-</head>
-<body>
-    ${pagesHTML}
-</body>
-</html>
+                    /* 인쇄 시 그림자/애니메이션 제거 */
+                    @media print {
+                        * {
+                            box-shadow: none !important;
+                            animation: none !important;
+                            transition: none !important;
+                        }
+                    }
+                </style>
             `;
 
-            printWindow.document.write(fullHTML);
+            // HTML에 인쇄 스타일 삽입
+            let modifiedHTML = htmlContent;
+            if (htmlContent.includes('</head>')) {
+                modifiedHTML = htmlContent.replace('</head>', printStyles + '</head>');
+            } else {
+                // head 태그가 없으면 body 앞에 삽입
+                modifiedHTML = printStyles + htmlContent;
+            }
+
+            printWindow.document.write(modifiedHTML);
             printWindow.document.close();
 
             // 콘텐츠 로딩 대기 후 인쇄 다이얼로그 표시
