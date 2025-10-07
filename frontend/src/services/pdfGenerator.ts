@@ -1,494 +1,751 @@
 /**
  * PDF Generator Service
- * Generates high-quality PDFs with proper pagination and layout control
+ * Optimizes HTML for browser-based PDF generation via print dialog
+ *
+ * Requirements:
+ * 1. Remove black boxes around tech tags
+ * 2. Remove page headers/footers (date, template name, URL, page numbers)
+ * 3. Prevent content from splitting across pages
+ * 4. Compact layout - minimize spacing
+ * 5. Fit entire sections on single pages when possible
  */
-
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
 
 export class PDFGenerator {
     /**
-     * Generate PDF using HTML2Canvas + jsPDF
-     * Ensures each major section starts on a new page
-     */
-    async generatePDF(
-        htmlContent: string,
-        filename: string = 'portfolio.pdf',
-        options?: {
-            quality?: number;
-            format?: 'a4' | 'letter';
-            orientation?: 'portrait' | 'landscape';
-        }
-    ): Promise<void> {
-        let iframe: HTMLIFrameElement | null = null;
-
-        try {
-            console.log('[PDF Generator] 시작');
-
-            // PDF configuration
-            const format = options?.format || 'a4';
-            const orientation = options?.orientation || 'portrait';
-            const quality = options?.quality || 2;
-
-            // Create PDF
-            const pdf = new jsPDF({
-                orientation,
-                unit: 'mm',
-                format,
-                compress: true,
-            });
-
-            const pageWidth = pdf.internal.pageSize.getWidth();
-            const pageHeight = pdf.internal.pageSize.getHeight();
-            const margin = 10;
-            const contentWidth = pageWidth - (margin * 2);
-
-            console.log('[PDF Generator] PDF 설정:', { pageWidth, pageHeight, margin, contentWidth });
-
-            // Create an invisible iframe to render the HTML properly with all styles
-            iframe = document.createElement('iframe');
-            iframe.style.position = 'absolute';
-            iframe.style.left = '-9999px';
-            iframe.style.top = '0';
-            iframe.style.width = '794px'; // A4 width at 96 DPI
-            iframe.style.height = '1123px'; // A4 height at 96 DPI
-            iframe.style.border = 'none';
-            document.body.appendChild(iframe);
-
-            // Wait for iframe to be ready
-            await new Promise((resolve) => {
-                iframe!.onload = resolve;
-                // Write the complete HTML document to iframe
-                iframe!.srcdoc = htmlContent;
-            });
-
-            const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-            if (!iframeDoc) {
-                throw new Error('Iframe document를 찾을 수 없습니다.');
-            }
-
-            console.log('[PDF Generator] Iframe 로드 완료');
-
-            // Wait for fonts and images to load
-            await this.waitForContent(iframeDoc);
-
-            console.log('[PDF Generator] 콘텐츠 로딩 완료');
-
-            // Get sections from iframe document
-            const sections = this.identifySections(iframeDoc.body);
-
-            console.log('[PDF Generator] 섹션 식별 완료:', sections.length);
-
-            if (sections.length === 0) {
-                // Fallback: render the entire body as one page
-                console.log('[PDF Generator] 섹션을 찾을 수 없어 전체 문서를 렌더링합니다.');
-                sections.push({
-                    name: 'full-document',
-                    element: iframeDoc.body,
-                });
-            }
-
-            let isFirstPage = true;
-
-            // Process each section
-            for (let i = 0; i < sections.length; i++) {
-                const section = sections[i];
-                console.log(`[PDF Generator] 섹션 ${i + 1}/${sections.length} 처리 중: ${section.name}`);
-
-                if (!isFirstPage) {
-                    pdf.addPage();
-                }
-
-                try {
-                    // IMPORTANT: Render from the iframe's window context
-                    const iframeWindow = iframe.contentWindow;
-                    if (!iframeWindow) {
-                        throw new Error('Iframe window를 찾을 수 없습니다.');
-                    }
-
-                    // Render section to canvas using iframe's window
-                    const canvas = await html2canvas(section.element, {
-                        scale: quality,
-                        useCORS: true,
-                        logging: false,
-                        backgroundColor: '#ffffff',
-                        allowTaint: true,
-                        windowWidth: section.element.scrollWidth,
-                        windowHeight: section.element.scrollHeight,
-                        // Use the iframe's window for proper style resolution
-                        foreignObjectRendering: false,
-                    });
-
-                    console.log(`[PDF Generator] Canvas 생성 완료: ${canvas.width}x${canvas.height}`);
-
-                    const imgData = canvas.toDataURL('image/png');
-                    const imgWidth = contentWidth;
-                    const imgHeight = (canvas.height * contentWidth) / canvas.width;
-
-                    // Check if image fits on one page
-                    if (imgHeight <= pageHeight - (margin * 2)) {
-                        // Fits on one page
-                        pdf.addImage(imgData, 'PNG', margin, margin, imgWidth, imgHeight);
-                        console.log(`[PDF Generator] 섹션 ${section.name}: 한 페이지에 추가 완료`);
-                    } else {
-                        // Need to split across multiple pages
-                        console.log(`[PDF Generator] 섹션 ${section.name}: 여러 페이지로 분할 필요`);
-
-                        let remainingHeight = imgHeight;
-                        let yPosition = 0;
-                        let pageNumber = 0;
-
-                        while (remainingHeight > 0) {
-                            if (pageNumber > 0) {
-                                pdf.addPage();
-                            }
-
-                            const heightToAdd = Math.min(pageHeight - (margin * 2), remainingHeight);
-                            const sourceY = yPosition * (canvas.height / imgHeight);
-                            const sourceHeight = heightToAdd * (canvas.height / imgHeight);
-
-                            // Create a temporary canvas for this slice
-                            const sliceCanvas = document.createElement('canvas');
-                            sliceCanvas.width = canvas.width;
-                            sliceCanvas.height = sourceHeight;
-                            const sliceCtx = sliceCanvas.getContext('2d');
-
-                            if (sliceCtx) {
-                                sliceCtx.drawImage(
-                                    canvas,
-                                    0, sourceY,
-                                    canvas.width, sourceHeight,
-                                    0, 0,
-                                    canvas.width, sourceHeight
-                                );
-
-                                const sliceImgData = sliceCanvas.toDataURL('image/png');
-                                pdf.addImage(sliceImgData, 'PNG', margin, margin, imgWidth, heightToAdd);
-                                console.log(`[PDF Generator] 섹션 ${section.name}: 페이지 ${pageNumber + 1} 추가`);
-                            }
-
-                            yPosition += heightToAdd;
-                            remainingHeight -= heightToAdd;
-                            pageNumber++;
-                        }
-                    }
-                } catch (sectionError) {
-                    console.error(`[PDF Generator] 섹션 ${section.name} 처리 실패:`, sectionError);
-                    // Continue with other sections
-                }
-
-                isFirstPage = false;
-            }
-
-            console.log('[PDF Generator] PDF 생성 완료, 다운로드 중...');
-
-            // Save PDF
-            pdf.save(filename);
-
-            console.log('[PDF Generator] 다운로드 완료');
-        } catch (error) {
-            console.error('[PDF Generator] 오류 발생:', error);
-            throw error;
-        } finally {
-            // Clean up iframe
-            if (iframe && iframe.parentNode) {
-                document.body.removeChild(iframe);
-                console.log('[PDF Generator] Iframe 정리 완료');
-            }
-        }
-    }
-
-    /**
-     * Identify logical sections in the HTML for pagination
-     * Returns references to elements in their original DOM context (don't clone!)
-     */
-    private identifySections(container: HTMLElement): Array<{ name: string; element: HTMLElement }> {
-        const sections: Array<{ name: string; element: HTMLElement }> = [];
-
-        // Find all <section> elements
-        const sectionElements = container.querySelectorAll('section');
-
-        if (sectionElements.length > 0) {
-            console.log(`[PDF Generator] ${sectionElements.length}개의 section 요소 발견`);
-
-            // Strategy: Capture header + first section together, then each section separately
-            const header = container.querySelector('header');
-
-            // First, we'll create a temporary combined element for header + about
-            // This needs to be done inside the iframe's document
-            if (header && sectionElements[0]) {
-                const doc = container.ownerDocument;
-                if (doc) {
-                    // Create wrapper in the same document
-                    const wrapper = doc.createElement('div');
-                    wrapper.style.position = 'absolute';
-                    wrapper.style.left = '0';
-                    wrapper.style.top = '0';
-                    wrapper.style.backgroundColor = '#ffffff';
-                    wrapper.style.width = '794px';
-
-                    // Clone and append to wrapper
-                    wrapper.appendChild(header.cloneNode(true));
-                    wrapper.appendChild(sectionElements[0].cloneNode(true));
-
-                    // Append wrapper to body temporarily
-                    container.appendChild(wrapper);
-
-                    sections.push({
-                        name: 'header-about',
-                        element: wrapper,
-                    });
-
-                    console.log('[PDF Generator] Header + About 섹션 생성');
-                }
-
-                // Add remaining sections individually (use original elements, not clones)
-                for (let i = 1; i < sectionElements.length; i++) {
-                    const section = sectionElements[i] as HTMLElement;
-                    const sectionName = this.getSectionName(section, i);
-
-                    sections.push({
-                        name: sectionName,
-                        element: section,
-                    });
-
-                    console.log(`[PDF Generator] 섹션 ${sectionName} 추가`);
-                }
-            } else if (header) {
-                // Only header exists
-                sections.push({
-                    name: 'header',
-                    element: header as HTMLElement,
-                });
-
-                // Add all sections individually
-                sectionElements.forEach((section, i) => {
-                    const sectionName = this.getSectionName(section, i);
-                    sections.push({
-                        name: sectionName,
-                        element: section as HTMLElement,
-                    });
-                });
-            } else {
-                // No header, just sections
-                sectionElements.forEach((section, i) => {
-                    const sectionName = this.getSectionName(section, i);
-                    sections.push({
-                        name: sectionName,
-                        element: section as HTMLElement,
-                    });
-                });
-            }
-        } else {
-            // Fallback: try to find sections by class or data-section
-            console.log('[PDF Generator] <section> 요소를 찾을 수 없음, class 기반으로 검색');
-
-            const header = container.querySelector('header, .header') as HTMLElement | null;
-            const aboutSection = this.findSectionByClass(container, ['about', 'summary']);
-            const experienceSection = this.findSectionByClass(container, ['experience', 'work']);
-            const projectsSection = this.findSectionByClass(container, ['project']);
-            const educationSection = this.findSectionByClass(container, ['education']);
-            const skillsSection = this.findSectionByClass(container, ['skill']);
-
-            // Combine header + about
-            if (header || aboutSection) {
-                const doc = container.ownerDocument;
-                if (doc) {
-                    const wrapper = doc.createElement('div');
-                    wrapper.style.backgroundColor = '#ffffff';
-                    wrapper.style.width = '794px';
-
-                    if (header) wrapper.appendChild(header.cloneNode(true));
-                    if (aboutSection) wrapper.appendChild(aboutSection.cloneNode(true));
-
-                    container.appendChild(wrapper);
-
-                    sections.push({
-                        name: 'header-about',
-                        element: wrapper,
-                    });
-                }
-            }
-
-            // Add other sections (use original elements)
-            const otherSections = [
-                { element: experienceSection, name: 'experience' },
-                { element: projectsSection, name: 'projects' },
-                { element: educationSection, name: 'education' },
-                { element: skillsSection, name: 'skills' },
-            ];
-
-            otherSections.forEach(({ element, name }) => {
-                if (element) {
-                    sections.push({
-                        name,
-                        element,
-                    });
-                }
-            });
-        }
-
-        return sections;
-    }
-
-    /**
-     * Get section name from element
-     */
-    private getSectionName(section: Element, index: number): string {
-        // Try to get name from class or id
-        const className = section.className.toLowerCase();
-        const id = section.id.toLowerCase();
-
-        if (className.includes('experience') || id.includes('experience')) return 'experience';
-        if (className.includes('project') || id.includes('project')) return 'projects';
-        if (className.includes('education') || id.includes('education')) return 'education';
-        if (className.includes('skill') || id.includes('skill')) return 'skills';
-        if (className.includes('about') || id.includes('about')) return 'about';
-
-        // Try to get from h2 text
-        const h2 = section.querySelector('h2');
-        if (h2) {
-            const text = h2.textContent?.toLowerCase() || '';
-            if (text.includes('experience') || text.includes('경험') || text.includes('경력')) return 'experience';
-            if (text.includes('project') || text.includes('프로젝트')) return 'projects';
-            if (text.includes('education') || text.includes('학력')) return 'education';
-            if (text.includes('skill') || text.includes('스킬')) return 'skills';
-            if (text.includes('about') || text.includes('소개')) return 'about';
-        }
-
-        return `section-${index + 1}`;
-    }
-
-    /**
-     * Find section by class name
-     */
-    private findSectionByClass(container: HTMLElement, classNames: string[]): HTMLElement | null {
-        for (const name of classNames) {
-            const selectors = [
-                `.${name}`,
-                `#${name}`,
-                `[data-section="${name}"]`,
-                `[class*="${name}"]`,
-            ];
-
-            for (const selector of selectors) {
-                try {
-                    const element = container.querySelector(selector);
-                    if (element) {
-                        return element as HTMLElement;
-                    }
-                } catch (e) {
-                    // Invalid selector, continue
-                }
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Wait for images and fonts to load
-     */
-    private async waitForContent(doc: Document): Promise<void> {
-        // Wait for images
-        const images = doc.querySelectorAll('img');
-        const imagePromises = Array.from(images).map((img) => {
-            if (img.complete) {
-                return Promise.resolve();
-            }
-            return new Promise((resolve) => {
-                img.onload = resolve;
-                img.onerror = resolve; // Still resolve on error
-                // Timeout after 5 seconds
-                setTimeout(resolve, 5000);
-            });
-        });
-
-        await Promise.all(imagePromises);
-
-        // Wait for fonts (if document.fonts API is available)
-        if (doc.fonts && doc.fonts.ready) {
-            try {
-                await Promise.race([
-                    doc.fonts.ready,
-                    new Promise((resolve) => setTimeout(resolve, 3000)), // 3 second timeout
-                ]);
-            } catch (e) {
-                console.warn('[PDF Generator] Font loading timeout');
-            }
-        }
-
-        // Additional delay to ensure rendering
-        await new Promise((resolve) => setTimeout(resolve, 500));
-    }
-
-    /**
-     * Generate enhanced print-optimized HTML with page breaks
-     * This version adds CSS for better browser print control
+     * Generate print-optimized HTML with enhanced CSS for high-quality PDF output
      */
     generatePrintOptimizedHTML(htmlContent: string): string {
-        // Add page break CSS
         const printStyles = `
             <style>
+                /* ========================================
+                   PDF 최적화 스타일 - Compact & Clean
+                ======================================== */
+
                 @media print {
+                    /* ========================================
+                       페이지 설정
+                    ======================================== */
+
                     @page {
                         size: A4;
-                        margin: 15mm;
+                        margin: 10mm 10mm; /* 최소 여백으로 공간 최대 활용 */
                     }
 
-                    body {
-                        margin: 0;
-                        padding: 0;
-                        -webkit-print-color-adjust: exact;
-                        print-color-adjust: exact;
-                        color-adjust: exact;
+                    @page :first {
+                        margin-bottom: 15mm; /* 첫 페이지는 하단 여백을 더 줘서 내용이 채워질 수 있도록 */
                     }
 
-                    /* Prevent page breaks inside elements */
-                    h1, h2, h3, h4, h5, h6 {
-                        page-break-after: avoid;
-                        break-after: avoid;
+                    /* ========================================
+                       헤더/푸터 제거 (날짜, URL, 페이지 번호 등)
+                    ======================================== */
+
+                    @page {
+                        margin-top: 10mm;
+                        margin-bottom: 10mm;
+                        /* 브라우저 기본 헤더/푸터 숨김 */
                     }
 
-                    p, li {
-                        page-break-inside: avoid;
-                        break-inside: avoid;
-                    }
-
-                    /* Force page break before major sections (except first two - header and about) */
-                    section:nth-of-type(n+3) {
-                        page-break-before: always;
-                        break-before: page;
-                    }
-
-                    /* Keep header and about together */
-                    header + section {
-                        page-break-before: avoid;
-                        break-before: avoid;
-                    }
-
-                    /* Remove shadows and animations for print */
+                    /* 기본 설정 */
                     * {
-                        box-shadow: none !important;
-                        animation: none !important;
-                        transition: none !important;
-                    }
-
-                    /* Ensure backgrounds print */
-                    * {
+                        box-sizing: border-box;
                         -webkit-print-color-adjust: exact !important;
                         print-color-adjust: exact !important;
                         color-adjust: exact !important;
+                    }
+
+                    html, body {
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        background: #ffffff !important;
+                    }
+
+                    /* ========================================
+                       검은색 박스 제거 (기술 태그 등)
+                    ======================================== */
+
+                    /* 모든 테두리 제거 또는 최소화 */
+                    .tech-tag,
+                    .tech-tags .tag,
+                    .skill-item,
+                    .skill,
+                    .tag,
+                    .badge,
+                    [class*="tag"],
+                    [class*="badge"],
+                    [class*="skill"] {
+                        border: none !important;
+                        outline: none !important;
+                        /* 배경색과 텍스트만 유지 */
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                        color-adjust: exact !important;
+                    }
+
+                    /* Elegant 템플릿: 스킬 태그 앞 이모지(✨) 정렬 수정 */
+                    .skill-list li::before,
+                    .skill-category li::before {
+                        content: '' !important;
+                        display: inline-flex !important;
+                        align-items: center !important;
+                        vertical-align: middle !important;
+                        margin-right: 6px !important;
+                        line-height: 1 !important;
+                        position: relative !important;
+                        top: 0 !important;
+                    }
+
+                    .skill-list li,
+                    .skill-category li {
+                        display: flex !important;
+                        align-items: center !important;
+                        line-height: 1.6 !important;
+                        padding: 3px 0 !important;
+                    }
+
+                    /* Elegant 템플릿의 리스트 스타일 개선 */
+                    .skill-list,
+                    .skill-category {
+                        list-style: none !important;
+                    }
+
+                    .skill-list li span,
+                    .skill-category li span {
+                        display: inline-flex !important;
+                        align-items: center !important;
+                    }
+
+                    /* ========================================
+                       Compact 레이아웃 - 여백 최소화
+                    ======================================== */
+
+                    body {
+                        font-size: 10pt !important; /* 기본 폰트 크기 줄임 */
+                        line-height: 1.3 !important; /* 줄 간격 줄임 */
+                    }
+
+                    /* 제목 크기 조정 */
+                    h1 {
+                        font-size: 18pt !important;
+                        margin: 0 0 8px 0 !important;
+                        padding: 0 !important;
+                    }
+
+                    h2 {
+                        font-size: 14pt !important;
+                        margin: 12px 0 6px 0 !important;
+                        padding: 0 !important;
+                    }
+
+                    h3 {
+                        font-size: 11pt !important;
+                        margin: 6px 0 4px 0 !important;
+                        padding: 0 !important;
+                    }
+
+                    h4, h5, h6 {
+                        font-size: 10pt !important;
+                        margin: 4px 0 2px 0 !important;
+                        padding: 0 !important;
+                    }
+
+                    /* 단락 여백 최소화 */
+                    p {
+                        margin: 0 0 6px 0 !important;
+                        padding: 0 !important;
+                        line-height: 1.3 !important;
+                    }
+
+                    /* 리스트 여백 최소화 */
+                    ul, ol {
+                        margin: 4px 0 !important;
+                        padding-left: 16px !important;
+                    }
+
+                    li {
+                        margin: 2px 0 !important;
+                        padding: 0 !important;
+                        line-height: 1.3 !important;
+                    }
+
+                    /* 섹션 여백 최소화 */
+                    section {
+                        margin: 0 0 12px 0 !important;
+                        padding: 0 !important;
+                    }
+
+                    /* 첫 번째 섹션(보통 about)은 여백을 좀 더 둬서 첫 페이지를 적절히 채움 */
+                    section:first-of-type,
+                    .section:first-of-type {
+                        margin-bottom: 20px !important;
+                    }
+
+                    /* 마지막 섹션 전 섹션들은 적절한 간격으로 페이지를 채움 */
+                    section:not(:last-child) {
+                        margin-bottom: 15px !important;
+                    }
+
+                    header {
+                        margin: 0 0 10px 0 !important;
+                        padding: 0 0 8px 0 !important;
+                    }
+
+                    /* ========================================
+                       Colorful 템플릿: 섹션별 페이지 분할 전략
+                    ======================================== */
+
+                    /* Colorful: Hero 섹션 (기본 정보 + 자기소개) - 첫 페이지 */
+                    .hero {
+                        padding: 4rem 2rem !important;
+                        min-height: 280px !important;
+                        page-break-after: auto !important;
+                        break-after: auto !important;
+                    }
+
+                    .hero-content {
+                        padding: 3rem 0 !important;
+                        margin: 2rem 0 !important;
+                    }
+
+                    .hero h1 {
+                        margin-bottom: 1.5rem !important;
+                        font-size: 24pt !important;
+                    }
+
+                    .hero p {
+                        margin: 1rem 0 !important;
+                        line-height: 1.6 !important;
+                    }
+
+                    .hero .contact-links {
+                        margin-top: 1.5rem !important;
+                    }
+
+                    /* Colorful: 경험 섹션 - 새 페이지 시작 */
+                    section.experience,
+                    .experience-section,
+                    section[class*="experience"],
+                    #experience {
+                        page-break-before: always !important;
+                        break-before: page !important;
+                        page-break-after: auto !important;
+                        break-after: auto !important;
+                    }
+
+                    /* Colorful: 프로젝트 섹션 - 새 페이지 시작 */
+                    section.projects,
+                    .projects-section,
+                    section[class*="project"],
+                    #projects {
+                        page-break-before: always !important;
+                        break-before: page !important;
+                        page-break-after: auto !important;
+                        break-after: auto !important;
+                    }
+
+                    /* Colorful: Skills 섹션 - 새 페이지 시작 (연락처와 함께) */
+                    section.skills,
+                    .skills-section,
+                    section[class*="skills"],
+                    #skills {
+                        page-break-before: always !important;
+                        break-before: page !important;
+                    }
+
+                    /* 단, 내용이 잘릴 경우 다음 페이지로 */
+                    section.experience,
+                    section.projects,
+                    section.skills,
+                    .experience-section,
+                    .projects-section,
+                    .skills-section {
+                        page-break-inside: auto !important;
+                        break-inside: auto !important;
+                    }
+
+                    /* Container 여백 제거 */
+                    .container,
+                    [class*="container"] {
+                        margin: 0 !important;
+                        padding: 0 !important;
+                        max-width: 100% !important;
+                    }
+
+                    /* Experience/Project 항목 간격 최소화 */
+                    .experience-item,
+                    .project-item,
+                    .education-item,
+                    article {
+                        margin: 0 0 10px 0 !important;
+                        padding: 0 !important;
+                    }
+
+                    /* ========================================
+                       Colorful 템플릿: 경험/프로젝트 소제목 한 줄 레이아웃
+                    ======================================== */
+
+                    /* 경험/프로젝트 항목의 헤더 영역을 한 줄로 구성 */
+                    .experience-item header,
+                    .project-item header,
+                    .experience-item > div:first-child,
+                    .project-item > div:first-child {
+                        display: flex !important;
+                        flex-direction: row !important;
+                        align-items: center !important;
+                        justify-content: space-between !important;
+                        flex-wrap: nowrap !important;
+                        gap: 8px !important;
+                        margin-bottom: 8px !important;
+                        page-break-inside: avoid !important;
+                        break-inside: avoid !important;
+                    }
+
+                    /* 아이콘 + 제목 그룹을 왼쪽에 배치 */
+                    .experience-item header > div:first-child,
+                    .project-item header > div:first-child,
+                    .experience-item h3,
+                    .project-item h3 {
+                        display: flex !important;
+                        align-items: center !important;
+                        gap: 6px !important;
+                        margin: 0 !important;
+                        flex: 1 !important;
+                        white-space: nowrap !important;
+                        overflow: hidden !important;
+                        text-overflow: ellipsis !important;
+                    }
+
+                    /* 기간을 오른쪽에 배치 */
+                    .experience-item .duration,
+                    .project-item .duration,
+                    .experience-item .period,
+                    .project-item .period,
+                    .experience-item time,
+                    .project-item time {
+                        flex-shrink: 0 !important;
+                        margin: 0 !important;
+                        white-space: nowrap !important;
+                    }
+
+                    /* 아이콘 크기 조정 */
+                    .experience-item header svg,
+                    .project-item header svg,
+                    .experience-item h3 svg,
+                    .project-item h3 svg {
+                        width: 16px !important;
+                        height: 16px !important;
+                        flex-shrink: 0 !important;
+                    }
+
+                    /* 제목 텍스트 */
+                    .experience-item h3,
+                    .project-item h3 {
+                        font-size: 11pt !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                    }
+
+                    /* 직책/역할 정보는 두 번째 줄에 */
+                    .experience-item .position,
+                    .project-item .role,
+                    .experience-item .job-title,
+                    .project-item .project-role {
+                        display: block !important;
+                        margin: 4px 0 !important;
+                        font-size: 9pt !important;
+                    }
+
+                    /* 기술 태그 간격 최소화 */
+                    .tech-tag,
+                    .skill-item,
+                    .tag,
+                    .badge {
+                        margin: 2px 4px 2px 0 !important;
+                        padding: 2px 8px !important;
+                        font-size: 9pt !important;
+                    }
+
+                    .tech-tags,
+                    .skill-list {
+                        margin: 4px 0 !important;
+                        gap: 4px !important;
+                    }
+
+                    /* ========================================
+                       페이지 분할 방지 - 항목 단위로 유지
+                    ======================================== */
+
+                    /* 제목 뒤에서 페이지 안 나뉨 */
+                    h1, h2, h3, h4, h5, h6 {
+                        page-break-after: avoid !important;
+                        break-after: avoid !important;
+                        page-break-inside: avoid !important;
+                        break-inside: avoid !important;
+                    }
+
+                    /* 단락 중간에서 안 나뉨 */
+                    p {
+                        page-break-inside: avoid !important;
+                        break-inside: avoid !important;
+                        orphans: 3;
+                        widows: 3;
+                    }
+
+                    /* 리스트 항목 중간에서 안 나뉨 */
+                    li {
+                        page-break-inside: avoid !important;
+                        break-inside: avoid !important;
+                    }
+
+                    /* ★ 핵심: Experience/Project/Education 항목이 절대 중간에 안 잘림 */
+                    .experience-item,
+                    .project-item,
+                    .education-item,
+                    .skill-category,
+                    article,
+                    [class*="item"],
+                    [class*="card"] {
+                        page-break-inside: avoid !important;
+                        break-inside: avoid !important;
+                        page-break-after: auto !important;
+                        break-after: auto !important;
+                        margin-bottom: 10px !important; /* 페이지 채움을 위해 간격 조정 */
+                    }
+
+                    /* Colorful 템플릿: 카드들이 일관되게 정렬되도록 */
+                    .card {
+                        page-break-inside: avoid !important;
+                        break-inside: avoid !important;
+                    }
+
+                    /* 각 스킬 카드가 박스 형태를 유지하도록 */
+                    .skill-item {
+                        page-break-inside: avoid !important;
+                        break-inside: avoid !important;
+                        display: inline-block !important;
+                        vertical-align: top !important;
+                    }
+
+                    /* Header와 첫 섹션 함께 유지 */
+                    header {
+                        page-break-after: avoid !important;
+                        break-after: avoid !important;
+                    }
+
+                    header + section,
+                    header + .section {
+                        page-break-before: avoid !important;
+                        break-before: avoid !important;
+                    }
+
+                    /* 첫 페이지에 여백이 많으면 다음 섹션도 같은 페이지에 */
+                    header + section + section:not(.no-page-break),
+                    .hero + .container > section:first-child {
+                        page-break-before: auto !important;
+                        break-before: auto !important;
+                    }
+
+                    /* 섹션이 너무 길지 않으면 페이지 중간에 안 나뉨 */
+                    section {
+                        page-break-inside: auto !important;
+                        break-inside: auto !important;
+                    }
+
+                    /* ========================================
+                       일반 템플릿(Minimal, Clean, Elegant): 첫 페이지 여백 최적화
+                    ======================================== */
+
+                    /* Colorful이 아닌 템플릿에만 적용 - 첫 페이지 여백 채우기 */
+                    body:not(.colorful-template) section:nth-of-type(1),
+                    body:not(.colorful-template) section:nth-of-type(2) {
+                        page-break-after: auto !important;
+                        break-after: auto !important;
+                    }
+
+                    /* Colorful이 아닌 템플릿 - 섹션이 페이지에 충분히 들어갈 수 있으면 다음 페이지로 넘기지 않음 */
+                    body:not(.colorful-template) section:not(.page-break-before) {
+                        page-break-before: auto !important;
+                        break-before: auto !important;
+                    }
+
+                    /* Colorful이 아닌 템플릿 - About 섹션 최소 높이 */
+                    body:not(.colorful-template) section.about,
+                    body:not(.colorful-template) .about-section {
+                        min-height: 150px !important;
+                    }
+
+                    /* 모든 섹션에서 내용이 잘리지 않도록 보장 */
+                    section > *:not(header):not(h1):not(h2):not(h3) {
+                        page-break-inside: avoid !important;
+                        break-inside: avoid !important;
+                    }
+
+                    /* 일반 템플릿: 섹션 간 적절한 간격으로 페이지 채우기 */
+                    body:not(.colorful-template) section + section {
+                        margin-top: 18px !important;
+                    }
+
+                    /* Colorful 템플릿: 섹션 간 간격을 줄여서 명확한 페이지 구분 */
+                    body.colorful-template section + section {
+                        margin-top: 0 !important;
+                    }
+
+                    /* 섹션 헤더(제목)는 항상 다음 내용과 함께 */
+                    .section-header,
+                    .section-title,
+                    [class*="section-title"] {
+                        page-break-after: avoid !important;
+                        break-after: avoid !important;
+                        page-break-inside: avoid !important;
+                        break-inside: avoid !important;
+                    }
+
+                    /* Colorful 템플릿: 스킬 섹션 헤더와 내용 함께 유지 */
+                    .section-header + *,
+                    .section-title + * {
+                        page-break-before: avoid !important;
+                        break-before: avoid !important;
+                    }
+
+                    /* Skills 섹션 전체를 가능하면 함께 유지 */
+                    .skills-container,
+                    .skill-grid,
+                    .cards-grid {
+                        page-break-inside: auto !important;
+                        break-inside: auto !important;
+                    }
+
+                    /* Colorful 템플릿: Skills 섹션 헤더가 이전 페이지에서 잘리지 않도록 */
+                    section.skills,
+                    .skills-section,
+                    [class*="skills"] > h2,
+                    [class*="skills"] > .section-title,
+                    [class*="skills"] > .section-header {
+                        page-break-before: auto !important;
+                        break-before: auto !important;
+                        page-break-after: avoid !important;
+                        break-after: avoid !important;
+                        page-break-inside: avoid !important;
+                        break-inside: avoid !important;
+                        min-height: 40px !important;
+                        padding: 12px 0 !important;
+                    }
+
+                    /* Colorful 템플릿: 스킬 태그 박스들이 일관되게 정렬 */
+                    .skill-tags,
+                    .skills-grid .skill-item,
+                    .cards-grid .card {
+                        display: inline-flex !important;
+                        align-items: center !important;
+                        vertical-align: top !important;
+                        margin: 4px !important;
+                    }
+
+                    /* 스킬 태그들의 그리드 레이아웃 개선 */
+                    .skills-grid,
+                    .cards-grid {
+                        display: flex !important;
+                        flex-wrap: wrap !important;
+                        gap: 6px !important;
+                        align-items: flex-start !important;
+                    }
+
+                    /* ========================================
+                       색상 및 배경 유지
+                    ======================================== */
+
+                    *,
+                    *::before,
+                    *::after {
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
+                        color-adjust: exact !important;
+                    }
+
+                    /* ========================================
+                       불필요한 효과 제거
+                    ======================================== */
+
+                    * {
+                        box-shadow: none !important;
+                        text-shadow: none !important;
+                        animation: none !important;
+                        transition: none !important;
+                        border-radius: 3px !important; /* 둥근 모서리 최소화 */
+                    }
+
+                    /* ========================================
+                       레이아웃 최적화
+                    ======================================== */
+
+                    /* Flexbox 유지하되 간격 최소화 */
+                    .tech-tags,
+                    .skill-list,
+                    .skills-grid,
+                    [class*="tags"],
+                    [class*="skills"],
+                    [class*="grid"] {
+                        display: flex !important;
+                        flex-wrap: wrap !important;
+                        gap: 4px !important;
+                    }
+
+                    /* Grid 레이아웃 최적화 */
+                    .skills-grid,
+                    .projects-grid,
+                    [class*="grid"] {
+                        gap: 8px !important;
+                    }
+
+                    /* ========================================
+                       텍스트 가독성
+                    ======================================== */
+
+                    body, p, span, div, h1, h2, h3, h4, h5, h6, li {
+                        text-rendering: optimizeLegibility !important;
+                        -webkit-font-smoothing: antialiased !important;
+                        -moz-osx-font-smoothing: grayscale !important;
+                    }
+
+                    /* ========================================
+                       이미지
+                    ======================================== */
+
+                    img {
+                        max-width: 100% !important;
+                        height: auto !important;
+                        page-break-inside: avoid !important;
+                        break-inside: avoid !important;
+                    }
+
+                    /* ========================================
+                       링크 스타일
+                    ======================================== */
+
+                    a {
+                        text-decoration: none !important;
+                        color: inherit !important;
+                    }
+
+                    /* URL 표시 안 함 */
+                    a[href]::after {
+                        content: "" !important;
+                    }
+
+                    /* ========================================
+                       특정 요소 숨김 (브라우저 UI 요소)
+                    ======================================== */
+
+                    /* 인쇄 시 불필요한 요소 숨김 */
+                    .no-print,
+                    [class*="button"],
+                    button,
+                    input,
+                    select,
+                    textarea {
+                        display: none !important;
+                    }
+
+                    /* ========================================
+                       Duration/Date 스타일 최적화
+                    ======================================== */
+
+                    .duration,
+                    .period,
+                    .date,
+                    time {
+                        font-size: 9pt !important;
+                        color: #666 !important;
+                        margin: 2px 0 !important;
+                    }
+
+                    /* ========================================
+                       Position/Role 스타일 최적화
+                    ======================================== */
+
+                    .position,
+                    .role,
+                    .job-title {
+                        font-size: 10pt !important;
+                        margin: 2px 0 !important;
+                    }
+
+                    /* ========================================
+                       Achievement/Description 리스트 최적화
+                    ======================================== */
+
+                    .achievements,
+                    .achievements li,
+                    .description ul li {
+                        margin: 1px 0 !important;
+                        padding-left: 4px !important;
+                        line-height: 1.3 !important;
+                    }
+
+                    /* ========================================
+                       Contact Links 최적화
+                    ======================================== */
+
+                    .contact-links,
+                    .contact-link {
+                        margin: 2px 4px !important;
+                        font-size: 9pt !important;
+                    }
+
+                    /* ========================================
+                       Section Title 스타일
+                    ======================================== */
+
+                    .section-title {
+                        margin-bottom: 8px !important;
+                        padding-bottom: 4px !important;
+                        border-bottom: 1px solid #ddd !important;
+                    }
+
+                    /* Section title 밑줄 효과 제거 또는 최소화 */
+                    .section-title::after {
+                        display: none !important;
+                    }
+                }
+
+                /* ========================================
+                   화면 표시용 스타일
+                ======================================== */
+
+                @media screen {
+                    body {
+                        background: #f5f5f5;
+                        padding: 20px;
+                    }
+
+                    .print-preview {
+                        max-width: 210mm;
+                        margin: 0 auto;
+                        background: white;
+                        padding: 10mm;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
                     }
                 }
             </style>
         `;
 
-        // Insert styles before </head>
+        // HTML에 스타일 삽입
         if (htmlContent.includes('</head>')) {
             return htmlContent.replace('</head>', printStyles + '</head>');
+        } else if (htmlContent.includes('<body>')) {
+            return htmlContent.replace('<body>', '<head>' + printStyles + '</head><body>');
         } else {
-            // If no head tag, wrap content
-            return `<!DOCTYPE html><html><head>${printStyles}</head><body>${htmlContent}</body></html>`;
+            return `<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio</title>
+    ${printStyles}
+</head>
+<body>
+    ${htmlContent}
+</body>
+</html>`;
         }
     }
 }

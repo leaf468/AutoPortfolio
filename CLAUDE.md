@@ -55,32 +55,47 @@ AutoPortfolio/
 ```
 
 ### Core Workflow
-The application follows a wizard-based approach for portfolio creation:
+The application follows a page-based routing approach for portfolio creation:
 
-1. **Template Selection** - User chooses from predefined portfolio templates (james, geon, eunseong, iu)
-2. **AI Organization** - User inputs raw information that gets organized by OpenAI GPT-4
-3. **Auto-fill** - System auto-fills portfolio data based on organized content
-4. **Enhanced Editing** - Manual refinement of generated content with AI assistance
-5. **Feedback & Completion** - User feedback integration and final result generation
-6. **Export** - Generate markdown, HTML, and PDF formats
+1. **Home Page** (`/`) - Landing page
+2. **Template Selection** (`/template`) - User chooses from predefined portfolio templates (minimal, clean, colorful, elegant)
+3. **AI Organization** (`/organize`) - User inputs raw information that gets organized by OpenAI GPT-4
+4. **Auto-fill** (`/autofill`) - System auto-fills portfolio data based on organized content
+5. **Enhanced Editing** (`/edit`) - Manual refinement of generated content with AI assistance
+6. **Template Editing** (`/edit/:template`) - Template-specific editing
+7. **Feedback Editing** (`/feedback`) - User feedback integration
+8. **Completion** (`/complete`) - Final result generation and export (markdown, HTML, PDF)
 
 ### Frontend Architecture
 
+#### Pages (React Router)
+- `HomePage.tsx` - Landing page (`/`)
+- `TemplateSelectionPage.tsx` - Template selection interface (`/template`)
+- `OrganizeContentPage.tsx` - AI organization step (`/organize`)
+- `AutoFillPage.tsx` - Auto-fill step (`/autofill`)
+- `EnhancedEditPage.tsx` - Enhanced editing (`/edit`)
+- `TemplateEditPage.tsx` - Template-specific editing (`/edit/:template`)
+- `FeedbackEditPage.tsx` - Feedback collection (`/feedback`)
+- `CompletePage.tsx` - Final result and download (`/complete`)
+
 #### Key Components
-- `PortfolioWizard.tsx` - Main wizard orchestrating the entire flow
 - `AIOrganizer.tsx` - Handles AI-powered content organization
 - `AutoFillPortfolioEditor.tsx` - Auto-population of portfolio fields
 - `EnhancedPortfolioEditor.tsx` - Manual editing interface with AI suggestions
 - `FinalResultPanel.tsx` - Final output and download functionality
-- `BlockCard.tsx` - Reusable component for portfolio content blocks
+- `TemplateSelector.tsx` - Template selection interface
+- `SimpleNaturalLanguageEditor.tsx` - Natural language editing interface
+- `NaturalLanguageSidebar.tsx` - AI assistant sidebar
+- `JobRecommendationSlider.tsx` - Job recommendation feature
 
 #### Services Layer
-- `aiOrganizer.ts` - OpenAI integration for content organization
-- `autoFillService.ts` - Auto-fill functionality
-- `oneClickGenerator.ts` - Portfolio generation using Mustache templates
-- `userFeedbackService.ts` - User feedback collection and processing
-- `contentRecommendationService.ts` - AI-powered content suggestions
-- `portfolioTextEnhancer.ts` - Text enhancement and improvement
+Service classes are exported as singleton instances:
+- `aiOrganizer.ts` - OpenAI integration for content organization (exports `aiOrganizer`)
+- `autoFillService.ts` - Auto-fill functionality (exports `autoFillService`)
+- `oneClickGenerator.ts` - Portfolio generation using Mustache templates (exports `oneClickGenerator`)
+- `userFeedbackService.ts` - User feedback collection and processing (exports `userFeedbackService`)
+- `portfolioTextEnhancer.ts` - Text enhancement and improvement (exports `portfolioTextEnhancer`)
+- `interactiveBooster.ts` - Interactive content boosting (exports `interactiveBooster`)
 
 #### Data Models
 Core types in `src/types/portfolio.ts`:
@@ -94,15 +109,17 @@ Core types in `src/types/portfolio.ts`:
 
 ### Backend Architecture
 
-The backend provides verification and block-based content management:
+The backend is a lightweight Express server for portfolio content verification:
 
 #### API Endpoints
-- `/health` - Health check endpoint
-- Block management endpoints for portfolio content validation
+- `GET /health` - Health check endpoint returning status and timestamp
+- Block API endpoints in `blockAPI.ts` for portfolio content validation
 
-#### Services
-- `blockService.ts` - Handles content block operations and validation
-- Shared types with frontend for consistent data structures
+#### Structure
+- `src/index.ts` - Express server setup with CORS and JSON middleware
+- `src/api/blockAPI.ts` - Block management API routes
+- `src/services/` - Business logic services
+- `src/types/` - Shared type definitions with frontend
 
 ### Tech Stack
 
@@ -123,10 +140,13 @@ The backend provides verification and block-based content management:
 - **TypeScript 5.1** for type safety
 
 ### State Management
-- Frontend uses React hooks with prop drilling for component communication
-- The PortfolioWizard maintains overall step state
-- Form state managed by React Hook Form
-- Server state cached with React Query
+- **React Context API** - `PortfolioContext` provides global state management
+  - Tracks current step in the workflow (`template`, `organize`, `autofill`, `enhanced-edit`, `feedback`, `complete`)
+  - Stores selected template, organized content, and generation results
+  - Persists state to localStorage for session recovery
+- **React Router** - Client-side routing between workflow pages
+- **React Hook Form** - Form state management in editor components
+- **React Query** - Server state caching (if backend API is used)
 
 ### Templates
 Portfolio templates are stored in `frontend/src/templates/`:
@@ -143,9 +163,41 @@ Portfolio templates are stored in `frontend/src/templates/`:
 ### Environment Setup
 Frontend requires OpenAI API key:
 ```bash
-# In frontend/.env
+# Copy example environment file
+cp .env.example frontend/.env
+
+# Set your OpenAI API key in frontend/.env
 REACT_APP_OPENAI_API_KEY=your-api-key-here
 ```
+
+### PDF Generation
+The application uses browser-based PDF generation (not html2canvas/jsPDF):
+- `pdfGenerator.ts` - Generates print-optimized HTML with CSS `@media print` rules
+- Opens a new window with optimized HTML and triggers browser's print dialog
+- User selects "Save as PDF" in the print dialog
+
+#### PDF Optimization Strategy
+- **Page Break Control**: Uses `page-break-before`, `page-break-after`, `page-break-inside` CSS properties
+- **Template-specific Rules**:
+  - `colorful` template: Explicit page breaks per section (Hero → Experience → Projects → Skills)
+  - Other templates: Auto-fill strategy to minimize whitespace
+- **Layout Preservation**: Headers stay with content, items don't split across pages
+- **Print Styles**: Removes shadows, animations, buttons, and browser headers/footers
+
+#### Colorful Template PDF Specifics
+When modifying PDF generation for the colorful template:
+1. Use `page-break-before: always` for major section boundaries
+2. Keep experience/project headers as single-line flex layouts (icon + title + date)
+3. Allow `page-break-inside: auto` so long sections can split if needed
+4. Section grouping: "Basic Info + About" → "Experience" → "Projects" → "Skills + Contact"
+
+### Important Notes
+- **Service Singletons**: All service classes in `frontend/src/services/` are exported as singleton instances, not classes
+- **LocalStorage Persistence**: Application state persists to localStorage, allowing users to resume their workflow
+- **Text Processing**: Templates support line break preservation and markdown formatting for HTML display
+- **Template Types**: Use `minimal`, `clean`, `colorful`, or `elegant` (not the old james/geon/eunseong/iu names)
+- **No Backend Required**: The backend is optional; frontend can run standalone with direct OpenAI API calls
+- **Working Directory**: Commands should be run from the `frontend/` directory (current working directory in development)
 
 ### Deployment
 - Configured for Vercel deployment via `vercel.json`

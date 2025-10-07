@@ -43,7 +43,6 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
     const [hoverRating, setHoverRating] = useState<number>(0);
     const [ratingSubmitted, setRatingSubmitted] = useState(false);
     const [copySuccess, setCopySuccess] = useState<string>('');
-    const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
     const portfolioRef = useRef<HTMLDivElement>(null);
 
     // 기존 평가 불러오기
@@ -99,7 +98,7 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
         }
     };
 
-    // 브라우저 인쇄 기능을 사용한 PDF 저장 (빠른 방법)
+    // 개선된 PDF 인쇄 기능
     const handlePrintToPDF = () => {
         const printWindow = window.open("", "_blank");
         if (!printWindow) {
@@ -108,6 +107,8 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
         }
 
         const htmlContent = generateTemplatedHTML();
+
+        // 고품질 PDF를 위한 최적화된 HTML 생성
         const optimizedHTML = pdfGenerator.generatePrintOptimizedHTML(htmlContent);
 
         printWindow.document.write(optimizedHTML);
@@ -117,26 +118,8 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
         printWindow.onload = () => {
             setTimeout(() => {
                 printWindow.print();
-            }, 500);
+            }, 800);
         };
-    };
-
-    // 고품질 PDF 생성 (섹션별 페이지 구분)
-    const handleDownloadHighQualityPDF = async () => {
-        try {
-            setIsGeneratingPDF(true);
-            const htmlContent = generateTemplatedHTML();
-            await pdfGenerator.generatePDF(htmlContent, 'portfolio.pdf', {
-                quality: 2,
-                format: 'a4',
-                orientation: 'portrait',
-            });
-        } catch (error) {
-            console.error('고품질 PDF 생성 실패:', error);
-            alert('PDF 생성에 실패했습니다. 다시 시도해주세요.');
-        } finally {
-            setIsGeneratingPDF(false);
-        }
     };
 
     // 별점 평가 핸들러
@@ -473,7 +456,7 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                             </h2>
 
                             {/* 메인 액션 버튼들 */}
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
                                 <button
                                     onClick={() => setShowPreview(true)}
                                     className="group flex items-center justify-center p-6 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-xl font-medium hover:from-blue-700 hover:to-cyan-700 shadow-md hover:shadow-lg transition-all duration-200"
@@ -484,31 +467,10 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
 
                                 <button
                                     onClick={handlePrintToPDF}
-                                    className="group flex items-center justify-center p-6 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-medium hover:from-green-700 hover:to-emerald-700 shadow-md hover:shadow-lg transition-all duration-200"
+                                    className="group flex items-center justify-center p-6 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-medium hover:from-purple-700 hover:to-indigo-700 shadow-md hover:shadow-lg transition-all duration-200"
                                 >
                                     <DocumentArrowDownIcon className="w-6 h-6 mr-2" />
-                                    빠른 인쇄
-                                </button>
-
-                                <button
-                                    onClick={handleDownloadHighQualityPDF}
-                                    disabled={isGeneratingPDF}
-                                    className="group flex items-center justify-center p-6 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-medium hover:from-purple-700 hover:to-indigo-700 shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    {isGeneratingPDF ? (
-                                        <>
-                                            <svg className="animate-spin w-6 h-6 mr-2" fill="none" viewBox="0 0 24 24">
-                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                            </svg>
-                                            생성 중...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <DocumentArrowDownIcon className="w-6 h-6 mr-2" />
-                                            고품질 PDF
-                                        </>
-                                    )}
+                                    PDF 다운로드
                                 </button>
                             </div>
 
@@ -563,10 +525,9 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                                         <strong>💡 다운로드 형식 안내</strong>
                                     </p>
                                     <ul className="text-xs text-blue-700 mt-2 space-y-1 list-disc list-inside">
-                                        <li><strong>빠른 인쇄</strong>: 브라우저 인쇄 기능으로 빠르게 PDF 저장. 섹션별 페이지 구분 최적화.</li>
-                                        <li><strong>고품질 PDF</strong>: HTML을 이미지로 변환하여 PDF 생성. 섹션(기본정보+소개, 경험, 프로젝트 등)이 각각 별도 페이지로 구성. 디자인 완벽 보존.</li>
-                                        <li><strong>Markdown</strong>: 텍스트 기반 형식으로 콘텐츠 구조 유지. GitHub, Notion 등에서 사용 가능.</li>
-                                        <li><strong>HTML</strong>: 완전한 웹 페이지 파일. 브라우저에서 직접 열어 확인 가능.</li>
+                                        <li><strong>PDF 다운로드</strong>: 브라우저의 인쇄 기능을 사용합니다. 인쇄 대화상자에서 "PDF로 저장"을 선택하고, 여백과 배율을 조정할 수 있습니다. 모든 디자인과 색상이 완벽하게 유지됩니다.</li>
+                                        <li><strong>Markdown</strong>: 텍스트 기반 형식으로 콘텐츠 구조를 유지합니다. GitHub, Notion 등에서 바로 사용 가능합니다.</li>
+                                        <li><strong>HTML</strong>: 완전한 웹 페이지 파일입니다. 브라우저에서 직접 열어 확인하거나 웹 호스팅할 수 있습니다.</li>
                                     </ul>
                                 </div>
                             </div>
