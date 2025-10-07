@@ -378,7 +378,6 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
         const allLinks = doc.querySelectorAll('a[href]');
         allLinks.forEach(el => {
             const href = el.getAttribute('href') || '';
-            const text = el.textContent?.trim() || '';
 
             if (href.startsWith('mailto:')) {
                 extractedData.contact.email = href.replace('mailto:', '');
