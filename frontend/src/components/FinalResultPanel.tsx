@@ -684,7 +684,7 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                             display: none !important;
                         }
 
-                        /* 프로젝트를 세로로 배치 */
+                        /* 프로젝트와 수상내역을 세로로 배치 */
                         .grid {
                             display: block !important;
                             grid-template-columns: none !important;
@@ -700,6 +700,12 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                             display: grid !important;
                             grid-template-columns: repeat(3, 1fr) !important;
                             gap: 1rem !important;
+                        }
+
+                        /* 수상내역도 세로로 배치 */
+                        #awards .grid {
+                            display: block !important;
+                            grid-template-columns: none !important;
                         }
                     }
                 </style>
