@@ -853,15 +853,6 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                             <h1 className="text-xl font-semibold text-gray-900">
                                 Clean 템플릿 편집 - 기업형 스타일
                             </h1>
-                            {isTranslating && (
-                                <span className="ml-3 text-sm text-blue-600 flex items-center">
-                                    <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                    번역 중...
-                                </span>
-                            )}
                         </div>
                         <div className="flex items-center space-x-3">
                             {/* 한/영 전환 버튼 */}
@@ -1709,6 +1700,26 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                 onApplyChange={handleNaturalLanguageChange}
                 currentContent={JSON.stringify(portfolioData)}
             />
+
+            {/* 번역 중 로딩 오버레이 */}
+            {isTranslating && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+                    <div className="bg-white rounded-2xl p-8 shadow-2xl flex flex-col items-center space-y-4">
+                        <svg className="animate-spin h-16 w-16 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <div className="text-center">
+                            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                                {language === 'ko' ? '영어로 번역 중...' : '한국어로 번역 중...'}
+                            </h3>
+                            <p className="text-sm text-gray-600">
+                                포트폴리오를 전문적으로 번역하고 있습니다.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
