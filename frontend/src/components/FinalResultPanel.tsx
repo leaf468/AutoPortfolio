@@ -9,12 +9,16 @@ import {
     ChartBarIcon,
     SparklesIcon,
     ArrowPathIcon,
+    DocumentTextIcon,
+    ClipboardDocumentIcon,
+    CodeBracketIcon,
 } from "@heroicons/react/24/outline";
 import { StarIcon as StarIconSolid } from "@heroicons/react/24/solid";
 import { GenerationResult } from "../services/oneClickGenerator";
 import { BoostResult } from "../services/interactiveBooster";
 import { FeedbackResult } from "../services/userFeedbackService";
 import { portfolioTemplates } from "../templates/portfolioTemplates";
+import { htmlToMarkdownConverter } from "../services/htmlToMarkdownConverter";
 
 type TemplateType = "minimal" | "clean" | "colorful" | "elegant";
 
@@ -37,6 +41,7 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
     const [userRating, setUserRating] = useState<number>(0);
     const [hoverRating, setHoverRating] = useState<number>(0);
     const [ratingSubmitted, setRatingSubmitted] = useState(false);
+    const [copySuccess, setCopySuccess] = useState<string>('');
     const portfolioRef = useRef<HTMLDivElement>(null);
 
     // 기존 평가 불러오기
@@ -92,7 +97,450 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
         }
     };
 
-    // 브라우저 인쇄 기능을 사용한 PDF 저장
+    // 데이터를 페이지별로 분할하는 함수
+    const splitDataIntoPages = (data: any) => {
+        const pages: any[] = [];
+
+        const projects = data.projects || [];
+        const experience = data.experience || [];
+        const skills = data.skills || data.skillCategories || [];
+        const awards = data.awards || [];
+
+        // 1페이지: 프로필 + 자기소개
+        pages.push({
+            type: 'profile',
+            data: {
+                name: data.name,
+                title: data.title,
+                contact: data.contact,
+                about: data.about,
+            }
+        });
+
+        // 2페이지 로직: 프로젝트≤2 && 커리어≤2 → 합침
+        if (projects.length <= 2 && experience.length <= 2) {
+            pages.push({
+                type: 'combined',
+                data: {
+                    projects: projects,
+                    experience: experience,
+                }
+            });
+        } else {
+            // 프로젝트가 많으면 별도 페이지로
+            if (projects.length > 0) {
+                // 프로젝트를 2개씩 분할 (한 페이지에 2개씩만)
+                for (let i = 0; i < projects.length; i += 2) {
+                    const chunk = projects.slice(i, i + 2);
+                    pages.push({
+                        type: 'projects',
+                        data: { projects: chunk }
+                    });
+                }
+            }
+
+            // 경력을 별도 페이지로 (2개씩)
+            if (experience.length > 0) {
+                for (let i = 0; i < experience.length; i += 2) {
+                    const chunk = experience.slice(i, i + 2);
+                    pages.push({
+                        type: 'experience',
+                        data: { experience: chunk }
+                    });
+                }
+            }
+        }
+
+        // 마지막 페이지: 스킬셋 + 수상내역
+        if (skills.length > 0 || awards.length > 0) {
+            pages.push({
+                type: 'skills_awards',
+                data: {
+                    skills: skills,
+                    awards: awards,
+                }
+            });
+        }
+
+        return pages;
+    };
+
+    // 페이지별 HTML 생성
+    const generatePageHTML = (page: any, templateData: any, template: any) => {
+        const { type, data } = page;
+        const colors = template.designSystem.colors;
+
+        if (type === 'profile') {
+            // 연락처 정보 배열 생성
+            const contactItems = [];
+            if (data.contact?.email) contactItems.push(`📧 ${data.contact.email}`);
+            if (data.contact?.phone) contactItems.push(`📱 ${data.contact.phone}`);
+            if (data.contact?.github) contactItems.push(`💻 GitHub`);
+            if (data.contact?.linkedin) contactItems.push(`🔗 LinkedIn`);
+
+            return `
+                <div class="page-content">
+                    <div style="text-align: center; margin-bottom: 50px; padding: 30px 0;">
+                        <h1 style="font-size: 42px; font-weight: 700; margin-bottom: 12px; color: ${colors.primary};">${data.name || ''}</h1>
+                        <p style="font-size: 22px; color: ${colors.secondary}; margin-bottom: 25px; font-weight: 500;">${data.title || ''}</p>
+                        ${contactItems.length > 0 ? `
+                            <div style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; font-size: 15px; color: ${colors.text}; margin-top: 20px;">
+                                ${contactItems.map(item => `<span style="padding: 8px 16px; background: ${colors.background}; border-radius: 20px; border: 1px solid ${colors.border};">${item}</span>`).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+                    <div style="border-top: 3px solid ${colors.primary}; padding-top: 35px;">
+                        <h2 style="font-size: 28px; margin-bottom: 20px; color: ${colors.primary}; font-weight: 600;">자기소개</h2>
+                        <p style="line-height: 2; color: ${colors.text}; font-size: 16px; text-align: justify; white-space: pre-wrap; word-break: keep-all;">${data.about || ''}</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        if (type === 'combined') {
+            return `
+                <div class="page-content">
+                    ${data.projects.length > 0 ? `
+                        <div style="margin-bottom: 50px;">
+                            <h2 style="font-size: 28px; margin-bottom: 25px; color: ${colors.primary}; border-bottom: 3px solid ${colors.primary}; padding-bottom: 12px; font-weight: 600;">프로젝트</h2>
+                            ${data.projects.map((proj: any) => `
+                                <div style="margin-bottom: 30px; padding: 20px; border-left: 4px solid ${colors.accent}; background: ${colors.background}; border-radius: 0 8px 8px 0;">
+                                    <h3 style="font-size: 20px; margin-bottom: 12px; color: ${colors.primary}; font-weight: 600;">${proj.name || ''}</h3>
+                                    <p style="color: ${colors.text}; margin-bottom: 12px; line-height: 1.8; font-size: 15px; white-space: pre-wrap;">${proj.description || ''}</p>
+                                    ${proj.tech && proj.tech.length > 0 ? `
+                                        <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px;">
+                                            ${proj.tech.map((t: string) => `<span style="background: ${colors.accent}; color: white; padding: 6px 12px; border-radius: 14px; font-size: 13px; font-weight: 500;">${t}</span>`).join('')}
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                    ${data.experience.length > 0 ? `
+                        <div>
+                            <h2 style="font-size: 28px; margin-bottom: 25px; color: ${colors.primary}; border-bottom: 3px solid ${colors.primary}; padding-bottom: 12px; font-weight: 600;">경력</h2>
+                            ${data.experience.map((exp: any) => `
+                                <div style="margin-bottom: 30px; padding: 20px; border-left: 4px solid ${colors.accent}; background: ${colors.background}; border-radius: 0 8px 8px 0;">
+                                    <h3 style="font-size: 20px; margin-bottom: 8px; color: ${colors.primary}; font-weight: 600;">${exp.position || ''}</h3>
+                                    <p style="color: ${colors.secondary}; margin-bottom: 12px; font-size: 14px; font-weight: 500;">${exp.company || ''} • ${exp.duration || ''}</p>
+                                    <p style="color: ${colors.text}; line-height: 1.8; font-size: 15px; white-space: pre-wrap;">${exp.description || ''}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        if (type === 'projects') {
+            return `
+                <div class="page-content">
+                    <h2 style="font-size: 28px; margin-bottom: 25px; color: ${colors.primary}; border-bottom: 3px solid ${colors.primary}; padding-bottom: 12px; font-weight: 600;">프로젝트</h2>
+                    ${data.projects.map((proj: any) => `
+                        <div style="margin-bottom: 30px; padding: 20px; border-left: 4px solid ${colors.accent}; background: ${colors.background}; border-radius: 0 8px 8px 0;">
+                            <h3 style="font-size: 20px; margin-bottom: 12px; color: ${colors.primary}; font-weight: 600;">${proj.name || ''}</h3>
+                            <p style="color: ${colors.text}; margin-bottom: 12px; line-height: 1.8; font-size: 15px; white-space: pre-wrap;">${proj.description || ''}</p>
+                            ${proj.tech && proj.tech.length > 0 ? `
+                                <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px;">
+                                    ${proj.tech.map((t: string) => `<span style="background: ${colors.accent}; color: white; padding: 6px 12px; border-radius: 14px; font-size: 13px; font-weight: 500;">${t}</span>`).join('')}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        if (type === 'experience') {
+            return `
+                <div class="page-content">
+                    <h2 style="font-size: 28px; margin-bottom: 25px; color: ${colors.primary}; border-bottom: 3px solid ${colors.primary}; padding-bottom: 12px; font-weight: 600;">경력</h2>
+                    ${data.experience.map((exp: any) => `
+                        <div style="margin-bottom: 30px; padding: 20px; border-left: 4px solid ${colors.accent}; background: ${colors.background}; border-radius: 0 8px 8px 0;">
+                            <h3 style="font-size: 20px; margin-bottom: 8px; color: ${colors.primary}; font-weight: 600;">${exp.position || ''}</h3>
+                            <p style="color: ${colors.secondary}; margin-bottom: 12px; font-size: 14px; font-weight: 500;">${exp.company || ''} • ${exp.duration || ''}</p>
+                            <p style="color: ${colors.text}; line-height: 1.8; font-size: 15px; white-space: pre-wrap;">${exp.description || ''}</p>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        if (type === 'mixed') {
+            return `
+                <div class="page-content">
+                    ${data.projects.length > 0 ? `
+                        <div style="margin-bottom: 50px;">
+                            <h2 style="font-size: 28px; margin-bottom: 25px; color: ${colors.primary}; border-bottom: 3px solid ${colors.primary}; padding-bottom: 12px; font-weight: 600;">프로젝트 (계속)</h2>
+                            ${data.projects.map((proj: any) => `
+                                <div style="margin-bottom: 30px; padding: 20px; border-left: 4px solid ${colors.accent}; background: ${colors.background}; border-radius: 0 8px 8px 0;">
+                                    <h3 style="font-size: 20px; margin-bottom: 12px; color: ${colors.primary}; font-weight: 600;">${proj.name || ''}</h3>
+                                    <p style="color: ${colors.text}; margin-bottom: 12px; line-height: 1.8; font-size: 15px; white-space: pre-wrap;">${proj.description || ''}</p>
+                                    ${proj.tech && proj.tech.length > 0 ? `
+                                        <div style="display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px;">
+                                            ${proj.tech.map((t: string) => `<span style="background: ${colors.accent}; color: white; padding: 6px 12px; border-radius: 14px; font-size: 13px; font-weight: 500;">${t}</span>`).join('')}
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                    ${data.experience.length > 0 ? `
+                        <div>
+                            <h2 style="font-size: 28px; margin-bottom: 25px; color: ${colors.primary}; border-bottom: 3px solid ${colors.primary}; padding-bottom: 12px; font-weight: 600;">경력${data.projects.length > 0 ? ' (계속)' : ''}</h2>
+                            ${data.experience.map((exp: any) => `
+                                <div style="margin-bottom: 30px; padding: 20px; border-left: 4px solid ${colors.accent}; background: ${colors.background}; border-radius: 0 8px 8px 0;">
+                                    <h3 style="font-size: 20px; margin-bottom: 8px; color: ${colors.primary}; font-weight: 600;">${exp.position || ''}</h3>
+                                    <p style="color: ${colors.secondary}; margin-bottom: 12px; font-size: 14px; font-weight: 500;">${exp.company || ''} • ${exp.duration || ''}</p>
+                                    <p style="color: ${colors.text}; line-height: 1.8; font-size: 15px; white-space: pre-wrap;">${exp.description || ''}</p>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        if (type === 'skills_awards') {
+            return `
+                <div class="page-content">
+                    ${data.skills && data.skills.length > 0 ? `
+                        <div style="margin-bottom: 50px;">
+                            <h2 style="font-size: 28px; margin-bottom: 25px; color: ${colors.primary}; border-bottom: 3px solid ${colors.primary}; padding-bottom: 12px; font-weight: 600;">스킬</h2>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px;">
+                                ${data.skills.map((skillCat: any) => `
+                                    <div style="padding: 20px; background: ${colors.background}; border-radius: 10px; border: 1px solid ${colors.border};">
+                                        <h3 style="font-size: 18px; margin-bottom: 14px; color: ${colors.primary}; font-weight: 600;">${skillCat.category || ''}</h3>
+                                        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                                            ${(skillCat.skills || []).map((skill: string) => `
+                                                <span style="background: ${colors.accent}; color: white; padding: 6px 12px; border-radius: 12px; font-size: 13px; font-weight: 500;">${skill}</span>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+                    ${data.awards && data.awards.length > 0 ? `
+                        <div>
+                            <h2 style="font-size: 28px; margin-bottom: 25px; color: ${colors.primary}; border-bottom: 3px solid ${colors.primary}; padding-bottom: 12px; font-weight: 600;">수상 내역</h2>
+                            ${data.awards.map((award: any) => `
+                                <div style="margin-bottom: 25px; padding: 20px; background: ${colors.background}; border-left: 4px solid ${colors.accent}; border-radius: 0 8px 8px 0;">
+                                    <h3 style="font-size: 20px; margin-bottom: 8px; color: ${colors.primary}; font-weight: 600;">${award.title || ''}</h3>
+                                    <p style="color: ${colors.secondary}; font-size: 14px; font-weight: 500;">${award.organization || ''} • ${award.year || ''}</p>
+                                    ${award.description ? `<p style="color: ${colors.text}; margin-top: 12px; line-height: 1.8; font-size: 15px;">${award.description}</p>` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        return '';
+    };
+
+    // HTML에서 포트폴리오 데이터 추출
+    const extractPortfolioDataFromHTML = (html: string) => {
+        if (!html) {
+            return null;
+        }
+
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+
+        const extractedData: any = {
+            name: '',
+            title: '',
+            contact: {
+                email: '',
+                phone: '',
+                github: '',
+                linkedin: ''
+            },
+            about: '',
+            skills: [],
+            skillCategories: [],
+            projects: [],
+            experience: [],
+            education: [],
+            awards: []
+        };
+
+        // 이름 추출 (h1 태그 - header나 .hero 안에 있음)
+        const nameElement = doc.querySelector('header h1, .hero h1, h1');
+        if (nameElement) {
+            extractedData.name = nameElement.textContent?.trim() || '';
+        }
+
+        // 직책 추출 (.subtitle 클래스)
+        const titleElement = doc.querySelector('.subtitle');
+        if (titleElement) {
+            extractedData.title = titleElement.textContent?.trim() || '';
+        }
+
+        // 연락처 추출 (.social-links 안의 링크들 + 일반 링크)
+        const allLinks = doc.querySelectorAll('a[href]');
+        allLinks.forEach(el => {
+            const href = el.getAttribute('href') || '';
+
+            if (href.startsWith('mailto:')) {
+                extractedData.contact.email = href.replace('mailto:', '');
+            } else if (href.startsWith('tel:')) {
+                extractedData.contact.phone = href.replace('tel:', '');
+            } else if (href.includes('github')) {
+                extractedData.contact.github = href;
+            } else if (href.includes('linkedin')) {
+                extractedData.contact.linkedin = href;
+            }
+        });
+
+        console.log("📧 추출된 연락처:", extractedData.contact);
+
+        // About 추출 - section 안에서 찾기
+        const sections = doc.querySelectorAll('section.section, section');
+        sections.forEach(section => {
+            const sectionTitle = section.querySelector('h2, .section-title');
+            const titleText = sectionTitle?.textContent?.trim().toLowerCase() || '';
+
+            if (titleText.includes('about') || titleText.includes('소개')) {
+                const aboutP = section.querySelector('p');
+                if (aboutP) {
+                    // <br>을 줄바꿈으로 변환
+                    let aboutText = aboutP.innerHTML.replace(/<br\s*\/?>/gi, '\n');
+                    // HTML 태그 제거
+                    const tempDiv = document.createElement('div');
+                    tempDiv.innerHTML = aboutText;
+                    extractedData.about = tempDiv.textContent || '';
+                }
+            }
+
+            // 프로젝트 추출
+            if (titleText.includes('project') || titleText.includes('프로젝트')) {
+                const projectCards = section.querySelectorAll('.project-card, .card');
+                projectCards.forEach(card => {
+                    const name = card.querySelector('h3, h4, .project-name')?.textContent?.trim() || '';
+                    const descP = card.querySelector('p, .project-description');
+                    let description = '';
+                    if (descP) {
+                        let descHTML = descP.innerHTML.replace(/<br\s*\/?>/gi, '\n');
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = descHTML;
+                        description = tempDiv.textContent || '';
+                    }
+                    const techElements = card.querySelectorAll('.tech-pill, .tech-tag, .badge');
+                    const tech = Array.from(techElements).map(el => el.textContent?.trim() || '').filter(Boolean);
+
+                    if (name) {
+                        extractedData.projects.push({
+                            name,
+                            description,
+                            tech,
+                            role: '',
+                            results: []
+                        });
+                    }
+                });
+            }
+
+            // 경력 추출
+            if (titleText.includes('experience') || titleText.includes('경력')) {
+                const expCards = section.querySelectorAll('.timeline-item, .experience-card, .card');
+                expCards.forEach(card => {
+                    const position = card.querySelector('h3')?.textContent?.trim() || '';
+                    const metaText = card.querySelector('.meta, p.meta')?.textContent?.trim() || '';
+
+                    // "회사 • 기간" 형식 파싱
+                    const metaParts = metaText.split('•').map(s => s.trim());
+                    const company = metaParts[0] || '';
+                    const duration = metaParts[1] || '';
+
+                    const descP = card.querySelector('p:not(.meta)');
+                    let description = '';
+                    if (descP) {
+                        let descHTML = descP.innerHTML.replace(/<br\s*\/?>/gi, '\n');
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = descHTML;
+                        description = tempDiv.textContent || '';
+                    }
+
+                    if (position) {
+                        extractedData.experience.push({
+                            position,
+                            company,
+                            duration,
+                            description,
+                            achievements: []
+                        });
+                    }
+                });
+            }
+
+            // 스킬 추출
+            if (titleText.includes('skill') || titleText.includes('스킬')) {
+                const skillGroups = section.querySelectorAll('.skill-category');
+                if (skillGroups.length > 0) {
+                    skillGroups.forEach(group => {
+                        const categoryH3 = group.querySelector('h3');
+                        let category = categoryH3?.textContent?.trim() || '';
+                        // 이모지 제거 (✨ 같은 것들)
+                        category = category.replace(/[\u{1F300}-\u{1F9FF}]/gu, '').trim();
+
+                        const skillItems = group.querySelectorAll('.skill-list li, li');
+                        const skills = Array.from(skillItems).map(li =>
+                            li.textContent?.trim().replace(/^[✨💡🚀⚡️]+\s*/, '') || ''
+                        ).filter(Boolean);
+
+                        if (category && skills.length > 0) {
+                            extractedData.skillCategories.push({ category, skills });
+                        }
+                    });
+                } else {
+                    // 단순 스킬 리스트
+                    const skillElements = section.querySelectorAll('.skill-badge, .badge, .tech-pill');
+                    const skills = Array.from(skillElements).map(el => el.textContent?.trim() || '').filter(Boolean);
+                    if (skills.length > 0) {
+                        extractedData.skills = skills;
+                        extractedData.skillCategories = [{ category: 'Skills', skills }];
+                    }
+                }
+            }
+
+            // 수상 내역 추출
+            if (titleText.includes('award') || titleText.includes('수상')) {
+                const awardCards = section.querySelectorAll('.award-card, .card');
+                awardCards.forEach(card => {
+                    const title = card.querySelector('h3, h4')?.textContent?.trim() || '';
+                    const metaText = card.querySelector('.meta')?.textContent?.trim() || '';
+                    const metaParts = metaText.split('•').map(s => s.trim());
+                    const organization = metaParts[0] || '';
+                    const year = metaParts[1] || '';
+                    const description = card.querySelector('p:not(.meta)')?.textContent?.trim() || '';
+
+                    if (title) {
+                        extractedData.awards.push({
+                            title,
+                            organization,
+                            year,
+                            description
+                        });
+                    }
+                });
+            }
+        });
+
+        console.log("📊 추출된 데이터 상세:", {
+            name: extractedData.name,
+            title: extractedData.title,
+            projectsCount: extractedData.projects.length,
+            experienceCount: extractedData.experience.length,
+            skillCategoriesCount: extractedData.skillCategories.length
+        });
+
+        return extractedData;
+    };
+
+    // 브라우저 인쇄 기능을 사용한 PDF 저장 (미리보기 HTML 그대로 사용)
     const handlePrintToPDF = () => {
         const printWindow = window.open("", "_blank");
         if (!printWindow) {
@@ -100,53 +548,246 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
             return;
         }
 
-        const htmlContent = generateTemplatedHTML();
+        try {
+            // 미리보기와 동일한 HTML 생성 (데이터 추출 없이 바로 사용)
+            const htmlContent = generateTemplatedHTML();
 
-        // 인쇄 최적화 스타일 추가
-        const printStyles = `
-      <style>
-        @media print {
-          @page {
-            size: A4;
-            margin: 0;
-          }
-          body {
-            margin: 0;
-            padding: 20px;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-          /* 페이지 나누기 방지 */
-          * {
-            page-break-inside: avoid;
-          }
-          /* 그림자와 애니메이션 제거 (인쇄 최적화) */
-          * {
-            box-shadow: none !important;
-            animation: none !important;
-            transition: none !important;
-          }
+            console.log("=== PDF 생성 (미리보기 HTML 사용) ===");
+            console.log("HTML 길이:", htmlContent.length);
+
+            // CSS를 추가하여 페이지 나누기 적용
+            const printStyles = `
+                <style>
+                    @page {
+                        size: A4;
+                        margin: 20mm;
+                    }
+
+                    body {
+                        -webkit-print-color-adjust: exact;
+                        print-color-adjust: exact;
+                        line-height: 1.5 !important;
+                    }
+
+                    /* 목차 숨기기 */
+                    nav,
+                    .nav,
+                    .navigation,
+                    .menu,
+                    .toc,
+                    [role="navigation"] {
+                        display: none !important;
+                    }
+
+                    /* 줄 간격 조정 */
+                    p {
+                        line-height: 1.5 !important;
+                        margin-bottom: 0.5em !important;
+                    }
+
+                    /* 섹션별 페이지 나누기 */
+                    .section {
+                        page-break-inside: avoid;
+                        margin-bottom: 1.5rem !important;
+                    }
+
+                    /* 프로젝트/경력 카드 깨짐 방지 */
+                    .project-card,
+                    .timeline-item,
+                    .card {
+                        page-break-inside: avoid !important;
+                        margin-bottom: 1rem !important;
+                    }
+
+                    /* 프로젝트 카드 2개마다 페이지 나누기 */
+                    .project-card:nth-child(2n) {
+                        page-break-after: always;
+                    }
+
+                    /* 경력 카드 2개마다 페이지 나누기 */
+                    .timeline-item:nth-child(2n) {
+                        page-break-after: always;
+                    }
+
+                    /* 스킬셋 간격 조정 */
+                    .skills-container,
+                    .skill-category {
+                        gap: 0.8rem !important;
+                        margin-bottom: 0.8rem !important;
+                    }
+
+                    .skill-category {
+                        padding: 1rem !important;
+                    }
+
+                    .skill-list li {
+                        padding: 0.3rem 0 !important;
+                    }
+
+                    /* 인쇄 시 그림자/애니메이션 제거 */
+                    @media print {
+                        * {
+                            box-shadow: none !important;
+                            animation: none !important;
+                            transition: none !important;
+                        }
+
+                        /* 줄바꿈 제거 (연속된 텍스트로) */
+                        br {
+                            display: none !important;
+                        }
+
+                        p {
+                            display: inline !important;
+                        }
+
+                        p + p {
+                            display: block !important;
+                            margin-top: 0.5em !important;
+                        }
+
+                        /* Clean 템플릿 레이아웃 수정: 사이드바와 메인을 세로로 배치 */
+                        .layout {
+                            display: block !important;
+                            flex-direction: column !important;
+                        }
+
+                        .sidebar {
+                            position: relative !important;
+                            width: 100% !important;
+                            height: auto !important;
+                            border-right: none !important;
+                            page-break-after: avoid !important;
+                            padding: 2rem !important;
+                            background: white !important;
+                            border: none !important;
+                            margin-bottom: 1.5rem !important;
+                        }
+
+                        .main-content {
+                            margin-left: 0 !important;
+                            padding: 0 !important;
+                        }
+
+                        /* 프로필 섹션과 개인소개를 같은 페이지에 */
+                        .profile-section {
+                            page-break-after: avoid !important;
+                            margin-bottom: 0 !important;
+                        }
+
+                        #about {
+                            page-break-before: avoid !important;
+                            padding: 1.5rem !important;
+                            border: 2px solid #ddd !important;
+                            border-radius: 8px !important;
+                            background: white !important;
+                        }
+
+                        /* 네비게이션 메뉴 숨기기 */
+                        nav,
+                        .nav-menu {
+                            display: none !important;
+                        }
+
+                        /* 프로젝트와 수상내역을 세로로 배치 */
+                        .grid {
+                            display: block !important;
+                            grid-template-columns: none !important;
+                        }
+
+                        .grid .card {
+                            margin-bottom: 1.5rem !important;
+                        }
+
+                        /* 스킬셋은 가로로 배치 (3개씩 한 줄) */
+                        #skills .grid,
+                        .skills-container {
+                            display: grid !important;
+                            grid-template-columns: repeat(3, 1fr) !important;
+                            gap: 1rem !important;
+                        }
+
+                        /* 수상내역도 세로로 배치 */
+                        #awards .grid {
+                            display: block !important;
+                            grid-template-columns: none !important;
+                        }
+                    }
+                </style>
+            `;
+
+            // HTML에 인쇄 스타일 삽입
+            let modifiedHTML = htmlContent;
+            if (htmlContent.includes('</head>')) {
+                modifiedHTML = htmlContent.replace('</head>', printStyles + '</head>');
+            } else {
+                // head 태그가 없으면 body 앞에 삽입
+                modifiedHTML = printStyles + htmlContent;
+            }
+
+            printWindow.document.write(modifiedHTML);
+            printWindow.document.close();
+
+            // 콘텐츠 로딩 대기 후 인쇄 다이얼로그 표시
+            printWindow.onload = () => {
+                setTimeout(() => {
+                    printWindow.print();
+                }, 500);
+            };
+        } catch (error) {
+            console.error("PDF 생성 중 오류:", error);
+            alert("PDF 생성 중 오류가 발생했습니다.");
         }
-      </style>
-    `;
+    };
 
-        // HTML에 인쇄 스타일 삽입
-        const modifiedHTML = htmlContent.replace(
-            "</head>",
-            printStyles + "</head>"
-        );
+    // Markdown 다운로드
+    const handleDownloadMarkdown = () => {
+        try {
+            const htmlContent = generateTemplatedHTML();
+            const markdown = htmlToMarkdownConverter.convertToMarkdown(htmlContent);
+            htmlToMarkdownConverter.downloadMarkdown(markdown, `${finalResult.id}_portfolio.md`);
+        } catch (error) {
+            console.error("Markdown 다운로드 실패:", error);
+            alert("Markdown 다운로드에 실패했습니다.");
+        }
+    };
 
-        printWindow.document.write(modifiedHTML);
-        printWindow.document.close();
+    // Markdown 클립보드 복사
+    const handleCopyMarkdown = async () => {
+        try {
+            const htmlContent = generateTemplatedHTML();
+            const markdown = htmlToMarkdownConverter.convertToMarkdown(htmlContent);
+            const success = await htmlToMarkdownConverter.copyToClipboard(markdown);
 
-        // 콘텐츠 로딩 대기 후 인쇄 다이얼로그 표시
-        printWindow.onload = () => {
-            setTimeout(() => {
-                printWindow.print();
-                // 인쇄 후 창 닫기 (선택사항)
-                // printWindow.close();
-            }, 500);
-        };
+            if (success) {
+                setCopySuccess('Markdown이 클립보드에 복사되었습니다!');
+                setTimeout(() => setCopySuccess(''), 3000);
+            } else {
+                alert("클립보드 복사에 실패했습니다.");
+            }
+        } catch (error) {
+            console.error("Markdown 복사 실패:", error);
+            alert("Markdown 복사에 실패했습니다.");
+        }
+    };
+
+    // HTML 다운로드
+    const handleDownloadHTML = () => {
+        try {
+            const htmlContent = generateTemplatedHTML();
+            const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${finalResult.id}_portfolio.html`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        } catch (error) {
+            console.error("HTML 다운로드 실패:", error);
+            alert("HTML 다운로드에 실패했습니다.");
+        }
     };
 
     // 별점 평가 핸들러
@@ -456,7 +1097,28 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                                 <h3 className="font-semibold text-gray-700">
                                     추가 옵션
                                 </h3>
-                                <div className="grid grid-cols-1 gap-3">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <button
+                                        onClick={handleDownloadMarkdown}
+                                        className="flex items-center justify-center p-4 border border-gray-300 text-gray-700 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-all"
+                                    >
+                                        <DocumentTextIcon className="w-5 h-5 mr-2" />
+                                        Markdown 다운로드
+                                    </button>
+                                    <button
+                                        onClick={handleCopyMarkdown}
+                                        className="flex items-center justify-center p-4 border border-gray-300 text-gray-700 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-all"
+                                    >
+                                        <ClipboardDocumentIcon className="w-5 h-5 mr-2" />
+                                        Markdown 복사
+                                    </button>
+                                    <button
+                                        onClick={handleDownloadHTML}
+                                        className="flex items-center justify-center p-4 border border-gray-300 text-gray-700 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-all"
+                                    >
+                                        <CodeBracketIcon className="w-5 h-5 mr-2" />
+                                        HTML 다운로드
+                                    </button>
                                     <button
                                         onClick={handleShare}
                                         className="flex items-center justify-center p-4 border border-gray-300 text-gray-700 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-all"
@@ -465,11 +1127,13 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                                         공유하기
                                     </button>
                                 </div>
+                                {copySuccess && (
+                                    <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-2 rounded-lg text-sm">
+                                        {copySuccess}
+                                    </div>
+                                )}
                                 <p className="text-xs text-gray-500 mt-2">
-                                    💡 <strong>PDF 다운로드</strong>: 브라우저의
-                                    인쇄 기능을 사용하여 PDF로 저장합니다.
-                                    빠르고 안정적이며, 디자인이 완벽하게
-                                    유지됩니다.
+                                    💡 <strong>다양한 형식 지원</strong>: PDF, Markdown, HTML 형식으로 포트폴리오를 다운로드할 수 있습니다.
                                 </p>
                             </div>
 

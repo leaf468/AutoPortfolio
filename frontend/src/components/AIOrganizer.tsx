@@ -17,9 +17,17 @@ const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
   const [jobPosting, setJobPosting] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [showJobPosting, setShowJobPosting] = useState(false);
+  const [showValidationModal, setShowValidationModal] = useState(false);
 
   const handleOrganize = () => {
     if (!input.trim()) return;
+
+    // 입력 길이 검증 (최소 50자 이상)
+    const trimmedInput = input.trim();
+    if (trimmedInput.length < 50) {
+      setShowValidationModal(true);
+      return;
+    }
 
     console.log('=== 사용자 입력 데이터 전달 ===');
     console.log('사용자 입력 데이터:', input);
@@ -169,6 +177,41 @@ const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
             )}
           </button>
         </div>
+
+        {/* 입력 검증 모달 */}
+        {showValidationModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="bg-white rounded-xl p-8 max-w-md mx-4 shadow-2xl"
+            >
+              <div className="text-center">
+                <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-3">
+                  입력이 너무 적습니다
+                </h3>
+                <p className="text-gray-600 mb-2">
+                  조금 더 구체적으로 작성해주세요.
+                </p>
+                <p className="text-sm text-gray-500 mb-6">
+                  최소 50자 이상 입력해주시면<br />
+                  더 나은 포트폴리오를 생성해드릴 수 있습니다.
+                </p>
+                <button
+                  onClick={() => setShowValidationModal(false)}
+                  className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3 px-6 rounded-lg font-semibold hover:shadow-lg transition-all duration-200"
+                >
+                  확인
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
     </div>
   );
 };
