@@ -16,7 +16,6 @@ import BlurFade from '../ui/BlurFade';
 import Badge from '../ui/Badge';
 import { BaseEditorProps, ElegantPortfolioData, ProjectData, ExperienceData, SkillCategory } from './types';
 import { useScrollPreservation } from '../../hooks/useScrollPreservation';
-import { useAutoExpand } from '../../hooks/useAutoExpand';
 import NaturalLanguageModal from '../NaturalLanguageModal';
 import { userFeedbackService } from '../../services/userFeedbackService';
 
@@ -88,7 +87,8 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
     const [currentHtml, setCurrentHtml] = useState<string>('');
     const [isEnhancing, setIsEnhancing] = useState(false);
     const [enhancingSection, setEnhancingSection] = useState<string | null>(null);
-    const [enhancedFields, setEnhancedFields] = useState<Record<string, boolean>>({});
+    const [initialEnhancedFields, setInitialEnhancedFields] = useState<Record<string, boolean>>({}); // 초기 AI 생성 필드
+    const [userEnhancedFields, setUserEnhancedFields] = useState<Record<string, boolean>>({}); // 사용자가 'AI로 개선' 버튼 눌러서 생성된 필드
     const [isInitializing, setIsInitializing] = useState(true);
     const [dataLoaded, setDataLoaded] = useState(false);
     const [showTemplateSelector, setShowTemplateSelector] = useState(false);
@@ -104,6 +104,11 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
     });
 
     const hasInitialized = useRef(false);
+    const isUserTyping = useRef(false);
+    const updateDebounceRef = useRef<NodeJS.Timeout | null>(null);
+    const aboutEditorRef = useRef<HTMLDivElement>(null);
+    const expDescRefs = useRef<(HTMLDivElement | null)[]>([]);
+    const projDescRefs = useRef<(HTMLDivElement | null)[]>([]);
     const { iframeRef, preserveScrollAndUpdate } = useScrollPreservation();
 
     // HTML에서 포트폴리오 데이터 추출
@@ -243,6 +248,25 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
                             console.log('🔧 ElegantEditor: Immediately updating HTML with correct template on initialization');
                             updateHtml().catch(console.error);
                         });
+
+                        // AI 확장된 필드 표시 (autoFillService에서 이미 확장됨)
+                        const newInitialEnhancedFields: Record<string, boolean> = {};
+                        if (actualData.about && actualData.about.includes('<span style="color:orange">')) {
+                            newInitialEnhancedFields['about'] = true;
+                        }
+                        actualData.projects?.forEach((project, index) => {
+                            if (project.description && project.description.includes('<span style="color:orange">')) {
+                                newInitialEnhancedFields[`project_${index}_description`] = true;
+                            }
+                        });
+                        actualData.experience?.forEach((exp, index) => {
+                            if (exp.description && exp.description.includes('<span style="color:orange">')) {
+                                newInitialEnhancedFields[`experience_${index}_description`] = true;
+                            }
+                        });
+                        if (Object.keys(newInitialEnhancedFields).length > 0) {
+                            setInitialEnhancedFields(newInitialEnhancedFields);
+                        }
                     }
 
                     // 데이터가 부족한 경우 AI로 개선
@@ -259,7 +283,7 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
                             if (!actualData.about && enhanced.about) {
                                 generatedFields['about'] = true;
                             }
-                            setEnhancedFields(generatedFields);
+                            setInitialEnhancedFields(generatedFields);
                         } catch (error) {
                             console.error('데이터 개선 실패:', error);
                             if (!dataLoaded) {
@@ -369,6 +393,45 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
         }
     }, [portfolioData, sectionTitles, dataLoaded, updateHtml]);
 
+    // about 섹션 컨텐츠 동기화 (커서 점프 방지)
+    useEffect(() => {
+        if (aboutEditorRef.current && !isUserTyping.current) {
+            const currentContent = aboutEditorRef.current.innerHTML;
+            const newContent = portfolioData.about || '';
+            if (currentContent !== newContent) {
+                aboutEditorRef.current.innerHTML = newContent;
+            }
+        }
+    }, [portfolioData.about]);
+
+    // Experience description 동기화 (커서 점프 방지)
+    useEffect(() => {
+        portfolioData.experience.forEach((exp, index) => {
+            const ref = expDescRefs.current[index];
+            if (ref && !isUserTyping.current) {
+                const currentContent = ref.innerHTML;
+                const newContent = exp.description || '';
+                if (currentContent !== newContent) {
+                    ref.innerHTML = newContent;
+                }
+            }
+        });
+    }, [portfolioData.experience]);
+
+    // Project description 동기화 (커서 점프 방지)
+    useEffect(() => {
+        portfolioData.projects.forEach((project, index) => {
+            const ref = projDescRefs.current[index];
+            if (ref && !isUserTyping.current) {
+                const currentContent = ref.innerHTML;
+                const newContent = project.description || '';
+                if (currentContent !== newContent) {
+                    ref.innerHTML = newContent;
+                }
+            }
+        });
+    }, [portfolioData.projects]);
+
     // 자기소개 개선
     const handleEnhanceAbout = async () => {
         setIsEnhancing(true);
@@ -377,7 +440,8 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
             const enhanced = await portfolioTextEnhancer.enhanceAboutMe(portfolioData.about);
             setPortfolioData(prev => ({ ...prev, about: enhanced.enhanced }));
             if (enhanced.isGenerated) {
-                setEnhancedFields(prev => ({ ...prev, about: true }));
+                setUserEnhancedFields(prev => ({ ...prev, about: true }));
+                setInitialEnhancedFields(prev => ({ ...prev, about: false }));
             }
         } catch (error) {
             console.error('자기소개 개선 실패:', error);
@@ -408,9 +472,15 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
                 return { ...prev, experience: updatedExperience };
             });
 
-            if (enhanced.enhanced?.isGenerated) {
-                setEnhancedFields(prev => ({ ...prev, [`experience_${index}`]: true }));
-            }
+            // AI 개선 시 description 필드 추적
+            setUserEnhancedFields(prev => ({
+                ...prev,
+                [`experience_${index}_description`]: true
+            }));
+            setInitialEnhancedFields(prev => ({
+                ...prev,
+                [`experience_${index}_description`]: false
+            }));
         } catch (error) {
             console.error('경력 개선 실패:', error);
             alert('AI 개선에 실패했습니다. 다시 시도해주세요.');
@@ -475,7 +545,8 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
             });
 
             if (enhanced.enhanced?.isGenerated) {
-                setEnhancedFields(prev => ({ ...prev, [`project_${index}`]: true }));
+                setUserEnhancedFields(prev => ({ ...prev, [`project_${index}_description`]: true }));
+                setInitialEnhancedFields(prev => ({ ...prev, [`project_${index}_description`]: false }));
             }
         } catch (error) {
             console.error('프로젝트 개선 실패:', error);
@@ -772,20 +843,34 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
                                 <div
                                     contentEditable
                                     suppressContentEditableWarning
-                                    dangerouslySetInnerHTML={{ __html: portfolioData.about || '' }}
-                                    onInput={(e) => {
-                                        const newValue = e.currentTarget.innerHTML;
-                                        setPortfolioData(prev => ({ ...prev, about: newValue }));
-                                        if (enhancedFields['about']) {
-                                            setEnhancedFields(prev => ({ ...prev, about: false }));
+                                    ref={aboutEditorRef}
+                                    onFocus={() => { isUserTyping.current = true; }}
+                                    onBlur={() => {
+                                        isUserTyping.current = false;
+                                        // Blur 시 마지막 변경사항 즉시 적용
+                                        if (updateDebounceRef.current) {
+                                            clearTimeout(updateDebounceRef.current);
+                                            updateDebounceRef.current = null;
                                         }
                                     }}
-                                    onBlur={(e) => {
-                                        const html = e.currentTarget.innerHTML;
-                                        setPortfolioData(prev => ({ ...prev, about: html }));
+                                    onInput={(e) => {
+                                        const newValue = e.currentTarget.innerHTML;
+
+                                        // Clear existing timeout
+                                        if (updateDebounceRef.current) {
+                                            clearTimeout(updateDebounceRef.current);
+                                        }
+
+                                        // Debounce state update to improve performance
+                                        updateDebounceRef.current = setTimeout(() => {
+                                            setPortfolioData(prev => ({ ...prev, about: newValue }));
+                                            if (userEnhancedFields['about']) {
+                                                setUserEnhancedFields(prev => ({ ...prev, about: false }));
+                                            }
+                                        }, 300);
                                     }}
                                     className={`w-full p-4 border rounded-lg min-h-[150px] focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                                        enhancedFields['about']
+                                        userEnhancedFields['about']
                                             ? 'bg-yellow-50 border-yellow-300'
                                             : 'bg-white border-purple-200 focus:border-purple-500'
                                     } transition-colors`}
@@ -796,11 +881,15 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
                                         wordWrap: 'break-word'
                                     }}
                                 />
-                                {enhancedFields['about'] && (
+                                {userEnhancedFields['about'] ? (
                                     <p className="mt-2 text-xs text-yellow-700">
                                         ⚠️ AI가 생성/개선한 내용입니다. 검토 후 필요시 수정해주세요.
                                     </p>
-                                )}
+                                ) : initialEnhancedFields['about'] ? (
+                                    <p className="mt-2 text-xs text-yellow-700">
+                                        색이 다른 글씨는 AI가 보충하여 생성한 데이터입니다. 검토 후 필요시 수정해주세요.
+                                    </p>
+                                ) : null}
                             </div>
                         </BlurFade>
 
@@ -834,7 +923,7 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
                                             animate={{ opacity: 1, y: 0 }}
                                             transition={{ delay: index * 0.1, type: "spring", stiffness: 100 }}
                                             className={`p-4 rounded-lg border transition-all hover:shadow-md ${
-                                                enhancedFields[`experience_${index}`]
+                                                userEnhancedFields[`experience_${index}`]
                                                     ? 'bg-gradient-to-r from-yellow-50 to-yellow-100 border-yellow-300'
                                                     : 'bg-gradient-to-r from-indigo-50 to-purple-50 border-purple-200'
                                             }`}
@@ -889,20 +978,29 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
                                             <div
                                                 contentEditable
                                                 suppressContentEditableWarning
-                                                dangerouslySetInnerHTML={{ __html: exp.description || '' }}
-                                                onInput={(e) => {
-                                                    const newValue = e.currentTarget.innerHTML;
-                                                    handleUpdateExperience(index, 'description', newValue);
-                                                    if (enhancedFields[`experience_${index}_description`]) {
-                                                        setEnhancedFields(prev => ({ ...prev, [`experience_${index}_description`]: false }));
+                                                ref={(el) => { expDescRefs.current[index] = el; }}
+                                                onFocus={() => { isUserTyping.current = true; }}
+                                                onBlur={() => {
+                                                    isUserTyping.current = false;
+                                                    if (updateDebounceRef.current) {
+                                                        clearTimeout(updateDebounceRef.current);
+                                                        updateDebounceRef.current = null;
                                                     }
                                                 }}
-                                                onBlur={(e) => {
-                                                    const html = e.currentTarget.innerHTML;
-                                                    handleUpdateExperience(index, 'description', html);
+                                                onInput={(e) => {
+                                                    const newValue = e.currentTarget.innerHTML;
+                                                    if (updateDebounceRef.current) {
+                                                        clearTimeout(updateDebounceRef.current);
+                                                    }
+                                                    updateDebounceRef.current = setTimeout(() => {
+                                                        handleUpdateExperience(index, 'description', newValue);
+                                                        if (userEnhancedFields[`experience_${index}_description`]) {
+                                                            setUserEnhancedFields(prev => ({ ...prev, [`experience_${index}_description`]: false }));
+                                                        }
+                                                    }, 300);
                                                 }}
                                                 className={`w-full p-3 border rounded min-h-[80px] text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                                                    enhancedFields[`experience_${index}_description`]
+                                                    userEnhancedFields[`experience_${index}_description`]
                                                         ? 'bg-yellow-50 border-yellow-300'
                                                         : 'bg-white border-purple-200 focus:border-purple-500'
                                                 } transition-colors`}
@@ -913,6 +1011,15 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
                                                     wordWrap: 'break-word'
                                                 }}
                                             />
+                                            {userEnhancedFields[`experience_${index}_description`] ? (
+                                                <p className="mt-2 text-xs text-yellow-700">
+                                                    ⚠️ AI가 생성/개선한 내용입니다. 검토 후 필요시 수정해주세요.
+                                                </p>
+                                            ) : initialEnhancedFields[`experience_${index}_description`] ? (
+                                                <p className="mt-2 text-xs text-yellow-700">
+                                                    색이 다른 글씨는 AI가 보충하여 생성한 데이터입니다. 검토 후 필요시 수정해주세요.
+                                                </p>
+                                            ) : null}
                                         </motion.div>
                                     ))}
                                 </div>
@@ -949,7 +1056,7 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
 
                                 {portfolioData.projects.map((project, index) => (
                                     <div key={index} className={`mb-4 p-4 rounded-lg border shadow-sm ${
-                                        enhancedFields[`project_${index}`]
+                                        userEnhancedFields[`project_${index}`]
                                             ? 'bg-yellow-50 border-yellow-300'
                                             : 'bg-gradient-to-r from-pink-50 to-purple-50 border-purple-200'
                                     }`}>
@@ -982,20 +1089,29 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
                                         <div
                                             contentEditable
                                             suppressContentEditableWarning
-                                            dangerouslySetInnerHTML={{ __html: project.description || '' }}
-                                            onInput={(e) => {
-                                                const newValue = e.currentTarget.innerHTML;
-                                                handleUpdateProject(index, 'description', newValue);
-                                                if (enhancedFields[`project_${index}_description`]) {
-                                                    setEnhancedFields(prev => ({ ...prev, [`project_${index}_description`]: false }));
+                                            ref={(el) => { projDescRefs.current[index] = el; }}
+                                            onFocus={() => { isUserTyping.current = true; }}
+                                            onBlur={() => {
+                                                isUserTyping.current = false;
+                                                if (updateDebounceRef.current) {
+                                                    clearTimeout(updateDebounceRef.current);
+                                                    updateDebounceRef.current = null;
                                                 }
                                             }}
-                                            onBlur={(e) => {
-                                                const html = e.currentTarget.innerHTML;
-                                                handleUpdateProject(index, 'description', html);
+                                            onInput={(e) => {
+                                                const newValue = e.currentTarget.innerHTML;
+                                                if (updateDebounceRef.current) {
+                                                    clearTimeout(updateDebounceRef.current);
+                                                }
+                                                updateDebounceRef.current = setTimeout(() => {
+                                                    handleUpdateProject(index, 'description', newValue);
+                                                    if (userEnhancedFields[`project_${index}_description`]) {
+                                                        setUserEnhancedFields(prev => ({ ...prev, [`project_${index}_description`]: false }));
+                                                    }
+                                                }, 300);
                                             }}
                                             className={`w-full p-3 mb-3 border rounded min-h-[80px] focus:outline-none focus:ring-2 focus:ring-purple-500 ${
-                                                enhancedFields[`project_${index}_description`]
+                                                userEnhancedFields[`project_${index}_description`]
                                                     ? 'bg-yellow-50 border-yellow-300'
                                                     : 'bg-white border-purple-200 focus:border-purple-500'
                                             } transition-colors`}
@@ -1006,6 +1122,15 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
                                                 wordWrap: 'break-word'
                                             }}
                                         />
+                                        {userEnhancedFields[`project_${index}_description`] ? (
+                                            <p className="mt-2 text-xs text-yellow-700">
+                                                ⚠️ AI가 생성/개선한 내용입니다. 검토 후 필요시 수정해주세요.
+                                            </p>
+                                        ) : initialEnhancedFields[`project_${index}_description`] ? (
+                                            <p className="mt-2 text-xs text-yellow-700">
+                                                색이 다른 글씨는 AI가 보충하여 생성한 데이터입니다. 검토 후 필요시 수정해주세요.
+                                            </p>
+                                        ) : null}
 
                                         <div className="grid grid-cols-3 gap-3">
                                             <div>
@@ -1039,7 +1164,7 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
                                                 />
                                             </div>
                                         </div>
-                                        {enhancedFields[`project_${index}`] && (
+                                        {(initialEnhancedFields[`project_${index}`] || userEnhancedFields[`project_${index}`]) && (
                                             <p className="mt-2 text-xs text-yellow-700">
                                                 ⚠️ AI가 생성/개선한 내용입니다. 검토 후 필요시 수정해주세요.
                                             </p>

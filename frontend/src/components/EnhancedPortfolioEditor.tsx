@@ -612,7 +612,7 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                     💡 <strong>마크다운 지원:</strong> **굵게**, *기울임*, `코드`, [링크](URL) 사용 가능 | Enter로 줄바꿈
                 </div>
                 {enhancedFields['about'] && (
-                    <p className="mt-2 text-xs text-purple-700">
+                    <p className="mt-2 text-xs text-yellow-700">
                         ⚠️ AI가 생성/개선한 내용입니다. 검토 후 필요시 수정해주세요.
                     </p>
                 )}
@@ -742,7 +742,7 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                             💡 **굵게**, *기울임*, `코드`, [링크](URL) 사용 가능
                         </div>
                         {enhancedFields[`project_${index}`] && (
-                            <p className="mb-3 text-xs text-purple-700">
+                            <p className="mb-3 text-xs text-yellow-700">
                                 ⚠️ AI가 생성/개선한 내용입니다. 검토 후 필요시 수정해주세요.
                             </p>
                         )}
@@ -894,7 +894,7 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                                 💡 **굵게**, *기울임* 사용 가능
                             </div>
                             {enhancedFields[`experience_${index}_description`] && (
-                                <p className="mt-2 text-xs text-purple-700">
+                                <p className="mt-2 text-xs text-yellow-700">
                                     ⚠️ AI가 생성/개선한 내용입니다. 검토 후 필요시 수정해주세요.
                                 </p>
                             )}
@@ -917,7 +917,7 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
 • 팀 생산성 향상을 위한 자동화 도구 개발"
                                     />
                                     {enhancedFields[`experience_${index}_achievements`] && (
-                                        <p className="mt-2 text-xs text-purple-700">
+                                        <p className="mt-2 text-xs text-yellow-700">
                                             ⚠️ AI가 생성/개선한 내용입니다. 검토 후 필요시 수정해주세요.
                                         </p>
                                     )}

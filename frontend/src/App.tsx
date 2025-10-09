@@ -1,6 +1,6 @@
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { PortfolioProvider } from './contexts/PortfolioContext';
+import React from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { PortfolioProvider } from "./contexts/PortfolioContext";
 
 // Pages
 import HomePage from './pages/HomePage';
