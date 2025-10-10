@@ -19,6 +19,7 @@ import { BoostResult } from "../services/interactiveBooster";
 import { FeedbackResult } from "../services/userFeedbackService";
 import { portfolioTemplates } from "../templates/portfolioTemplates";
 import { htmlToMarkdownConverter } from "../services/htmlToMarkdownConverter";
+import { trackRating, trackPDFDownload, trackButtonClick } from "../utils/analytics";
 
 type TemplateType = "minimal" | "clean" | "colorful" | "elegant";
 
@@ -542,6 +543,10 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
 
     // 브라우저 인쇄 기능을 사용한 PDF 저장 (미리보기 HTML 그대로 사용)
     const handlePrintToPDF = () => {
+        // GA 이벤트 추적
+        trackPDFDownload(finalResult.id);
+        trackButtonClick('PDF 다운로드', 'FinalResultPanel');
+
         const printWindow = window.open("", "_blank");
         if (!printWindow) {
             alert("팝업이 차단되었습니다. 팝업을 허용해주세요.");
@@ -742,6 +747,9 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
 
     // Markdown 다운로드
     const handleDownloadMarkdown = () => {
+        // GA 이벤트 추적
+        trackButtonClick('Markdown 다운로드', 'FinalResultPanel');
+
         try {
             const htmlContent = generateTemplatedHTML();
             const markdown = htmlToMarkdownConverter.convertToMarkdown(htmlContent);
@@ -773,6 +781,9 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
 
     // HTML 다운로드
     const handleDownloadHTML = () => {
+        // GA 이벤트 추적
+        trackButtonClick('HTML 다운로드', 'FinalResultPanel');
+
         try {
             const htmlContent = generateTemplatedHTML();
             const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
@@ -794,6 +805,9 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
     const handleRating = (rating: number) => {
         setUserRating(rating);
         setRatingSubmitted(true);
+
+        // GA 이벤트 추적
+        trackRating(rating, finalResult.id);
 
         // 평가 데이터 저장 (로컬 스토리지 또는 서버)
         const ratingData = {

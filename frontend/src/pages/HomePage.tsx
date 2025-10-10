@@ -1,13 +1,21 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { SparklesIcon, RocketLaunchIcon, CpuChipIcon } from '@heroicons/react/24/outline';
 import MainLayout from '../layouts/MainLayout';
+import { trackMainPageVisit, trackButtonClick } from '../utils/analytics';
 
 export default function HomePage() {
   const navigate = useNavigate();
 
+  useEffect(() => {
+    // 메인 페이지 방문 추적
+    trackMainPageVisit();
+  }, []);
+
   const handleGetStarted = () => {
+    // GA 이벤트 추적
+    trackButtonClick('포트폴리오 만들기 시작', 'HomePage');
     navigate('/template');
   };
 

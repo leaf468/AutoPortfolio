@@ -17,6 +17,7 @@ import autoFillService, {
     GenerateRequest
 } from '../services/autoFillService';
 import JobRecommendationSlider from './JobRecommendationSlider';
+import { trackPortfolioGeneration, trackButtonClick } from '../utils/analytics';
 type TemplateType = 'minimal' | 'clean' | 'colorful' | 'elegant';
 
 interface AutoFillPortfolioEditorProps {
@@ -47,6 +48,11 @@ const AutoFillPortfolioEditor: React.FC<AutoFillPortfolioEditorProps> = ({
 
     const generatePortfolio = async () => {
         setLoading(true);
+
+        // GA 이벤트 추적
+        trackPortfolioGeneration(selectedTemplate);
+        trackButtonClick('포트폴리오 생성하기', 'AutoFillPage');
+
         try {
             const request: GenerateRequest = {
                 user_id: userId,
@@ -59,7 +65,7 @@ const AutoFillPortfolioEditor: React.FC<AutoFillPortfolioEditorProps> = ({
             const generatedDoc = await autoFillService.generatePortfolio(request);
             setDocument(generatedDoc);
             autoFillService.saveDocument(generatedDoc);
-            
+
             if (onSave) {
                 onSave(generatedDoc);
             }

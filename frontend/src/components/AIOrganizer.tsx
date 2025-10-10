@@ -6,6 +6,7 @@ import {
   ClipboardDocumentListIcon
 } from '@heroicons/react/24/outline';
 import { aiOrganizer, OrganizedContent } from '../services/aiOrganizer';
+import { trackButtonClick } from '../utils/analytics';
 
 interface AIOrganizerProps {
   onComplete: (organizedContent: OrganizedContent) => void;
@@ -28,6 +29,9 @@ const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
       setShowValidationModal(true);
       return;
     }
+
+    // GA 이벤트 추적
+    trackButtonClick('AI 분석 시작', 'OrganizeContentPage');
 
     console.log('=== 사용자 입력 데이터 전달 ===');
     console.log('사용자 입력 데이터:', input);
