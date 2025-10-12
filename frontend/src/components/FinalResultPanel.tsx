@@ -984,6 +984,17 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                                     </p>
                                 </div>
                             )}
+
+                            <div className="text-center mt-4">
+                                <a
+                                    href="https://forms.gle/BuGqR1Wauwfjbes69"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors text-sm"
+                                >
+                                    자세한 리뷰 작성하기
+                                </a>
+                            </div>
                         </div>
 
                         {/* AI 개선 효과 */}
