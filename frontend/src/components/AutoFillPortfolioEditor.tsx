@@ -237,7 +237,7 @@ const AutoFillPortfolioEditor: React.FC<AutoFillPortfolioEditorProps> = ({
                             AI가 포트폴리오를 생성하고 있습니다
                         </h2>
                         <p className="text-sm text-gray-500">
-                            잠시만 기다려주세요
+                            잠시만 기다려주세요 (약 2분 정도 소요될 예정입니다)
                         </p>
                     </motion.div>
                 </div>
