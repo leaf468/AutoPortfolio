@@ -82,9 +82,9 @@ export const AIRecommendationPanel: React.FC<AIRecommendationPanelProps> = ({
   if (!currentInput || currentInput.length < 10) {
     return (
       <div className="h-full flex items-center justify-center text-gray-400 px-6 text-center">
-        <div>
-          <SparklesIcon className="w-12 h-12 mx-auto mb-3 opacity-50" />
-          <p className="text-sm">
+        <div className="py-12">
+          <SparklesIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
+          <p className="text-sm leading-relaxed">
             답변을 작성하면<br />
             AI 기반 추천이 표시됩니다
           </p>

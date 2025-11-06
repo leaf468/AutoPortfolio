@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PencilIcon, TrashIcon, PlusIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, TrashIcon, PlusIcon, Cog6ToothIcon, SparklesIcon } from '@heroicons/react/24/outline';
 
 export interface CoverLetterQuestion {
   id: string;
@@ -17,6 +17,8 @@ interface CoverLetterQuestionInputProps {
   onQuestionAdd?: () => void;
   onQuestionRemove?: (questionId: string) => void;
   onFocus?: (questionId: string) => void;
+  onAnalyzeQuestion?: (questionId: string) => void;
+  analyzingQuestionId?: string | null;
 }
 
 export const CoverLetterQuestionInput: React.FC<CoverLetterQuestionInputProps> = ({
@@ -27,6 +29,8 @@ export const CoverLetterQuestionInput: React.FC<CoverLetterQuestionInputProps> =
   onQuestionAdd,
   onQuestionRemove,
   onFocus,
+  onAnalyzeQuestion,
+  analyzingQuestionId,
 }) => {
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
@@ -142,6 +146,22 @@ export const CoverLetterQuestionInput: React.FC<CoverLetterQuestionInputProps> =
               </div>
             )}
           </div>
+
+          {/* 질문 분석 버튼 */}
+          {onAnalyzeQuestion && (
+            <div className="mb-4 mt-4 flex items-center justify-between py-2">
+              <p className="text-xs text-gray-500">
+                💡 합격자들이 많이 쓴 키워드와 경험 통계 확인
+              </p>
+              <button
+                onClick={() => onAnalyzeQuestion(question.id)}
+                disabled={analyzingQuestionId === question.id}
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {analyzingQuestionId === question.id ? '분석 중...' : '질문 분석 →'}
+              </button>
+            </div>
+          )}
 
           <textarea
             value={question.answer}

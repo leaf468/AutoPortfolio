@@ -75,6 +75,7 @@ export const CoverLetterPageV3: React.FC = () => {
   const [isLoadingStats, setIsLoadingStats] = useState(false);
   const [questionAnalyses, setQuestionAnalyses] = useState<QuestionAnalysis[]>([]);
   const [isLoadingQuestionAnalysis, setIsLoadingQuestionAnalysis] = useState(false);
+  const [analyzingQuestionId, setAnalyzingQuestionId] = useState<string | null>(null);
   const [overallAnalysis, setOverallAnalysis] = useState<{
     overallScore: number;
     strengths: string[];
@@ -221,28 +222,36 @@ export const CoverLetterPageV3: React.FC = () => {
     }));
   };
 
-  const handleAnalyzeQuestions = async () => {
+  const handleAnalyzeSingleQuestion = async (questionId: string) => {
     if (!userSpec.position.trim()) {
       alert('직무를 입력해주세요.');
       return;
     }
 
-    setIsLoadingQuestionAnalysis(true);
-    try {
-      const analyses = await analyzeAllQuestions(
-        questions.map((q) => ({ id: q.id, question: q.question })),
-        userSpec.position
-      );
-      setQuestionAnalyses(analyses);
+    const question = questions.find(q => q.id === questionId);
+    if (!question) return;
 
+    setAnalyzingQuestionId(questionId);
+    try {
+      const { analyzeQuestion } = await import('../services/questionAnalysisService');
+      const analysis = await analyzeQuestion(question.question, questionId, userSpec.position);
+
+      // 기존 분석 결과 업데이트 또는 추가
+      setQuestionAnalyses(prev => {
+        const filtered = prev.filter(a => a.questionId !== questionId);
+        return [...filtered, analysis];
+      });
+
+      // 우측 패널로 스크롤
       setTimeout(() => {
-        document.getElementById('question-analysis')?.scrollIntoView({ behavior: 'smooth' });
+        const element = document.getElementById(`analysis-${questionId}`);
+        element?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }, 100);
     } catch (error) {
       console.error('질문 분석 실패:', error);
       alert('질문 분석 중 오류가 발생했습니다.');
     } finally {
-      setIsLoadingQuestionAnalysis(false);
+      setAnalyzingQuestionId(null);
     }
   };
 
@@ -462,17 +471,12 @@ export const CoverLetterPageV3: React.FC = () => {
               onQuestionAdd={handleQuestionAdd}
               onQuestionRemove={handleQuestionRemove}
               onFocus={handleQuestionFocus}
+              onAnalyzeQuestion={handleAnalyzeSingleQuestion}
+              analyzingQuestionId={analyzingQuestionId}
             />
 
-            {/* 분석 버튼 */}
-            <div className="mt-6 flex justify-center gap-4">
-              <button
-                onClick={handleAnalyzeQuestions}
-                disabled={!userSpec.position.trim() || isLoadingQuestionAnalysis}
-                className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-all font-medium shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isLoadingQuestionAnalysis ? '분석 중...' : '질문 분석'}
-              </button>
+            {/* 답변 종합 분석 버튼 */}
+            <div className="mt-6 flex justify-center">
               <button
                 onClick={handleAnalyzeComplete}
                 disabled={!userSpec.position.trim()}
@@ -483,24 +487,86 @@ export const CoverLetterPageV3: React.FC = () => {
             </div>
           </div>
 
-          {/* 우측: AI 추천 패널 (1/3) */}
+          {/* 우측: 질문 분석 결과 또는 AI 추천 패널 (1/3) */}
           <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-lg sticky top-24 h-[calc(100vh-7rem)]">
-              <AIRecommendationPanel
-                currentInput={currentInput}
-                position={userSpec.position}
-                questionId={focusedQuestionId}
-              />
+            <div className="bg-white rounded-lg shadow-lg sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto">
+              {questionAnalyses.length > 0 ? (
+                <div className="p-6">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <span className="text-purple-600">💡</span>
+                    질문 분석 결과
+                  </h3>
+                  <div className="space-y-6">
+                    {questionAnalyses.map((analysis) => {
+                      const questionNum = questions.findIndex(q => q.id === analysis.questionId) + 1;
+                      return (
+                        <div key={analysis.questionId} id={`analysis-${analysis.questionId}`} className="border-l-4 border-purple-500 pl-4 py-2">
+                          <h4 className="font-semibold text-gray-900 mb-2">
+                            질문 {questionNum}: {analysis.question}
+                          </h4>
+
+                          {/* 관련 키워드 */}
+                          {analysis.relevantKeywords.length > 0 && (
+                            <div className="mb-3">
+                              <p className="text-xs font-medium text-gray-600 mb-1">🔑 관련 키워드</p>
+                              <div className="flex flex-wrap gap-1">
+                                {analysis.relevantKeywords.map((keyword, idx) => (
+                                  <span key={idx} className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs">
+                                    {keyword}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* 추천 주제 */}
+                          {analysis.suggestedTopics.length > 0 && (
+                            <div className="mb-3">
+                              <p className="text-xs font-medium text-gray-600 mb-1">📝 추천 주제</p>
+                              <ul className="text-xs text-gray-700 space-y-1">
+                                {analysis.suggestedTopics.map((topic, idx) => (
+                                  <li key={idx}>• {topic}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {/* 관련 통계 */}
+                          {analysis.relatedStats.length > 0 && (
+                            <div className="mb-3">
+                              <p className="text-xs font-medium text-gray-600 mb-1">📊 합격자 통계</p>
+                              <div className="space-y-2">
+                                {analysis.relatedStats.slice(0, 3).map((stat, idx) => (
+                                  <div key={idx} className="bg-gray-50 rounded p-2">
+                                    <div className="flex items-center justify-between mb-1">
+                                      <span className="text-xs font-medium text-gray-900">{stat.activityType}</span>
+                                      <span className="text-xs font-bold text-blue-600">{stat.percentage.toFixed(0)}%</span>
+                                    </div>
+                                    <p className="text-xs text-gray-600">{stat.insight}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* 일반 조언 */}
+                          <div className="bg-blue-50 border border-blue-200 rounded p-3">
+                            <p className="text-xs text-blue-800">{analysis.generalAdvice}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <AIRecommendationPanel
+                  currentInput={currentInput}
+                  position={userSpec.position}
+                  questionId={focusedQuestionId}
+                />
+              )}
             </div>
           </div>
-        </div>
-
-        {/* 질문 분석 결과 */}
-        <div id="question-analysis">
-          <QuestionAnalysisPanel
-            analyses={questionAnalyses}
-            isLoading={isLoadingQuestionAnalysis}
-          />
         </div>
 
         {/* 종합 분석 결과 */}
