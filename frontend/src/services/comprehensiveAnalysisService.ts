@@ -233,67 +233,73 @@ function calculateToeicDistribution(coverLetters: CoverLetter[]): { range: strin
 }
 
 function analyzeActivityPatterns(activities: Activity[], totalApplicants: number): ActivityPattern[] {
-  // 필터링할 무의미한 활동 타입
-  const invalidTypes = ['활동', '느낀점', '배운점', '기타', '내용', '설명', '경험', '역할'];
+  // content에서 의미있는 활동 키워드 추출
+  const activityKeywords = [
+    '프로젝트', '개발', '데이터 분석', '인턴', '공모전', '해커톤',
+    '봉사', '동아리', '스터디', '연구', '논문', '특허',
+    '수상', '대회', '경진대회', '창업', '멘토링', '강의',
+    '리더', '팀장', '기획', '설계', '운영', '마케팅'
+  ];
 
   const activityMap = new Map<string, {
     count: number;
-    personCount: Set<number>; // 중복 제거를 위한 지원자 ID 추적
+    personCount: Set<number>;
     examples: string[];
-    keywords: Map<string, number>;
+    relatedKeywords: Map<string, number>;
   }>();
 
-  // 디버깅: 처음 10개 활동 타입 확인
-  const sampleTypes = activities.slice(0, 10).map(a => a.activity_type);
-  console.log('🔍 Sample activity types from DB:', sampleTypes);
-
   activities.forEach((act) => {
-    // 무의미한 타입 필터링
-    if (invalidTypes.includes(act.activity_type) || !act.activity_type || act.activity_type.length < 2) {
+    if (!act.content || act.content.length < 10) {
       return;
     }
 
-    const existing = activityMap.get(act.activity_type) || {
-      count: 0,
-      personCount: new Set<number>(),
-      examples: [],
-      keywords: new Map(),
-    };
+    // content에서 의미있는 활동 키워드 찾기
+    const foundKeywords = activityKeywords.filter(keyword =>
+      act.content.includes(keyword)
+    );
 
-    existing.count++;
-    existing.personCount.add(act.cover_letter_id); // 지원자 추적
+    foundKeywords.forEach(keyword => {
+      const existing = activityMap.get(keyword) || {
+        count: 0,
+        personCount: new Set<number>(),
+        examples: [],
+        relatedKeywords: new Map(),
+      };
 
-    if (existing.examples.length < 5 && act.content && act.content.length > 10) {
-      existing.examples.push(act.content);
-    }
+      existing.count++;
+      existing.personCount.add(act.cover_letter_id);
 
-    // 키워드 추출
-    const keywords = extractKeywords(act.content);
-    keywords.forEach((keyword) => {
-      existing.keywords.set(keyword, (existing.keywords.get(keyword) || 0) + 1);
+      if (existing.examples.length < 3 && act.content.length > 20) {
+        existing.examples.push(act.content.slice(0, 100));
+      }
+
+      // 관련 키워드 추출
+      const relatedWords = extractKeywords(act.content);
+      relatedWords.forEach((word) => {
+        existing.relatedKeywords.set(word, (existing.relatedKeywords.get(word) || 0) + 1);
+      });
+
+      activityMap.set(keyword, existing);
     });
-
-    activityMap.set(act.activity_type, existing);
   });
 
   const results = Array.from(activityMap.entries())
-    .filter(([type, data]) => data.personCount.size >= 1) // 최소 1명 이상으로 완화
-    .map(([type, data]) => {
-      // 실제 해당 활동을 한 사람 수 기준으로 백분율 계산
+    .filter(([keyword, data]) => data.personCount.size >= 2) // 최소 2명 이상
+    .map(([keyword, data]) => {
       const percentage = Math.min((data.personCount.size / totalApplicants) * 100, 100);
-      const avgCount = data.count / data.personCount.size; // 1인당 평균 언급 횟수
-      const topKeywords = Array.from(data.keywords.entries())
+      const avgCount = data.count / data.personCount.size;
+      const topKeywords = Array.from(data.relatedKeywords.entries())
         .sort((a, b) => b[1] - a[1])
         .slice(0, 5)
-        .map(([keyword]) => keyword);
+        .map(([kw]) => kw);
 
       return {
-        activityType: type,
+        activityType: keyword,
         percentage,
         averageCount: avgCount,
         commonKeywords: topKeywords,
-        examples: data.examples.slice(0, 3), // 상위 3개만
-        insight: generateActivityInsight(type, percentage, topKeywords),
+        examples: data.examples,
+        insight: generateActivityInsight(keyword, percentage, topKeywords),
       };
     })
     .sort((a, b) => b.percentage - a.percentage)
@@ -302,9 +308,9 @@ function analyzeActivityPatterns(activities: Activity[], totalApplicants: number
   console.log('🔍 Activity Patterns Analysis:', {
     totalActivities: activities.length,
     totalApplicants,
-    uniqueActivityTypes: activityMap.size,
+    uniqueActivityKeywords: activityMap.size,
     finalResults: results.length,
-    results: results.slice(0, 5)
+    topResults: results.slice(0, 5).map(r => `${r.activityType} ${r.percentage.toFixed(0)}%`)
   });
 
   return results;
