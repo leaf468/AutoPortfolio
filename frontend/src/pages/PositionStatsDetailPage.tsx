@@ -77,7 +77,7 @@ export const PositionStatsDetailPage: React.FC = () => {
                 <img
                   src="/Careeroad_logo.png"
                   alt="Careeroad"
-                  className="h-16 w-auto cursor-pointer"
+                  className="h-20 w-auto cursor-pointer"
                 />
               </Link>
               <div className="border-l-2 border-gray-300 pl-4 py-1">

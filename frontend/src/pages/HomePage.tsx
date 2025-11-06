@@ -1,8 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
-  SparklesIcon,
   RocketLaunchIcon,
   CpuChipIcon,
   DocumentTextIcon,
@@ -11,9 +10,12 @@ import {
   CheckCircleIcon
 } from '@heroicons/react/24/outline';
 import { trackMainPageVisit, trackButtonClick } from '../utils/analytics';
+import AuthModal from '../components/AuthModal';
 
 export default function HomePage() {
   const navigate = useNavigate();
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('login');
 
   useEffect(() => {
     trackMainPageVisit();
@@ -21,24 +23,34 @@ export default function HomePage() {
 
   const handleGetStarted = () => {
     trackButtonClick('포트폴리오 만들기 시작', 'HomePage');
-    navigate('/template-selection');
+    setAuthModalMode('signup');
+    setIsAuthModalOpen(true);
   };
 
   const handleLogin = () => {
     trackButtonClick('로그인', 'HomePage');
-    navigate('/login');
+    setAuthModalMode('login');
+    setIsAuthModalOpen(true);
   };
 
   return (
     <div className="min-h-screen bg-white">
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        initialMode={authModalMode}
+      />
+
       {/* Navigation */}
       <nav className="fixed top-0 w-full bg-white/80 backdrop-blur-md z-50 border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <SparklesIcon className="w-8 h-8 text-indigo-600" />
-            <span className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              CareeRoad
-            </span>
+          <div className="flex items-center space-x-3">
+            <img
+              src="/Careeroad_logo.png"
+              alt="CareeRoad Logo"
+              className="h-14 object-contain"
+            />
           </div>
           <div className="flex items-center space-x-6">
             <a href="#features" className="text-gray-600 hover:text-gray-900 transition-colors">기능</a>
@@ -81,22 +93,14 @@ export default function HomePage() {
               AI가 당신의 경험을 분석하고, 채용 담당자의 마음을 사로잡는<br />
               전문적인 포트폴리오를 자동으로 생성합니다.
             </p>
-            <div className="flex items-center justify-center space-x-4">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={handleGetStarted}
-                className="px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl text-lg shadow-lg hover:shadow-xl transition-all"
-              >
-                무료로 시작하기
-              </motion.button>
-              <button
-                onClick={() => document.getElementById('demo')?.scrollIntoView({ behavior: 'smooth' })}
-                className="px-8 py-4 bg-white text-gray-900 font-semibold rounded-xl text-lg border-2 border-gray-200 hover:border-gray-300 transition-all"
-              >
-                데모 보기
-              </button>
-            </div>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleGetStarted}
+              className="px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl text-lg shadow-lg hover:shadow-xl transition-all"
+            >
+              무료로 시작하기
+            </motion.button>
             <p className="mt-4 text-sm text-gray-500">
               ✓ 신용카드 불필요 ✓ 5분이면 완성 ✓ 무료 템플릿 제공
             </p>
@@ -341,18 +345,21 @@ export default function HomePage() {
               <ul className="space-y-4 mb-8">
                 <li className="flex items-center text-gray-600">
                   <CheckCircleIcon className="w-5 h-5 text-green-500 mr-3" />
-                  기본 템플릿 3개
+                  자소서 AI 작성
                 </li>
                 <li className="flex items-center text-gray-600">
                   <CheckCircleIcon className="w-5 h-5 text-green-500 mr-3" />
-                  AI 자동 생성
+                  기본 템플릿
                 </li>
                 <li className="flex items-center text-gray-600">
                   <CheckCircleIcon className="w-5 h-5 text-green-500 mr-3" />
                   PDF 다운로드
                 </li>
               </ul>
-              <button className="w-full py-3 bg-gray-100 text-gray-900 font-semibold rounded-lg hover:bg-gray-200 transition-colors">
+              <button
+                onClick={handleGetStarted}
+                className="w-full py-3 bg-gray-100 text-gray-900 font-semibold rounded-lg hover:bg-gray-200 transition-colors"
+              >
                 시작하기
               </button>
             </div>
@@ -368,6 +375,10 @@ export default function HomePage() {
               <ul className="space-y-4 mb-8">
                 <li className="flex items-center text-white">
                   <CheckCircleIcon className="w-5 h-5 text-yellow-300 mr-3" />
+                  포트폴리오 AI 생성
+                </li>
+                <li className="flex items-center text-white">
+                  <CheckCircleIcon className="w-5 h-5 text-yellow-300 mr-3" />
                   모든 프리미엄 템플릿
                 </li>
                 <li className="flex items-center text-white">
@@ -376,14 +387,13 @@ export default function HomePage() {
                 </li>
                 <li className="flex items-center text-white">
                   <CheckCircleIcon className="w-5 h-5 text-yellow-300 mr-3" />
-                  자소서 AI 작성
-                </li>
-                <li className="flex items-center text-white">
-                  <CheckCircleIcon className="w-5 h-5 text-yellow-300 mr-3" />
                   우선 고객지원
                 </li>
               </ul>
-              <button className="w-full py-3 bg-white text-indigo-600 font-semibold rounded-lg hover:bg-gray-50 transition-colors">
+              <button
+                onClick={handleGetStarted}
+                className="w-full py-3 bg-white text-indigo-600 font-semibold rounded-lg hover:bg-gray-50 transition-colors"
+              >
                 시작하기
               </button>
             </div>
@@ -444,9 +454,12 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto">
           <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div>
-              <div className="flex items-center space-x-2 mb-4">
-                <SparklesIcon className="w-6 h-6 text-indigo-400" />
-                <span className="text-xl font-bold text-white">CareeRoad</span>
+              <div className="flex items-center mb-4">
+                <img
+                  src="/Careeroad_logo.png"
+                  alt="CareeRoad Logo"
+                  className="h-8 object-contain brightness-0 invert"
+                />
               </div>
               <p className="text-sm">
                 AI로 만드는 완벽한 포트폴리오

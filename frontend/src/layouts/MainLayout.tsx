@@ -102,7 +102,7 @@ export default function MainLayout({
                 <img
                   src="/Careeroad_logo.png"
                   alt="Careeroad"
-                  className="h-16 w-auto"
+                  className="h-20 w-auto"
                 />
                 <div className="border-l-2 border-gray-300 pl-4 py-1">
                   <p className="text-xl font-bold text-gray-900">

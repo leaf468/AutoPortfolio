@@ -263,34 +263,50 @@ const MyPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* 헤더 */}
-      <header className="bg-white shadow-sm">
+      <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-8">
               {/* 로고 */}
               <Link to="/" className="flex items-center space-x-2">
-                <img src="/Careeroad_logo.png" alt="Careeroad" className="h-16" />
+                <img src="/Careeroad_logo.png" alt="Careeroad" className="h-14" />
               </Link>
 
-              <div className="h-8 w-px bg-gray-300 mx-4"></div>
+              {/* 네비게이션 버튼들 */}
+              <nav className="flex items-center space-x-2">
+                <button
+                  onClick={() => navigate('/template-selection')}
+                  className="px-4 py-2 text-gray-700 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors font-medium"
+                >
+                  포트폴리오 만들기
+                </button>
+                <button
+                  onClick={() => navigate('/cover-letter')}
+                  className="px-4 py-2 text-gray-700 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors font-medium"
+                >
+                  자기소개서 작성하기
+                </button>
+              </nav>
+            </div>
 
+            <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-xl">
+                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
                   {user.name.charAt(0).toUpperCase()}
                 </div>
                 <div>
-                  <h1 className="text-lg font-bold text-gray-900">{user.name}</h1>
-                  <p className="text-sm text-gray-500">{user.email}</p>
+                  <p className="text-sm font-semibold text-gray-900">{user.name}</p>
+                  <p className="text-xs text-gray-500">{user.email}</p>
                 </div>
               </div>
+              <button
+                onClick={handleLogout}
+                className="flex items-center space-x-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition"
+              >
+                <ArrowRightOnRectangleIcon className="w-5 h-5" />
+                <span>로그아웃</span>
+              </button>
             </div>
-            <button
-              onClick={handleLogout}
-              className="flex items-center space-x-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition"
-            >
-              <ArrowRightOnRectangleIcon className="w-5 h-5" />
-              <span>로그아웃</span>
-            </button>
           </div>
         </div>
       </header>
