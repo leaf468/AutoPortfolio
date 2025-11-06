@@ -99,7 +99,7 @@ const Footer: React.FC = () => {
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
-        mode={authModalMode}
+        initialMode={authModalMode}
       />
     </>
   );
