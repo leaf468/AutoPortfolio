@@ -233,21 +233,33 @@ function calculateToeicDistribution(coverLetters: CoverLetter[]): { range: strin
 }
 
 function analyzeActivityPatterns(activities: Activity[], totalApplicants: number): ActivityPattern[] {
+  // 필터링할 무의미한 활동 타입
+  const invalidTypes = ['활동', '느낀점', '배운점', '기타', '내용', '설명', '경험', '역할'];
+
   const activityMap = new Map<string, {
     count: number;
+    personCount: Set<number>; // 중복 제거를 위한 지원자 ID 추적
     examples: string[];
     keywords: Map<string, number>;
   }>();
 
   activities.forEach((act) => {
+    // 무의미한 타입 필터링
+    if (invalidTypes.includes(act.activity_type) || !act.activity_type || act.activity_type.length < 2) {
+      return;
+    }
+
     const existing = activityMap.get(act.activity_type) || {
       count: 0,
+      personCount: new Set<number>(),
       examples: [],
       keywords: new Map(),
     };
 
     existing.count++;
-    if (existing.examples.length < 5) {
+    existing.personCount.add(act.cover_letter_id); // 지원자 추적
+
+    if (existing.examples.length < 5 && act.content && act.content.length > 10) {
       existing.examples.push(act.content);
     }
 
@@ -261,9 +273,11 @@ function analyzeActivityPatterns(activities: Activity[], totalApplicants: number
   });
 
   return Array.from(activityMap.entries())
+    .filter(([type, data]) => data.personCount.size >= 1) // 최소 1명 이상으로 완화
     .map(([type, data]) => {
-      const percentage = (data.count / totalApplicants) * 100;
-      const avgCount = data.count / totalApplicants;
+      // 실제 해당 활동을 한 사람 수 기준으로 백분율 계산
+      const percentage = Math.min((data.personCount.size / totalApplicants) * 100, 100);
+      const avgCount = data.count / data.personCount.size; // 1인당 평균 언급 횟수
       const topKeywords = Array.from(data.keywords.entries())
         .sort((a, b) => b[1] - a[1])
         .slice(0, 5)
@@ -274,7 +288,7 @@ function analyzeActivityPatterns(activities: Activity[], totalApplicants: number
         percentage,
         averageCount: avgCount,
         commonKeywords: topKeywords,
-        examples: data.examples,
+        examples: data.examples.slice(0, 3), // 상위 3개만
         insight: generateActivityInsight(type, percentage, topKeywords),
       };
     })
