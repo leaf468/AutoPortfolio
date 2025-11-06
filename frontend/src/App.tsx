@@ -34,8 +34,8 @@ function PageViewTracker() {
 // 페이지 경로에 따른 제목 반환
 function getPageTitle(pathname: string): string {
   const titleMap: Record<string, string> = {
-    '/': '템플릿 선택',
-    '/landing': '메인 페이지',
+    '/': '메인 페이지',
+    '/template-selection': '템플릿 선택',
     '/template': '템플릿 선택',
     '/organize': '콘텐츠 정리',
     '/autofill': '자동 채우기',
@@ -62,8 +62,8 @@ function App() {
         <Router>
           <PageViewTracker />
           <Routes>
-            <Route path="/" element={<TemplateSelectionPage />} />
-            <Route path="/landing" element={<HomePage />} />
+            <Route path="/" element={<HomePage />} />
+            <Route path="/template-selection" element={<TemplateSelectionPage />} />
             <Route path="/template" element={<TemplateSelectionPage />} />
             <Route path="/organize" element={<OrganizeContentPage />} />
             <Route path="/autofill" element={<AutoFillPage />} />
