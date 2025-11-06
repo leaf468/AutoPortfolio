@@ -638,22 +638,6 @@ export const CoverLetterPageV3: React.FC = () => {
           </div>
         )}
 
-        {/* 직무별 종합 통계 */}
-        {userSpec.position.trim() && (
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">
-              {userSpec.position} 직무 합격자 통계
-            </h2>
-            {isLoadingStats ? (
-              <div className="text-center py-12">
-                <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-                <p className="text-gray-600 mt-4">데이터 분석 중...</p>
-              </div>
-            ) : comprehensiveStats ? (
-              <ComprehensiveStatsDashboard stats={comprehensiveStats} compact={true} />
-            ) : null}
-          </div>
-        )}
       </div>
     </div>
   );
