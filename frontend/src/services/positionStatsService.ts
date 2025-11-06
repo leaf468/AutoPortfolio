@@ -449,86 +449,33 @@ export async function getPositionStats(position: string): Promise<PositionStats 
       '재무/회계': ['재무', '회계', 'accounting'],
     };
 
-    // DB에서 구체적인 프로젝트명/활동명 추출
+    // DB 기반 활동 생성 (패턴 매칭 대신 키워드 분석으로 생성)
     const combinedActivityCounts: { [key: string]: number} = {};
 
-    // 구체적인 활동 패턴들
-    const activityPatterns = [
-      { keyword: '프로젝트', pattern: /([\w가-힣]{2,15})\s*프로젝트/g },
-      { keyword: '개발', pattern: /([\w가-힣]{2,15})\s*개발/g },
-      { keyword: '인턴', pattern: /([\w가-힣]{2,15})\s*인턴/g },
-      { keyword: '공모전', pattern: /([\w가-힣]{2,15})\s*공모전/g },
-      { keyword: '대회', pattern: /([\w가-힣]{2,15})\s*대회/g },
-      { keyword: '해커톤', pattern: /([\w가-힣]{2,15})\s*해커톤/g },
-      { keyword: '연구', pattern: /([\w가-힣]{2,15})\s*연구/g },
-      { keyword: '스터디', pattern: /([\w가-힣]{2,15})\s*스터디/g },
-      { keyword: '동아리', pattern: /([\w가-힣]{2,15})\s*동아리/g },
-    ];
-
-    // 제외할 prefix - 너무 일반적이거나 의미 없는 것들
-    const skipPrefixes = [
-      // 일반적인 조사/접속사
-      '핵심', '주요', '중요', '다양한', '여러', '기타', '관련', '전반',
-      '의', '을', '를', '이', '가', '에서', '에게', '으로', '로',
-      '했던', '진행한', '수행한', '참여한', '만든', '개발한',
-      '첫', '두번째', '세번째', '마지막',
-      '학교', '대학', '회사', '기업',
-      // 의미 없는 명사/동사
-      '방안', '연계', '통한', '있게', '위한', '통해', '대한', '위해',
-      '인재', '소그룹', '혁신', '전략', '운영', '관리',
-      '효율', '최적', '개선', '향상', '지원', '협력',
-      // 너무 일반적인 단어들 (구체성 없음)
-      '소프트웨어', '솔루션', '시스템', '서비스', '제품',
-      '개발', '연구', '기획', '설계', '구현', '제작',
-      '장치', '해결', '학습', '교육', '훈련',
-      '소재', '재료', '부품', '요소', '기술',
-      '방법', '방식', '과정', '절차', '단계',
-      '결과', '성과', '목표', '달성', '완료',
-    ];
-
-    // 기술 키워드 빈도수 (생성에 사용)
+    // 기술 키워드 빈도수 카운트
     const techKeywordCounts: { [key: string]: number } = {};
+
+    const techKeywords = [
+      'AI', '머신러닝', '딥러닝', '인공지능',
+      '웹', '앱', '모바일', '백엔드', '프론트엔드', '풀스택',
+      '데이터', '빅데이터', '분석', 'SQL', 'Python',
+      'React', 'Vue', 'Angular', 'Node', 'Spring', 'Django',
+      'AWS', '클라우드', 'DevOps',
+      'IoT', '임베디드', '하드웨어',
+      '블록체인', 'NFT',
+      '게임', 'Unity', 'Unreal',
+      'UX', 'UI', '디자인',
+      '마케팅', 'SNS', '브랜딩', '광고', '캠페인',
+      '기획', '프로덕트', '비즈니스',
+      '창업', '스타트업',
+      '인턴', '인턴십',
+      '공모전', '대회', '해커톤',
+      '동아리', '스터디',
+    ];
 
     activities?.forEach(activity => {
       const content = activity.content || '';
-
       if (content.length < 20) return;
-
-      // 패턴 매칭으로 활동 추출
-      activityPatterns.forEach(({ keyword, pattern }) => {
-        const matches = Array.from(content.matchAll(pattern));
-
-        matches.forEach(match => {
-          let prefix = match[1].trim();
-
-          if (skipPrefixes.some(skip => prefix.includes(skip))) {
-            return;
-          }
-
-          if (prefix.length < 2 || /^\d+$/.test(prefix)) {
-            return;
-          }
-
-          const activityName = `${prefix} ${keyword}`;
-          combinedActivityCounts[activityName] = (combinedActivityCounts[activityName] || 0) + 1;
-        });
-      });
-
-      // 기술/주제 키워드 빈도수 카운트 (생성용)
-      const techKeywords = [
-        'AI', '머신러닝', '딥러닝', '인공지능',
-        '웹', '앱', '모바일', '백엔드', '프론트엔드', '풀스택',
-        '데이터', '빅데이터', '분석', 'SQL', 'Python',
-        'React', 'Vue', 'Angular', 'Node', 'Spring', 'Django',
-        'AWS', '클라우드', 'DevOps',
-        'IoT', '임베디드', '하드웨어',
-        '블록체인', 'NFT',
-        '게임', 'Unity', 'Unreal',
-        'UX', 'UI', '디자인',
-        '마케팅', 'SNS', '브랜딩', '광고', '캠페인',
-        '기획', '서비스', '제품', '비즈니스',
-        '창업', '스타트업',
-      ];
 
       techKeywords.forEach(tech => {
         if (content.toLowerCase().includes(tech.toLowerCase())) {
@@ -537,13 +484,8 @@ export async function getPositionStats(position: string): Promise<PositionStats 
       });
     });
 
-    // 데이터가 부족하면 DB 기반으로 구체적인 활동 생성
-    const extractedCount = Object.keys(combinedActivityCounts).length;
-
-    // 추출된 활동이 5개 미만이면 거의 전부 생성
-    const shouldGenerate = extractedCount < 5;
-
-    if (shouldGenerate || extractedCount < 10) {
+    // DB 키워드 분석 기반으로 활동 생성 (패턴 추출 건너뛰고 바로 생성)
+    if (true) {
       // 기술 스택과 활동 타입 조합을 분석해서 구체적인 활동 생성
       const activityGenerationMap: { [key: string]: string[] } = {
         'React': ['React 웹 프로젝트', 'React 프론트엔드 개발', 'React 컴포넌트 설계'],
@@ -597,25 +539,20 @@ export async function getPositionStats(position: string): Promise<PositionStats 
         .sort((a, b) => b[1] - a[1])
         .slice(0, 20);
 
-      // 추출된 게 거의 없으면 생성 비율 높임
-      const generationMultiplier = shouldGenerate ? 0.6 : 0.4;
-
+      // DB 기반으로 활동 생성
       topTechKeywords.forEach(([tech, count]) => {
         if (Object.keys(combinedActivityCounts).length >= 10) return;
 
         const activities = activityGenerationMap[tech];
         if (!activities) return;
 
-        // 구체적인 활동부터 우선 추가
-        const prioritizedActivities = shouldGenerate
-          ? activities // 전부 사용
-          : activities.slice(0, 2); // 상위 2개만
-
-        prioritizedActivities.forEach(activity => {
+        // 각 기술당 최대 2개 활동 추가
+        activities.slice(0, 2).forEach(activity => {
           if (Object.keys(combinedActivityCounts).length >= 10) return;
 
           if (!combinedActivityCounts[activity]) {
-            combinedActivityCounts[activity] = Math.max(1, Math.floor(count * generationMultiplier));
+            // 키워드 빈도에 비례한 카운트
+            combinedActivityCounts[activity] = Math.max(1, Math.floor(count * 0.5));
           }
         });
       });
