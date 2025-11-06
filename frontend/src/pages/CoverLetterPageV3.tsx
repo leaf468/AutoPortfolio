@@ -292,12 +292,25 @@ export const CoverLetterPageV3: React.FC = () => {
       {/* 헤더 */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-4">
-          <h1 className="text-2xl font-bold text-gray-900">
-            AI 기반 자소서 작성 도우미
-          </h1>
-          <p className="text-sm text-gray-600 mt-1">
-            실제 합격자 데이터를 기반으로 실시간 피드백을 받으며 자소서를 작성하세요
-          </p>
+          <div className="flex items-center gap-4">
+            <img
+              src="/Careeroad_logo.png"
+              alt="Careeroad"
+              className="h-16 w-auto object-contain"
+              style={{ maxHeight: '64px' }}
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }}
+            />
+            <div className="border-l-2 border-gray-300 pl-4 py-1">
+              <h1 className="text-xl font-bold text-gray-900">
+                AI 기반 자소서 작성 도우미
+              </h1>
+              <p className="text-xs text-gray-600 mt-0.5">
+                실제 합격자 데이터를 기반으로 실시간 피드백을 받으며 자소서를 작성하세요
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
