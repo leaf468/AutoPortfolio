@@ -22,11 +22,12 @@ import {
 
 interface ComprehensiveStatsDashboardProps {
   stats: ComprehensiveStats;
+  compact?: boolean;
 }
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 
-export const ComprehensiveStatsDashboard: React.FC<ComprehensiveStatsDashboardProps> = ({ stats }) => {
+export const ComprehensiveStatsDashboard: React.FC<ComprehensiveStatsDashboardProps> = ({ stats, compact = false }) => {
   const [visibleCount, setVisibleCount] = React.useState(5);
 
   console.log('📈 ComprehensiveStatsDashboard - Rendering with:', {
@@ -44,7 +45,7 @@ export const ComprehensiveStatsDashboard: React.FC<ComprehensiveStatsDashboardPr
   }
 
   return (
-    <div className="space-y-8">
+    <div className={compact ? "space-y-4" : "space-y-8"}>
       {/* 헤더 */}
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg p-6">
         <h2 className="text-2xl font-bold mb-2">{stats.position} 직무 종합 분석</h2>

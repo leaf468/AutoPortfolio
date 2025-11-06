@@ -650,7 +650,7 @@ export const CoverLetterPageV3: React.FC = () => {
                 <p className="text-gray-600 mt-4">데이터 분석 중...</p>
               </div>
             ) : comprehensiveStats ? (
-              <ComprehensiveStatsDashboard stats={comprehensiveStats} />
+              <ComprehensiveStatsDashboard stats={comprehensiveStats} compact={true} />
             ) : null}
           </div>
         )}
