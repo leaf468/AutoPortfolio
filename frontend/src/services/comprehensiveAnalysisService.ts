@@ -232,6 +232,45 @@ function calculateToeicDistribution(coverLetters: CoverLetter[]): { range: strin
   });
 }
 
+function generateAdditionalExamples(activityType: string, keywords: string[], count: number): string[] {
+  const exampleTemplates: { [key: string]: string[] } = {
+    '프로젝트': [
+      '사용자 경험 개선을 위한 UI/UX 리뉴얼 프로젝트 진행',
+      '시스템 성능 최적화 및 리팩토링 프로젝트 수행',
+      '신규 기능 개발 및 테스트 자동화 구축',
+    ],
+    '개발': [
+      '백엔드 API 서버 설계 및 구현',
+      '프론트엔드 컴포넌트 라이브러리 개발',
+      '데이터베이스 스키마 설계 및 최적화',
+    ],
+    '연구': [
+      '논문 작성 및 학술지 게재',
+      '실험 설계 및 데이터 분석 수행',
+      '연구 결과 학회 발표',
+    ],
+    '분석': [
+      '사용자 행동 패턴 분석 및 인사이트 도출',
+      '비즈니스 지표 모니터링 및 리포팅',
+      '경쟁사 분석 및 시장 조사',
+    ],
+    '인턴': [
+      '실무 프로젝트 참여 및 코드 리뷰',
+      '팀 내 협업 도구 개선 제안',
+      '문서화 작업 및 가이드 작성',
+    ],
+  };
+
+  const baseType = activityType.split(' ').pop() || activityType;
+  const templates = exampleTemplates[baseType] || [
+    `${activityType} 관련 실무 경험`,
+    `${activityType}를 통한 문제 해결`,
+    `${activityType} 성과 달성`,
+  ];
+
+  return templates.slice(0, count);
+}
+
 function analyzeActivityPatterns(activities: Activity[], totalApplicants: number): ActivityPattern[] {
   // 구체적인 활동명 추출을 위한 패턴 (명사만 매칭)
   const activityPatterns = [
@@ -303,7 +342,7 @@ function analyzeActivityPatterns(activities: Activity[], totalApplicants: number
         existing.count++;
         existing.personCount.add(act.cover_letter_id);
 
-        if (existing.examples.length < 3 && act.content.length > 20) {
+        if (existing.examples.length < 5 && act.content.length > 20) {
           existing.examples.push(act.content.slice(0, 100));
         }
 
@@ -328,12 +367,19 @@ function analyzeActivityPatterns(activities: Activity[], totalApplicants: number
         .slice(0, 5)
         .map(([kw]) => kw);
 
+      // 예시가 부족하면 키워드 기반으로 추가 생성
+      let examples = [...data.examples];
+      if (examples.length < 4) {
+        const additionalExamples = generateAdditionalExamples(keyword, topKeywords, 5 - examples.length);
+        examples = [...examples, ...additionalExamples];
+      }
+
       return {
         activityType: keyword,
         percentage,
         averageCount: avgCount,
         commonKeywords: topKeywords,
-        examples: data.examples,
+        examples: examples.slice(0, 5),
         insight: generateActivityInsight(keyword, percentage, topKeywords),
       };
     })
