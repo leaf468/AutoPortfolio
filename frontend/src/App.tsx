@@ -11,6 +11,8 @@ import AutoFillPage from './pages/AutoFillPage';
 import EnhancedEditPage from './pages/EnhancedEditPage';
 import TemplateEditPage from './pages/TemplateEditPage';
 import CompletePage from './pages/CompletePage';
+import CoverLetterPageV2 from './pages/CoverLetterPageV2';
+import CoverLetterPageV3 from './pages/CoverLetterPageV3';
 
 // GA 페이지뷰 추적 컴포넌트
 function PageViewTracker() {
@@ -34,6 +36,7 @@ function getPageTitle(pathname: string): string {
     '/autofill': '자동 채우기',
     '/edit': '포트폴리오 편집',
     '/complete': '완료',
+    '/cover-letter': '자소서 작성',
   };
 
   // /edit/:template 형태 처리
@@ -58,6 +61,8 @@ function App() {
           <Route path="/edit" element={<EnhancedEditPage />} />
           <Route path="/edit/:template" element={<TemplateEditPage />} />
           <Route path="/complete" element={<CompletePage />} />
+          <Route path="/cover-letter" element={<CoverLetterPageV3 />} />
+          <Route path="/cover-letter-v2" element={<CoverLetterPageV2 />} />
         </Routes>
       </Router>
     </PortfolioProvider>
