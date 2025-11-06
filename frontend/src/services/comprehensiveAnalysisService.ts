@@ -55,10 +55,14 @@ export async function getComprehensiveStats(position: string): Promise<Comprehen
       .select('*')
       .limit(1000);
 
+    // DB에 있는 모든 직무 목록 확인
+    const allPositions = Array.from(new Set(allCoverLetters?.map(cl => (cl as any).job_position).filter(Boolean))).slice(0, 20);
+
     console.log('🔍 DB 조회 결과:', {
       error,
       dataCount: allCoverLetters?.length,
-      firstItem: allCoverLetters?.[0]
+      firstItem: allCoverLetters?.[0],
+      DB내_모든_직무_샘플: allPositions
     });
 
     if (error || !allCoverLetters) {
@@ -66,17 +70,27 @@ export async function getComprehensiveStats(position: string): Promise<Comprehen
       return getEmptyStats(position);
     }
 
-    // 유사 직무 필터링
+    // 유사 직무 필터링 (유사도 50% 이상)
     const relevantCoverLetters = (allCoverLetters as IntegratedCoverLetter[]).filter((cl) => {
       if (!cl.job_position) return false;
       const similarity = calculatePositionSimilarity(cl.job_position, position);
-      return similarity >= 50; // 50% 이상 유사도
+      return similarity >= 50; // 50% 이상 유사도 (마케터-마케팅, 개발자-개발 등 포함)
     });
 
+    // 매칭된 직무 목록 추출 (디버깅용)
+    const matchedPositions = Array.from(
+      new Set(relevantCoverLetters.map(cl => cl.job_position))
+    ).slice(0, 10);
+
     console.log('🔍 필터링 후:', {
-      totalCount: allCoverLetters.length,
-      relevantCount: relevantCoverLetters.length,
-      position
+      검색한_직무: position,
+      전체_데이터: allCoverLetters.length,
+      매칭된_데이터: relevantCoverLetters.length,
+      매칭된_직무들: matchedPositions,
+      유사도_샘플: relevantCoverLetters.slice(0, 5).map(cl => ({
+        직무: cl.job_position,
+        유사도: calculatePositionSimilarity(cl.job_position, position)
+      }))
     });
 
     if (relevantCoverLetters.length === 0) {
@@ -93,6 +107,12 @@ export async function getComprehensiveStats(position: string): Promise<Comprehen
         created_at: ''
       }))
     );
+
+    console.log('📊 통계 계산:', {
+      매칭된_지원자수: relevantCoverLetters.length,
+      추출된_활동수: allActivities.length,
+      활동_샘플: allActivities.slice(0, 3).map(a => a.content.slice(0, 50))
+    });
 
     const stats: ComprehensiveStats = {
       position,
@@ -653,7 +673,9 @@ function analyzeActivityPatterns(activities: Activity[], totalApplicants: number
   const results = Array.from(activityMap.entries())
     .filter(([keyword, data]) => data.personCount.size >= 1) // 최소 1명 이상으로 완화
     .map(([keyword, data]) => {
-      const percentage = Math.min((data.personCount.size / totalApplicants) * 100, 100);
+      // 퍼센티지 계산 시 반올림하여 정확도 개선
+      const rawPercentage = (data.personCount.size / totalApplicants) * 100;
+      const percentage = Math.min(Math.round(rawPercentage * 10) / 10, 100); // 소수점 첫째자리까지
       const avgCount = data.count / data.personCount.size;
       const topKeywords = Array.from(data.relatedKeywords.entries())
         .sort((a, b) => b[1] - a[1])
@@ -673,7 +695,7 @@ function analyzeActivityPatterns(activities: Activity[], totalApplicants: number
         averageCount: avgCount,
         commonKeywords: topKeywords,
         examples: examples.slice(0, 5),
-        insight: generateActivityInsight(keyword, percentage, topKeywords),
+        insight: generateActivityInsight(keyword, percentage, topKeywords, totalApplicants),
       };
     })
     .sort((a, b) => b.percentage - a.percentage)
@@ -702,15 +724,26 @@ function extractKeywords(text: string): string[] {
   return keywords.filter((keyword) => text.includes(keyword));
 }
 
-function generateActivityInsight(type: string, percentage: number, keywords: string[]): string {
-  if (percentage > 70) {
-    return `${type}은(는) 합격자의 ${percentage.toFixed(0)}%가 보유한 거의 필수적인 경험입니다.`;
-  } else if (percentage > 50) {
-    return `${type}은(는) 합격자의 과반수(${percentage.toFixed(0)}%)가 보유한 중요한 경험입니다.`;
-  } else if (percentage > 30) {
-    return `${type}은(는) 합격자의 ${percentage.toFixed(0)}%가 보유한 유의미한 경험입니다.`;
+function generateActivityInsight(type: string, percentage: number, keywords: string[], totalApplicants: number): string {
+  // 샘플이 너무 적으면 "합격자" 대신 "합격자 중"으로 표현
+  const samplePrefix = totalApplicants < 10
+    ? `${type}은(는) 분석 대상 합격자 중`
+    : `${type}은(는) 합격자의`;
+
+  // 100%인 경우 특별 처리
+  if (percentage >= 100) {
+    if (totalApplicants < 5) {
+      return `${samplePrefix} ${percentage.toFixed(0)}%가 보유하고 있습니다. (샘플 ${totalApplicants}명 기준)`;
+    }
+    return `${samplePrefix} 대부분(${percentage.toFixed(0)}%)이 보유한 매우 중요한 경험입니다.`;
+  } else if (percentage >= 70) {
+    return `${samplePrefix} ${percentage.toFixed(0)}%가 보유한 거의 필수적인 경험입니다.`;
+  } else if (percentage >= 50) {
+    return `${samplePrefix} 과반수(${percentage.toFixed(0)}%)가 보유한 중요한 경험입니다.`;
+  } else if (percentage >= 30) {
+    return `${samplePrefix} ${percentage.toFixed(0)}%가 보유한 유의미한 경험입니다.`;
   } else {
-    return `${type}은(는) 합격자의 ${percentage.toFixed(0)}%가 보유한 차별화 포인트입니다.`;
+    return `${samplePrefix} ${percentage.toFixed(0)}%가 보유한 차별화 포인트입니다.`;
   }
 }
 

@@ -287,6 +287,10 @@ export const CoverLetterPageV3: React.FC = () => {
     ? questions.find((q) => q.id === focusedQuestionId)?.answer || ''
     : '';
 
+  const currentQuestion = focusedQuestionId
+    ? questions.find((q) => q.id === focusedQuestionId)?.question
+    : undefined;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
       {/* 헤더 */}
@@ -500,21 +504,29 @@ export const CoverLetterPageV3: React.FC = () => {
             </div>
           </div>
 
-          {/* 우측: 질문 분석 결과 또는 AI 추천 패널 (1/3) */}
+          {/* 우측: AI 추천 패널 + 질문 분석 결과 (1/3) */}
           <div className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow-lg sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto">
-              {questionAnalyses.length > 0 ? (
-                <div className="p-6">
+              <AIRecommendationPanel
+                currentInput={currentInput}
+                position={userSpec.position}
+                questionId={focusedQuestionId}
+                questionText={currentQuestion}
+              />
+
+              {/* 질문별 분석 결과 */}
+              {questionAnalyses.length > 0 && (
+                <div className="p-6 border-t border-gray-200">
                   <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                     <span className="text-purple-600">💡</span>
                     질문 분석 결과
                   </h3>
-                  <div className="space-y-6">
+                  <div className="space-y-4">
                     {questionAnalyses.map((analysis) => {
                       const questionNum = questions.findIndex(q => q.id === analysis.questionId) + 1;
                       return (
-                        <div key={analysis.questionId} id={`analysis-${analysis.questionId}`} className="border-l-4 border-purple-500 pl-4 py-2">
-                          <h4 className="font-semibold text-gray-900 mb-2">
+                        <div key={analysis.questionId} id={`analysis-${analysis.questionId}`} className="border border-purple-200 rounded-lg p-4 bg-purple-50">
+                          <h4 className="font-semibold text-gray-900 mb-2 text-sm">
                             질문 {questionNum}: {analysis.question}
                           </h4>
 
@@ -537,7 +549,7 @@ export const CoverLetterPageV3: React.FC = () => {
                             <div className="mb-3">
                               <p className="text-xs font-medium text-gray-600 mb-1">📝 추천 주제</p>
                               <ul className="text-xs text-gray-700 space-y-1">
-                                {analysis.suggestedTopics.map((topic, idx) => (
+                                {analysis.suggestedTopics.slice(0, 3).map((topic, idx) => (
                                   <li key={idx}>• {topic}</li>
                                 ))}
                               </ul>
@@ -549,8 +561,8 @@ export const CoverLetterPageV3: React.FC = () => {
                             <div className="mb-3">
                               <p className="text-xs font-medium text-gray-600 mb-1">📊 합격자 통계</p>
                               <div className="space-y-2">
-                                {analysis.relatedStats.slice(0, 3).map((stat, idx) => (
-                                  <div key={idx} className="bg-gray-50 rounded p-2">
+                                {analysis.relatedStats.slice(0, 2).map((stat, idx) => (
+                                  <div key={idx} className="bg-white rounded p-2">
                                     <div className="flex items-center justify-between mb-1">
                                       <span className="text-xs font-medium text-gray-900">{stat.activityType}</span>
                                       <span className="text-xs font-bold text-blue-600">{stat.percentage.toFixed(0)}%</span>
@@ -571,12 +583,6 @@ export const CoverLetterPageV3: React.FC = () => {
                     })}
                   </div>
                 </div>
-              ) : (
-                <AIRecommendationPanel
-                  currentInput={currentInput}
-                  position={userSpec.position}
-                  questionId={focusedQuestionId}
-                />
               )}
             </div>
           </div>

@@ -1,9 +1,10 @@
 import { supabase } from '../lib/supabaseClient';
 import { extractCoreActivity } from './comprehensiveAnalysisService';
 import { IntegratedCoverLetter, parseGpa, parseToeic, getAllActivities } from './integratedCoverLetterTypes';
+import { calculatePositionSimilarity } from './flexibleAnalysisService';
 
-// 유사 직무 매핑
-function getSimilarPositions(position: string): string[] {
+// 유사 직무 매핑 (더 이상 사용하지 않음 - calculatePositionSimilarity 사용)
+function getSimilarPositions_OLD(position: string): string[] {
   const normalizedPosition = position.toLowerCase().trim();
 
   const similarityMap: { [key: string]: string[] } = {
@@ -120,31 +121,19 @@ export async function getPositionStats(position: string): Promise<PositionStats 
       return null;
     }
 
-    // job_position으로 필터링
-    let finalCoverLetters = (coverLetters as IntegratedCoverLetter[]).filter(cl =>
-      cl.job_position && cl.job_position.toLowerCase().includes(position.toLowerCase())
-    );
+    // job_position으로 유사도 기반 필터링 (50% 이상)
+    let finalCoverLetters = (coverLetters as IntegratedCoverLetter[]).filter(cl => {
+      if (!cl.job_position) return false;
+      const similarity = calculatePositionSimilarity(cl.job_position, position);
+      return similarity >= 50;
+    });
 
-    const totalApplicants = finalCoverLetters.length;
-
-    // 데이터가 부족하면 유사 직무 데이터 추가
-    if (totalApplicants < 10) {
-      const similarPositions = getSimilarPositions(position);
-
-      for (const similarPos of similarPositions) {
-        if (finalCoverLetters.length >= 10) break;
-
-        const additionalData = (coverLetters as IntegratedCoverLetter[]).filter(cl =>
-          cl.job_position &&
-          cl.job_position.toLowerCase().includes(similarPos.toLowerCase()) &&
-          !finalCoverLetters.includes(cl)
-        ).slice(0, 10 - finalCoverLetters.length);
-
-        if (additionalData.length > 0) {
-          finalCoverLetters = [...finalCoverLetters, ...additionalData];
-        }
-      }
-    }
+    console.log('📊 positionStatsService 필터링:', {
+      검색_직무: position,
+      전체_데이터: coverLetters.length,
+      매칭된_데이터: finalCoverLetters.length,
+      매칭된_직무_샘플: Array.from(new Set(finalCoverLetters.map(cl => cl.job_position))).slice(0, 10)
+    });
 
     if (finalCoverLetters.length === 0) {
       return null;

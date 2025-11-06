@@ -1,19 +1,28 @@
 import { supabase } from '../lib/supabaseClient';
 import { ComprehensiveStats, getComprehensiveStats } from './comprehensiveAnalysisService';
+import OpenAI from 'openai';
+
+const openai = new OpenAI({
+  apiKey: process.env.REACT_APP_OPENAI_API_KEY || "",
+  dangerouslyAllowBrowser: true,
+});
+
+const OPENAI_MODEL = process.env.REACT_APP_OPENAI_MODEL || "gpt-4o-mini";
 
 export interface AIRecommendation {
-  type: 'pattern' | 'example' | 'keyword' | 'insight';
+  type: 'pattern' | 'example' | 'keyword' | 'insight' | 'llm_suggestion';
   title: string;
   content: string;
   relevance: number; // 0-100
 }
 
 /**
- * 사용자가 입력한 텍스트를 분석하여 실시간 AI 추천 생성
+ * 사용자가 입력한 텍스트를 분석하여 실시간 AI 추천 생성 (LLM 기반 고도화)
  */
 export async function generateRealtimeRecommendations(
   userInput: string,
-  position: string
+  position: string,
+  questionText?: string
 ): Promise<AIRecommendation[]> {
   if (!userInput.trim() || userInput.length < 10) {
     return [];
@@ -27,22 +36,135 @@ export async function generateRealtimeRecommendations(
   // 2. 사용자 입력에서 키워드 추출
   const userKeywords = extractUserKeywords(userInput);
 
-  // 3. 활동 패턴 기반 추천
+  // 3. LLM 기반 컨텍스트 분석 및 추천 (최우선)
+  try {
+    const llmRecommendations = await generateLLMRecommendations(
+      userInput,
+      position,
+      questionText,
+      stats
+    );
+    recommendations.push(...llmRecommendations);
+  } catch (error) {
+    console.error('LLM 추천 생성 실패:', error);
+  }
+
+  // 4. 활동 패턴 기반 추천
   const activityRecommendations = generateActivityRecommendations(userInput, userKeywords, stats);
   recommendations.push(...activityRecommendations);
 
-  // 4. 키워드 기반 추천
+  // 5. 키워드 기반 추천
   const keywordRecommendations = generateKeywordRecommendations(userKeywords, stats);
   recommendations.push(...keywordRecommendations);
 
-  // 5. 예시 기반 추천
+  // 6. 예시 기반 추천
   const exampleRecommendations = await generateExampleRecommendations(userKeywords, position);
   recommendations.push(...exampleRecommendations);
 
-  // 관련도 순으로 정렬하고 상위 5개만 반환
+  // 관련도 순으로 정렬하고 상위 6개만 반환
   return recommendations
     .sort((a, b) => b.relevance - a.relevance)
-    .slice(0, 5);
+    .slice(0, 6);
+}
+
+/**
+ * LLM 기반 컨텍스트 분석 및 추천 생성
+ */
+async function generateLLMRecommendations(
+  userInput: string,
+  position: string,
+  questionText: string | undefined,
+  stats: ComprehensiveStats
+): Promise<AIRecommendation[]> {
+  try {
+    // API 키 확인
+    const apiKey = process.env.REACT_APP_OPENAI_API_KEY;
+    if (!apiKey || apiKey.length < 20) {
+      console.warn('OpenAI API 키가 설정되지 않았습니다. LLM 추천을 건너뜁니다.');
+      return [];
+    }
+
+    // 실제 데이터 통계를 LLM에게 제공
+    const topActivities = stats.commonActivities.slice(0, 5).map(a => ({
+      활동: a.activityType,
+      비율: `${a.percentage.toFixed(0)}%`,
+      인사이트: a.insight,
+      관련키워드: a.commonKeywords.slice(0, 3)
+    }));
+
+    const prompt = `당신은 자기소개서 작성을 돕는 AI 어시스턴트입니다.
+
+# 상황
+- 지원 직무: ${position}
+${questionText ? `- 질문: ${questionText}` : ''}
+- 사용자가 작성 중인 답변: "${userInput}"
+
+# 실제 합격자 데이터 (${position} 직무)
+${JSON.stringify(topActivities, null, 2)}
+
+# 당신의 역할
+사용자가 작성 중인 답변을 분석하고, 다음 3가지 추천을 제공하세요:
+
+1. **구체성 개선**: 현재 답변에서 더 구체적으로 표현할 수 있는 부분
+2. **데이터 기반 제안**: 위 합격자 데이터를 참고하여, 답변에 추가하면 좋을 내용
+3. **스토리텔링**: STAR 방법론(Situation-Task-Action-Result)을 활용한 개선 방향
+
+각 추천은 짧고 실용적이어야 합니다 (1-2문장).
+
+응답 형식 (JSON만 반환):
+{
+  "recommendations": [
+    {
+      "title": "추천 제목",
+      "content": "구체적인 추천 내용 (1-2문장)",
+      "relevance": 85
+    }
+  ]
+}`;
+
+    const response = await openai.chat.completions.create({
+      model: OPENAI_MODEL,
+      messages: [{
+        role: 'system',
+        content: '당신은 자기소개서 작성 전문가입니다. JSON 형식으로만 응답하세요.'
+      }, {
+        role: 'user',
+        content: prompt
+      }],
+      temperature: 0.7,
+      max_tokens: 800,
+      response_format: { type: "json_object" }
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) return [];
+
+    console.log('✅ LLM 응답:', content);
+
+    // JSON 파싱
+    const parsed = JSON.parse(content);
+
+    if (!parsed.recommendations || !Array.isArray(parsed.recommendations)) {
+      console.warn('LLM 응답에 recommendations 배열이 없습니다:', parsed);
+      return [];
+    }
+
+    return parsed.recommendations.map((rec: any) => ({
+      type: 'llm_suggestion' as const,
+      title: rec.title || 'AI 추천',
+      content: rec.content || '',
+      relevance: rec.relevance || 90,
+    }));
+  } catch (error: any) {
+    console.error('LLM 추천 생성 중 오류:', error);
+
+    // API 키 오류인 경우 사용자에게 알림
+    if (error?.status === 401) {
+      console.error('❌ OpenAI API 키가 유효하지 않습니다. .env 파일을 확인하세요.');
+    }
+
+    return [];
+  }
 }
 
 /**

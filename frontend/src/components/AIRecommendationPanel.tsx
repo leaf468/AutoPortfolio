@@ -6,29 +6,32 @@ interface AIRecommendationPanelProps {
   currentInput: string;
   position: string;
   questionId: string;
+  questionText?: string;
 }
 
 export const AIRecommendationPanel: React.FC<AIRecommendationPanelProps> = ({
   currentInput,
   position,
   questionId,
+  questionText,
 }) => {
   const [recommendations, setRecommendations] = useState<AIRecommendation[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const fetchRecommendations = async () => {
-      if (!currentInput || currentInput.length < 10) {
+      if (!currentInput || currentInput.length < 10 || !position.trim()) {
         setRecommendations([]);
         return;
       }
 
       setLoading(true);
       try {
-        const recs = await generateRealtimeRecommendations(currentInput, position);
+        const recs = await generateRealtimeRecommendations(currentInput, position, questionText);
         setRecommendations(recs);
       } catch (error) {
         console.error('추천 생성 실패:', error);
+        setRecommendations([]);
       } finally {
         setLoading(false);
       }
@@ -38,7 +41,7 @@ export const AIRecommendationPanel: React.FC<AIRecommendationPanelProps> = ({
     const timeoutId = setTimeout(fetchRecommendations, 500);
 
     return () => clearTimeout(timeoutId);
-  }, [currentInput, position, questionId]);
+  }, [currentInput, position, questionId, questionText]);
 
   const getIcon = (type: AIRecommendation['type']) => {
     switch (type) {
@@ -50,6 +53,8 @@ export const AIRecommendationPanel: React.FC<AIRecommendationPanelProps> = ({
         return <SparklesIcon className="w-5 h-5" />;
       case 'insight':
         return <LightBulbIcon className="w-5 h-5" />;
+      case 'llm_suggestion':
+        return <SparklesIcon className="w-5 h-5" />;
     }
   };
 
@@ -63,6 +68,8 @@ export const AIRecommendationPanel: React.FC<AIRecommendationPanelProps> = ({
         return '키워드 제안';
       case 'insight':
         return 'AI 인사이트';
+      case 'llm_suggestion':
+        return 'AI 추천';
     }
   };
 
@@ -76,8 +83,24 @@ export const AIRecommendationPanel: React.FC<AIRecommendationPanelProps> = ({
         return 'bg-blue-100 text-blue-700 border-blue-200';
       case 'insight':
         return 'bg-amber-100 text-amber-700 border-amber-200';
+      case 'llm_suggestion':
+        return 'bg-indigo-100 text-indigo-700 border-indigo-200';
     }
   };
+
+  if (!position.trim()) {
+    return (
+      <div className="h-full flex items-center justify-center text-gray-400 px-6 text-center">
+        <div className="py-12">
+          <SparklesIcon className="w-12 h-12 mx-auto mb-4 opacity-50" />
+          <p className="text-sm leading-relaxed">
+            지원 직무를 입력하면<br />
+            AI 기반 추천이 표시됩니다
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (!currentInput || currentInput.length < 10) {
     return (
