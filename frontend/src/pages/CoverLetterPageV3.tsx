@@ -76,6 +76,9 @@ export const CoverLetterPageV3: React.FC = () => {
   // 로그인한 사용자의 프로필 데이터 불러오기 + 편집 모드 데이터 복원
   useEffect(() => {
     const loadUserProfile = async () => {
+      // 게스트 모드에서는 프로필 로드 건너뛰기
+      if (isGuestMode) return;
+
       if (!user) return;
 
       try {
@@ -123,7 +126,7 @@ export const CoverLetterPageV3: React.FC = () => {
     };
 
     loadUserProfile();
-  }, [user, editState]);
+  }, [user, editState, isGuestMode]);
 
   const [questions, setQuestions] = useState<CoverLetterQuestion[]>(
     DEFAULT_QUESTIONS.map((q) => ({ ...q, answer: '' }))
