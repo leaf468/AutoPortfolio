@@ -262,7 +262,7 @@ function analyzeActivityPatterns(activities: Activity[], totalApplicants: number
     }
 
     activityPatterns.forEach(({ keyword, pattern }) => {
-      const matches = [...act.content.matchAll(pattern)];
+      const matches = Array.from(act.content.matchAll(pattern));
 
       matches.forEach(match => {
         const prefix = match[1].trim();
