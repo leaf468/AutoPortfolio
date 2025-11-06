@@ -15,7 +15,6 @@ import LandingFooter from '../components/LandingFooter';
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('login');
   const [currentSlide, setCurrentSlide] = useState(0);
