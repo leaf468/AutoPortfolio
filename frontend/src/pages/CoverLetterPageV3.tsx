@@ -382,79 +382,87 @@ export const CoverLetterPageV3: React.FC = () => {
               </div>
             </div>
             <div className="flex items-center gap-6">
-              <Link
-                to="/cover-letter"
-                className="text-sm text-gray-700 hover:text-blue-600 transition font-medium whitespace-nowrap"
-              >
-                자기소개서 작성하기
-              </Link>
-              <Link
-                to="/"
-                className="text-sm text-gray-700 hover:text-blue-600 transition font-medium whitespace-nowrap"
-              >
-                포트폴리오 제작하기
-              </Link>
-              <Link
-                to="/mypage"
-                className="text-sm text-gray-700 hover:text-blue-600 transition font-medium whitespace-nowrap"
-              >
-                마이페이지
-              </Link>
-              <button
-                onClick={async () => {
-                  if (isGuestMode) {
-                    if (window.confirm('회원가입하시면 작성한 자소서를 저장하고 다운로드할 수 있습니다. 회원가입 페이지로 이동하시겠습니까?')) {
-                      window.location.href = '/signup';
+              {!isGuestMode && (
+                <>
+                  <Link
+                    to="/cover-letter"
+                    className="text-sm text-gray-700 hover:text-blue-600 transition font-medium whitespace-nowrap"
+                  >
+                    자기소개서 작성하기
+                  </Link>
+                  <Link
+                    to="/"
+                    className="text-sm text-gray-700 hover:text-blue-600 transition font-medium whitespace-nowrap"
+                  >
+                    포트폴리오 제작하기
+                  </Link>
+                  <Link
+                    to="/mypage"
+                    className="text-sm text-gray-700 hover:text-blue-600 transition font-medium whitespace-nowrap"
+                  >
+                    마이페이지
+                  </Link>
+                </>
+              )}
+              {isGuestMode ? (
+                <button
+                  onClick={() => {
+                    window.location.href = '/signup';
+                  }}
+                  className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition font-semibold whitespace-nowrap"
+                >
+                  회원가입하고 더 많은 기능 탐색하기
+                </button>
+              ) : (
+                <button
+                  onClick={async () => {
+                    if (!user) {
+                      alert('로그인이 필요합니다.');
+                      return;
                     }
-                    return;
-                  }
-
-                  if (!user) {
-                    alert('로그인이 필요합니다.');
-                    return;
-                  }
-                  try {
-                    if (documentId) {
-                      // 편집 모드: 업데이트
-                      const { error } = await supabase
-                        .from('user_documents')
-                        .update({
-                          title: `${userSpec.targetCompany || '회사'} ${userSpec.position || '직무'} 자소서`,
-                          company_name: userSpec.targetCompany,
-                          position: userSpec.position,
-                          content: JSON.stringify({ userSpec, questions }),
-                          updated_at: new Date().toISOString()
-                        })
-                        .eq('document_id', documentId);
-                      if (error) throw error;
-                      alert('자소서가 수정되었습니다!');
-                    } else {
-                      // 신규 작성 모드: 삽입
-                      const { data, error } = await supabase
-                        .from('user_documents')
-                        .insert({
-                          user_id: user.user_id,
-                          title: `${userSpec.targetCompany || '회사'} ${userSpec.position || '직무'} 자소서`,
-                          company_name: userSpec.targetCompany,
-                          position: userSpec.position,
-                          content: JSON.stringify({ userSpec, questions }),
-                          status: 'draft'
-                        })
-                        .select()
-                        .single();
-                      if (error) throw error;
-                      setDocumentId(data.document_id);
-                      alert('자소서가 저장되었습니다!');
+                    try {
+                      if (documentId) {
+                        // 편집 모드: 업데이트
+                        const { error } = await supabase
+                          .from('user_documents')
+                          .update({
+                            title: `${userSpec.targetCompany || '회사'} ${userSpec.position || '직무'} 자소서`,
+                            company_name: userSpec.targetCompany,
+                            position: userSpec.position,
+                            content: JSON.stringify({ userSpec, questions }),
+                            updated_at: new Date().toISOString()
+                          })
+                          .eq('document_id', documentId);
+                        if (error) throw error;
+                        alert('자소서가 수정되었습니다!');
+                      } else {
+                        // 신규 작성 모드: 삽입
+                        const { data, error } = await supabase
+                          .from('user_documents')
+                          .insert({
+                            user_id: user.user_id,
+                            title: `${userSpec.targetCompany || '회사'} ${userSpec.position || '직무'} 자소서`,
+                            company_name: userSpec.targetCompany,
+                            position: userSpec.position,
+                            content: JSON.stringify({ userSpec, questions }),
+                            status: 'draft'
+                          })
+                          .select()
+                          .single();
+                        if (error) throw error;
+                        setDocumentId(data.document_id);
+                        alert('자소서가 저장되었습니다!');
+                      }
+                    } catch (error) {
+                      console.error('저장 오류:', error);
+                      alert('저장 중 오류가 발생했습니다.');
                     }
-                  } catch (error) {
-                    console.error('저장 오류:', error);
-                    alert('저장 중 오류가 발생했습니다.');
-                  }
-                }}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium whitespace-nowrap"
-              >
-                {isGuestMode ? '회원가입하고 저장하기' : '저장하기'}
-              </button>
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium whitespace-nowrap"
+                >
+                  저장하기
+                </button>
+              )}
             </div>
           </div>
         </div>

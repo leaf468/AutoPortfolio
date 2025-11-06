@@ -11,9 +11,11 @@ import {
 } from '@heroicons/react/24/outline';
 import { trackMainPageVisit, trackButtonClick } from '../utils/analytics';
 import AuthModal from '../components/AuthModal';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function HomePage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('login');
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -564,48 +566,86 @@ export default function HomePage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-gray-400 py-12 px-6">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
-            <div>
-              <div className="flex items-center mb-4">
-                <img
-                  src="/Careeroad_logo.png"
-                  alt="CareeRoad Logo"
-                  className="h-8 object-contain brightness-0 invert"
-                />
+      <footer className="bg-gray-900 text-gray-300 mt-auto">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            {/* 로고 및 회사 정보 */}
+            <div className="col-span-1 md:col-span-2">
+              <div className="flex items-center space-x-2 mb-4">
+                <img src="/Careeroad_logo.png" alt="Careeroad" className="h-8" style={{ filter: 'brightness(0) invert(1)' }} />
+                <span className="text-xl font-bold text-white">CareeRoad</span>
               </div>
-              <p className="text-sm">
-                AI로 만드는 완벽한 포트폴리오
+              <p className="text-sm text-gray-400 mb-4">
+                AI 기반 자소서 작성 및 포트폴리오 생성 플랫폼
+              </p>
+              <p className="text-sm text-gray-400">
+                © 2025 CareeRoad. All rights reserved.
               </p>
             </div>
+
+            {/* 서비스 */}
             <div>
-              <h4 className="text-white font-semibold mb-4">제품</h4>
-              <ul className="space-y-2 text-sm">
-                <li><a href="#features" className="hover:text-white transition-colors">기능</a></li>
-                <li><a href="#process" className="hover:text-white transition-colors">사용방법</a></li>
-                <li><a href="#pricing" className="hover:text-white transition-colors">가격</a></li>
+              <h3 className="text-white font-semibold mb-4">서비스</h3>
+              <ul className="space-y-2">
+                <li>
+                  <button
+                    onClick={() => {
+                      if (user) {
+                        navigate('/cover-letter');
+                      } else {
+                        setAuthModalMode('signup');
+                        setIsAuthModalOpen(true);
+                      }
+                    }}
+                    className="text-sm hover:text-white transition text-left"
+                  >
+                    자소서 작성
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => {
+                      if (user) {
+                        navigate('/template-selection');
+                      } else {
+                        setAuthModalMode('signup');
+                        setIsAuthModalOpen(true);
+                      }
+                    }}
+                    className="text-sm hover:text-white transition text-left"
+                  >
+                    포트폴리오 생성
+                  </button>
+                </li>
+                <li>
+                  <button
+                    onClick={() => {
+                      if (user) {
+                        navigate('/mypage');
+                      } else {
+                        setAuthModalMode('login');
+                        setIsAuthModalOpen(true);
+                      }
+                    }}
+                    className="text-sm hover:text-white transition text-left"
+                  >
+                    마이페이지
+                  </button>
+                </li>
               </ul>
             </div>
+
+            {/* 고객 지원 */}
             <div>
-              <h4 className="text-white font-semibold mb-4">회사</h4>
-              <ul className="space-y-2 text-sm">
-                <li><a href="#" className="hover:text-white transition-colors">소개</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">블로그</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">채용</a></li>
+              <h3 className="text-white font-semibold mb-4">고객 지원</h3>
+              <ul className="space-y-2">
+                <li>
+                  <a href="mailto:careeroad2025@gmail.com" className="text-sm hover:text-white transition">
+                    문의하기
+                  </a>
+                </li>
               </ul>
             </div>
-            <div>
-              <h4 className="text-white font-semibold mb-4">지원</h4>
-              <ul className="space-y-2 text-sm">
-                <li><a href="#" className="hover:text-white transition-colors">고객센터</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">이용약관</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">개인정보처리방침</a></li>
-              </ul>
-            </div>
-          </div>
-          <div className="border-t border-gray-800 pt-8 text-sm text-center">
-            © 2025 CareeRoad. All rights reserved.
           </div>
         </div>
       </footer>
