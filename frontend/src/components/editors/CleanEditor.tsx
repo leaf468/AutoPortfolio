@@ -64,9 +64,12 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
     document,
     selectedTemplate,
     onSave,
+    onSaveOnly,
+    onDocumentChange,
     onBack,
     onSkipToNaturalEdit,
-    onTemplateChange
+    onTemplateChange,
+    isSaving
 }) => {
     const [portfolioData, setPortfolioData] = useState<CleanPortfolioData>({
         name: '',
@@ -334,6 +337,27 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
             initializeData();
         }
     }, []); // Empty dependency array - run only once
+
+    // portfolioData 변경 시 상위 컴포넌트에 알림
+    useEffect(() => {
+        if (dataLoaded && onDocumentChange) {
+            const updatedDocument = {
+                ...document,
+                metadata: {
+                    extractedData: portfolioData,
+                    lastUpdated: new Date().toISOString()
+                },
+                sections: document.sections?.map(section => ({
+                    ...section,
+                    blocks: section.blocks?.map(block => ({
+                        ...block,
+                        extractedData: portfolioData
+                    }))
+                }))
+            };
+            onDocumentChange(updatedDocument);
+        }
+    }, [portfolioData, dataLoaded]);
 
     // 빈 섹션 감지 및 AI 더미 데이터 생성
     useEffect(() => {
@@ -886,12 +910,25 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                                     English
                                 </button>
                             </div>
+                            {onSaveOnly && (
+                                <button
+                                    onClick={onSaveOnly}
+                                    disabled={isSaving}
+                                    className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-all duration-200 font-medium text-sm shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                                >
+                                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                                    </svg>
+                                    {isSaving ? '저장 중...' : '저장하기'}
+                                </button>
+                            )}
                             <button
                                 onClick={handleSave}
-                                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+                                disabled={isSaving}
+                                className="px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 font-medium text-sm shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                             >
                                 <CheckCircleIcon className="w-4 h-4 mr-2" />
-                                저장
+                                {isSaving ? '완성 중...' : '완성하기'}
                             </button>
                         </div>
                     </div>

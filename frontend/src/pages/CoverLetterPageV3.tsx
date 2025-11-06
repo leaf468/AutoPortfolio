@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import { UserSpec } from '../services/coverLetterAnalysisService';
 import { ComprehensiveStats, getComprehensiveStats } from '../services/comprehensiveAnalysisService';
 import { CompanyCategoryOnlySelector } from '../components/CompanyCategoryOnlySelector';
@@ -16,6 +17,9 @@ import { analyzeAllQuestions, QuestionAnalysis } from '../services/questionAnaly
 import { QuestionAnalysisPanel } from '../components/QuestionAnalysisPanel';
 import { PositionStats, getPositionStats } from '../services/positionStatsService';
 import { PositionStatsPanel } from '../components/PositionStatsPanel';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabaseClient';
+import Footer from '../components/Footer';
 
 const DEFAULT_QUESTIONS: Omit<CoverLetterQuestion, 'answer'>[] = [
   {
@@ -45,6 +49,10 @@ const DEFAULT_QUESTIONS: Omit<CoverLetterQuestion, 'answer'>[] = [
 ];
 
 export const CoverLetterPageV3: React.FC = () => {
+  const { user } = useAuth();
+  const location = useLocation();
+  const editState = location.state as { editMode?: boolean; documentId?: number; savedData?: any } | null;
+
   // 기본 정보
   const [userSpec, setUserSpec] = useState<UserSpec>({
     targetCompany: '',
@@ -57,6 +65,60 @@ export const CoverLetterPageV3: React.FC = () => {
     certificates: [],
     others: [],
   });
+
+  const [documentId, setDocumentId] = useState<number | undefined>(editState?.documentId);
+
+  // 로그인한 사용자의 프로필 데이터 불러오기 + 편집 모드 데이터 복원
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      if (!user) return;
+
+      try {
+        // 편집 모드인 경우 저장된 데이터 복원
+        if (editState?.editMode && editState?.savedData) {
+          const { userSpec: savedUserSpec, questions: savedQuestions } = editState.savedData;
+          if (savedUserSpec) {
+            setUserSpec(savedUserSpec);
+          }
+          if (savedQuestions) {
+            setQuestions(savedQuestions);
+          }
+          return;
+        }
+
+        // 신규 작성 모드인 경우 프로필 데이터 로드
+        const { data, error } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('user_id', user.user_id)
+          .maybeSingle();
+
+        if (error && error.code !== 'PGRST116') {
+          console.error('프로필 로드 실패:', error);
+          return;
+        }
+
+        if (data) {
+          setUserSpec((prev) => ({
+            ...prev,
+            targetCompany: data.company || prev.targetCompany,
+            position: data.position || prev.position,
+            major: data.major || prev.major,
+            year: data.grade || prev.year,
+            gpa: data.gpa || prev.gpa,
+            toeic: data.toeic ? parseInt(data.toeic) : prev.toeic,
+            certificates: data.certificates && data.certificates.length > 0 ? data.certificates : prev.certificates,
+            others: data.others && data.others.length > 0 ? data.others : prev.others,
+            referenceCategory: data.categories && data.categories.length > 0 ? data.categories[0] as CompanyCategory : prev.referenceCategory,
+          }));
+        }
+      } catch (error) {
+        console.error('프로필 로드 중 오류:', error);
+      }
+    };
+
+    loadUserProfile();
+  }, [user, editState]);
 
   const [questions, setQuestions] = useState<CoverLetterQuestion[]>(
     DEFAULT_QUESTIONS.map((q) => ({ ...q, answer: '' }))
@@ -293,27 +355,95 @@ export const CoverLetterPageV3: React.FC = () => {
     : undefined;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex flex-col">
       {/* 헤더 */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-4">
-            <img
-              src="/Careeroad_logo.png"
-              alt="Careeroad"
-              className="h-16 w-auto object-contain"
-              style={{ maxHeight: '64px' }}
-              onError={(e) => {
-                e.currentTarget.style.display = 'none';
-              }}
-            />
-            <div className="border-l-2 border-gray-300 pl-4 py-1">
-              <h1 className="text-xl font-bold text-gray-900">
-                AI 기반 자소서 작성 도우미
-              </h1>
-              <p className="text-xs text-gray-600 mt-0.5">
-                실제 합격자 데이터를 기반으로 실시간 피드백을 받으며 자소서를 작성하세요
-              </p>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <Link to="/">
+                <img
+                  src="/Careeroad_logo.png"
+                  alt="Careeroad"
+                  className="h-16 w-auto cursor-pointer"
+                />
+              </Link>
+              <div className="border-l-2 border-gray-300 pl-4 py-1">
+                <h1 className="text-xl font-bold text-gray-900">
+                  AI 기반 자소서 작성 도우미
+                </h1>
+                <p className="text-xs text-gray-600 mt-0.5">
+                  실제 합격자 데이터를 기반으로 실시간 피드백을 받으며 자소서를 작성하세요
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-6">
+              <Link
+                to="/cover-letter"
+                className="text-sm text-gray-700 hover:text-blue-600 transition font-medium whitespace-nowrap"
+              >
+                자기소개서 작성하기
+              </Link>
+              <Link
+                to="/"
+                className="text-sm text-gray-700 hover:text-blue-600 transition font-medium whitespace-nowrap"
+              >
+                포트폴리오 제작하기
+              </Link>
+              <Link
+                to="/mypage"
+                className="text-sm text-gray-700 hover:text-blue-600 transition font-medium whitespace-nowrap"
+              >
+                마이페이지
+              </Link>
+              <button
+                onClick={async () => {
+                  if (!user) {
+                    alert('로그인이 필요합니다.');
+                    return;
+                  }
+                  try {
+                    if (documentId) {
+                      // 편집 모드: 업데이트
+                      const { error } = await supabase
+                        .from('user_documents')
+                        .update({
+                          title: `${userSpec.targetCompany || '회사'} ${userSpec.position || '직무'} 자소서`,
+                          company_name: userSpec.targetCompany,
+                          position: userSpec.position,
+                          content: JSON.stringify({ userSpec, questions }),
+                          updated_at: new Date().toISOString()
+                        })
+                        .eq('document_id', documentId);
+                      if (error) throw error;
+                      alert('자소서가 수정되었습니다!');
+                    } else {
+                      // 신규 작성 모드: 삽입
+                      const { data, error } = await supabase
+                        .from('user_documents')
+                        .insert({
+                          user_id: user.user_id,
+                          title: `${userSpec.targetCompany || '회사'} ${userSpec.position || '직무'} 자소서`,
+                          company_name: userSpec.targetCompany,
+                          position: userSpec.position,
+                          content: JSON.stringify({ userSpec, questions }),
+                          status: 'draft'
+                        })
+                        .select()
+                        .single();
+                      if (error) throw error;
+                      setDocumentId(data.document_id);
+                      alert('자소서가 저장되었습니다!');
+                    }
+                  } catch (error) {
+                    console.error('저장 오류:', error);
+                    alert('저장 중 오류가 발생했습니다.');
+                  }
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium whitespace-nowrap"
+              >
+                저장하기
+              </button>
             </div>
           </div>
         </div>
@@ -654,6 +784,7 @@ export const CoverLetterPageV3: React.FC = () => {
           }))}
         />
       </div>
+      <Footer />
     </div>
   );
 };

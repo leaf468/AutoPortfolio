@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { login } from '../services/authService';
 import { useAuth } from '../contexts/AuthContext';
+import Footer from '../components/Footer';
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -33,8 +34,9 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
+      <div className="flex-1 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">로그인</h1>
           <p className="text-gray-600">포트폴리오 생성 플랫폼에 오신 것을 환영합니다</p>
@@ -100,7 +102,9 @@ const LoginPage: React.FC = () => {
             메인으로 돌아가기
           </Link>
         </div>
+        </div>
       </div>
+      <Footer />
     </div>
   );
 };

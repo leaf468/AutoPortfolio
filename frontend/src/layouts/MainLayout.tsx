@@ -2,7 +2,8 @@ import React, { ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { CheckIcon, SparklesIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
 import { usePortfolio } from '../contexts/PortfolioContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import Footer from '../components/Footer';
 
 interface StepInfo {
   id: string;
@@ -87,11 +88,11 @@ export default function MainLayout({
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* 헤더 */}
       {showHeader && (
         <div className="bg-white shadow-sm border-b border-gray-200">
-          <div className="max-w-7xl mx-auto px-8 py-4">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
             <div className="flex items-center justify-between">
               <div
                 className="flex items-center gap-4 cursor-pointer hover:opacity-80 transition-opacity"
@@ -101,27 +102,36 @@ export default function MainLayout({
                 <img
                   src="/Careeroad_logo.png"
                   alt="Careeroad"
-                  className="h-20 w-auto object-contain"
-                  style={{ maxHeight: '80px' }}
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                  }}
+                  className="h-16 w-auto"
                 />
                 <div className="border-l-2 border-gray-300 pl-4 py-1">
-                  <p className="text-sm text-gray-700 font-semibold">
+                  <p className="text-xl font-bold text-gray-900">
                     당신만의 AI 커리어 비서
                   </p>
-                  <p className="text-xs text-gray-500 mt-0.5">
+                  <p className="text-xs text-gray-600 mt-0.5">
                     경험 관리부터 포트폴리오 생성까지
                   </p>
                 </div>
               </div>
-              <div className="flex items-center space-x-3">
-                {showProgress && state.currentStep !== 'complete' && (
-                  <div className="text-xs text-gray-500 font-medium">
-                    {steps.findIndex(s => s.id === state.currentStep) + 1} / {steps.length}
-                  </div>
-                )}
+              <div className="flex items-center space-x-6">
+                <Link
+                  to="/cover-letter"
+                  className="text-sm text-gray-700 hover:text-blue-600 transition font-medium whitespace-nowrap"
+                >
+                  자기소개서 작성하기
+                </Link>
+                <Link
+                  to="/"
+                  className="text-sm text-gray-700 hover:text-blue-600 transition font-medium whitespace-nowrap"
+                >
+                  포트폴리오 제작하기
+                </Link>
+                <Link
+                  to="/mypage"
+                  className="text-sm text-gray-700 hover:text-blue-600 transition font-medium whitespace-nowrap"
+                >
+                  마이페이지
+                </Link>
               </div>
             </div>
           </div>
@@ -165,7 +175,7 @@ export default function MainLayout({
       )}
 
       {/* 메인 콘텐츠 */}
-      <div className="py-8">
+      <div className="flex-1 py-8">
         <motion.div
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -176,21 +186,7 @@ export default function MainLayout({
         </motion.div>
       </div>
 
-      {/* 푸터 */}
-      <div className="bg-gray-100 border-t border-gray-200">
-        <div className="max-w-6xl mx-auto px-6 py-6">
-          <div className="text-center">
-            <p className="text-sm text-gray-600 mb-1">커리어 성공을 위한 당신의 AI 파트너</p>
-            <p className="text-sm text-gray-500">
-              Contact: <a href="mailto:careeroad2025@gmail.com" className="text-gray-500 hover:text-gray-700">careeroad2025@gmail.com</a>
-            </p>
-            <div className="mt-3 pt-3 border-t border-gray-300">
-              <p className="text-xs text-gray-400">© 2025 Careeroad. All rights reserved.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
+      <Footer />
     </div>
   );
 }

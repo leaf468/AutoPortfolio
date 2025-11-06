@@ -8,6 +8,8 @@ import MinimalEditor from '../components/editors/MinimalEditor';
 import CleanEditor from '../components/editors/CleanEditor';
 import ColorfulEditor from '../components/editors/ColorfulEditor';
 import ElegantEditor from '../components/editors/ElegantEditor';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabaseClient';
 
 type TemplateType = 'minimal' | 'clean' | 'colorful' | 'elegant';
 
@@ -15,8 +17,11 @@ export default function TemplateEditPage() {
   const navigate = useNavigate();
   const { template } = useParams<{ template: TemplateType }>();
   const { state, setFinalResult, setCurrentStep, setTemplate } = usePortfolio();
+  const { user } = useAuth();
   const [isValidated, setIsValidated] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const initializationRef = useRef(false);
+  const [currentDocument, setCurrentDocument] = useState<PortfolioDocument | null>(null);
 
   useEffect(() => {
     // Prevent double initialization
@@ -73,30 +78,125 @@ export default function TemplateEditPage() {
     }
   }, [template, isValidated, state.selectedTemplate, setTemplate]);
 
-  const handleSave = (document: PortfolioDocument) => {
-    // Convert PortfolioDocument back to GenerationResult format
-    const result: GenerationResult = {
-      id: document.doc_id,
-      content: JSON.stringify(document),
-      format: 'json',
-      metadata: {
-        wordCount: document.sections.reduce((acc, s) =>
-          acc + s.blocks.reduce((blockAcc, b) => blockAcc + b.text.split(' ').length, 0), 0
-        ),
-        estimatedReadTime: Math.ceil(
-          document.sections.reduce((acc, s) =>
+  // 현재 문서 업데이트 (에디터에서 변경사항 추적)
+  const handleDocumentChange = (document: PortfolioDocument) => {
+    setCurrentDocument(document);
+  };
+
+  // 저장하기 - DB 저장 후 마이페이지로 이동 (완성 페이지 건너뜀)
+  const handleSaveOnly = async () => {
+    if (!user) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+
+    if (!currentDocument) {
+      alert('저장할 내용이 없습니다.');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      if (state.editMode && state.portfolioId) {
+        // 편집 모드: 업데이트
+        const { error } = await supabase
+          .from('portfolios')
+          .update({
+            title: `포트폴리오 - ${new Date().toLocaleDateString()}`,
+            template_type: state.selectedTemplate,
+            sections: state.organizedContent,
+            updated_at: new Date().toISOString()
+          })
+          .eq('portfolio_id', state.portfolioId);
+        if (error) throw error;
+        alert('포트폴리오가 저장되었습니다!');
+      } else {
+        // 신규 작성 모드: 삽입
+        const { error } = await supabase
+          .from('portfolios')
+          .insert({
+            user_id: user.user_id,
+            title: `포트폴리오 - ${new Date().toLocaleDateString()}`,
+            template_type: state.selectedTemplate,
+            sections: state.organizedContent,
+            published: false
+          });
+        if (error) throw error;
+        alert('포트폴리오가 저장되었습니다!');
+      }
+      navigate('/mypage');
+    } catch (error) {
+      console.error('저장 오류:', error);
+      alert('저장 중 오류가 발생했습니다.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  // 완성하기 - DB 저장 후 완성 페이지로 이동
+  const handleComplete = async (document: PortfolioDocument) => {
+    if (!user) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      if (state.editMode && state.portfolioId) {
+        // 편집 모드: 업데이트
+        const { error } = await supabase
+          .from('portfolios')
+          .update({
+            title: `포트폴리오 - ${new Date().toLocaleDateString()}`,
+            template_type: state.selectedTemplate,
+            sections: state.organizedContent,
+            updated_at: new Date().toISOString()
+          })
+          .eq('portfolio_id', state.portfolioId);
+        if (error) throw error;
+      } else {
+        // 신규 작성 모드: 삽입
+        const { error } = await supabase
+          .from('portfolios')
+          .insert({
+            user_id: user.user_id,
+            title: `포트폴리오 - ${new Date().toLocaleDateString()}`,
+            template_type: state.selectedTemplate,
+            sections: state.organizedContent,
+            published: false
+          });
+        if (error) throw error;
+      }
+
+      // Convert PortfolioDocument to GenerationResult format
+      const result: GenerationResult = {
+        id: document.doc_id,
+        content: JSON.stringify(document),
+        format: 'json',
+        metadata: {
+          wordCount: document.sections.reduce((acc, s) =>
             acc + s.blocks.reduce((blockAcc, b) => blockAcc + b.text.split(' ').length, 0), 0
-          ) / 200
-        ),
-        generatedAt: new Date(),
-        template: template || 'minimal'
-      },
-      qualityScore: 90,
-      suggestions: ['상세 편집 완료']
-    };
-    setFinalResult(result);
-    setCurrentStep('complete');
-    navigate('/complete');
+          ),
+          estimatedReadTime: Math.ceil(
+            document.sections.reduce((acc, s) =>
+              acc + s.blocks.reduce((blockAcc, b) => blockAcc + b.text.split(' ').length, 0), 0
+            ) / 200
+          ),
+          generatedAt: new Date(),
+          template: template || 'minimal'
+        },
+        qualityScore: 90,
+        suggestions: ['상세 편집 완료']
+      };
+      setFinalResult(result);
+      setCurrentStep('complete');
+      navigate('/complete');
+    } catch (error) {
+      console.error('저장 오류:', error);
+      alert('저장 중 오류가 발생했습니다.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleBack = () => {
@@ -154,9 +254,12 @@ export default function TemplateEditPage() {
     const commonProps = {
       document: parsedDocument,
       selectedTemplate: template,
-      onSave: handleSave,
+      onSave: handleComplete,
+      onSaveOnly: handleSaveOnly,
+      onDocumentChange: handleDocumentChange,
       onBack: handleBack,
-      onTemplateChange: handleTemplateChange
+      onTemplateChange: handleTemplateChange,
+      isSaving: isSaving
     };
 
     console.log('🎯 Getting Editor Component:');

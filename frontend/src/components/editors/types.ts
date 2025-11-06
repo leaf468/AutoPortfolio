@@ -4,9 +4,12 @@ export interface BaseEditorProps {
   document: PortfolioDocument;
   selectedTemplate: 'minimal' | 'clean' | 'colorful' | 'elegant';
   onSave: (updatedDocument: PortfolioDocument) => void;
+  onSaveOnly?: () => void;
+  onDocumentChange?: (updatedDocument: PortfolioDocument) => void;
   onBack: () => void;
   onSkipToNaturalEdit?: () => void;
   onTemplateChange?: (template: 'minimal' | 'clean' | 'colorful' | 'elegant') => void;
+  isSaving?: boolean;
 }
 
 export interface SkillCategory {
