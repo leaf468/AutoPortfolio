@@ -238,15 +238,23 @@ function analyzeActivityPatterns(activities: Activity[], totalApplicants: number
     { keyword: '프로젝트', pattern: /([가-힣a-zA-Z\s]{2,15})\s*프로젝트/g },
     { keyword: '개발', pattern: /([가-힣a-zA-Z\s]{2,15})\s*개발/g },
     { keyword: '분석', pattern: /([가-힣a-zA-Z\s]{2,15})\s*(데이터\s*)?분석/g },
-    { keyword: '인턴', pattern: /([가-힣a-zA-Z\s]{2,15})\s*인턴/g },
+    { keyword: '인턴', pattern: /([가-힣a-zA-Z\s]{2,15})\s*인턴(십)?/g },
     { keyword: '공모전', pattern: /([가-힣a-zA-Z\s]{2,15})\s*공모전/g },
     { keyword: '해커톤', pattern: /([가-힣a-zA-Z\s]{2,15})\s*해커톤/g },
-    { keyword: '대회', pattern: /([가-힣a-zA-Z\s]{2,15})\s*대회/g },
+    { keyword: '대회', pattern: /([가-힣a-zA-Z\s]{2,15})\s*(대회|경진대회)/g },
     { keyword: '연구', pattern: /([가-힣a-zA-Z\s]{2,15})\s*연구/g },
     { keyword: '동아리', pattern: /([가-힣a-zA-Z\s]{2,15})\s*동아리/g },
     { keyword: '스터디', pattern: /([가-힣a-zA-Z\s]{2,15})\s*스터디/g },
     { keyword: '기획', pattern: /([가-힣a-zA-Z\s]{2,15})\s*기획/g },
     { keyword: '운영', pattern: /([가-힣a-zA-Z\s]{2,15})\s*운영/g },
+    { keyword: '설계', pattern: /([가-힣a-zA-Z\s]{2,15})\s*설계/g },
+    { keyword: '봉사', pattern: /([가-힣a-zA-Z\s]{2,15})\s*봉사/g },
+    { keyword: '멘토링', pattern: /([가-힣a-zA-Z\s]{2,15})\s*멘토링/g },
+    { keyword: '교육', pattern: /([가-힣a-zA-Z\s]{2,15})\s*교육/g },
+    { keyword: '수상', pattern: /([가-힣a-zA-Z\s]{2,15})\s*(수상|상)/g },
+    { keyword: '논문', pattern: /([가-힣a-zA-Z\s]{2,15})\s*논문/g },
+    { keyword: '특허', pattern: /([가-힣a-zA-Z\s]{2,15})\s*특허/g },
+    { keyword: '창업', pattern: /([가-힣a-zA-Z\s]{2,15})\s*창업/g },
   ];
 
   const activityMap = new Map<string, {
@@ -300,7 +308,7 @@ function analyzeActivityPatterns(activities: Activity[], totalApplicants: number
   });
 
   const results = Array.from(activityMap.entries())
-    .filter(([keyword, data]) => data.personCount.size >= 2) // 최소 2명 이상
+    .filter(([keyword, data]) => data.personCount.size >= 1) // 최소 1명 이상으로 완화
     .map(([keyword, data]) => {
       const percentage = Math.min((data.personCount.size / totalApplicants) * 100, 100);
       const avgCount = data.count / data.personCount.size;
@@ -319,7 +327,7 @@ function analyzeActivityPatterns(activities: Activity[], totalApplicants: number
       };
     })
     .sort((a, b) => b.percentage - a.percentage)
-    .slice(0, 15);
+    .slice(0, 30); // 상위 30개로 확대
 
   console.log('🔍 Activity Patterns Analysis:', {
     totalActivities: activities.length,
