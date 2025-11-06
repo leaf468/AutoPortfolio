@@ -213,7 +213,7 @@ const MyPage: React.FC = () => {
 
   const handleLogout = async () => {
     await logout();
-    window.location.href = '/';
+    navigate('/login?logout=success');
   };
 
   const handleDeleteAccount = async () => {

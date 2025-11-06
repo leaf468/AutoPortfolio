@@ -1,16 +1,26 @@
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { login } from '../services/authService';
 import { useAuth } from '../contexts/AuthContext';
-import Footer from '../components/Footer';
+import LandingFooter from '../components/LandingFooter';
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { setUser } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('logout') === 'success') {
+      setSuccessMessage('로그아웃 되었습니다');
+      setTimeout(() => setSuccessMessage(''), 3000);
+    }
+  }, [location]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,6 +45,30 @@ const LoginPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex flex-col">
+      {/* 헤더 */}
+      <div className="bg-white shadow-sm border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div
+            className="flex items-center gap-4 cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => navigate('/')}
+          >
+            <img
+              src="/Careeroad_logo.png"
+              alt="Careeroad"
+              className="h-20 w-auto"
+            />
+            <div className="border-l-2 border-gray-300 pl-4 py-1">
+              <p className="text-xl font-bold text-gray-900">
+                당신만의 AI 커리어 비서
+              </p>
+              <p className="text-xs text-gray-600 mt-0.5">
+                경험 관리부터 포트폴리오 생성까지
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
@@ -43,6 +77,11 @@ const LoginPage: React.FC = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {successMessage && (
+            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
+              {successMessage}
+            </div>
+          )}
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
               {error}
@@ -104,7 +143,7 @@ const LoginPage: React.FC = () => {
         </div>
         </div>
       </div>
-      <Footer />
+      <LandingFooter />
     </div>
   );
 };

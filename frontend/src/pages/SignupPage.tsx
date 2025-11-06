@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { signup } from '../services/authService';
 import { useAuth } from '../contexts/AuthContext';
-import Footer from '../components/Footer';
+import LandingFooter from '../components/LandingFooter';
 
 const SignupPage: React.FC = () => {
   const navigate = useNavigate();
@@ -62,6 +62,30 @@ const SignupPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 flex flex-col">
+      {/* 헤더 */}
+      <div className="bg-white shadow-sm border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div
+            className="flex items-center gap-4 cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={() => navigate('/')}
+          >
+            <img
+              src="/Careeroad_logo.png"
+              alt="Careeroad"
+              className="h-20 w-auto"
+            />
+            <div className="border-l-2 border-gray-300 pl-4 py-1">
+              <p className="text-xl font-bold text-gray-900">
+                당신만의 AI 커리어 비서
+              </p>
+              <p className="text-xs text-gray-600 mt-0.5">
+                경험 관리부터 포트폴리오 생성까지
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="flex-1 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
         <div className="text-center mb-8">
@@ -166,7 +190,7 @@ const SignupPage: React.FC = () => {
         </div>
         </div>
       </div>
-      <Footer />
+      <LandingFooter />
     </div>
   );
 };
