@@ -7,6 +7,7 @@ import { CoverLetterQuestion, CoverLetterQuestionInput } from '../components/Cov
 import { AIRecommendationPanel } from '../components/AIRecommendationPanel';
 import { ComprehensiveStatsDashboard } from '../components/ComprehensiveStatsDashboard';
 import { analyzeCoverLetterComplete } from '../services/aiRecommendationService';
+import { CoverLetterChatbot } from '../components/CoverLetterChatbot';
 import {
   RecommendedCompany,
   getRecommendedCompaniesByCategory
@@ -644,6 +645,14 @@ export const CoverLetterPageV3: React.FC = () => {
           </div>
         )}
 
+        {/* 자소서 도우미 챗봇 */}
+        <CoverLetterChatbot
+          position={userSpec.position}
+          currentAnswers={questions.map(q => ({
+            question: q.question,
+            answer: q.answer
+          }))}
+        />
       </div>
     </div>
   );
