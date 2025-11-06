@@ -232,65 +232,53 @@ function calculateToeicDistribution(coverLetters: CoverLetter[]): { range: strin
   });
 }
 
-function normalizeActivityExample(content: string): string {
-  let normalized = content.trim();
+function extractCoreActivity(content: string): string {
+  let text = content.trim();
 
-  // 활동이 아닌 문장 필터링
-  const nonActivityPatterns = [
-    /^.{0,10}(회사|기업|대기업|스타트업).*?(유명|선두|최고|세계적)/,  // 회사 소개
-    /기여하고\s*싶|기여하겠|열망|바람|희망|생각|느낌/,  // 지원동기/다짐
-    /이며|입니다|있습니다$/,  // 설명문
-    /^.{0,15}(중요|가치|의미|필요)/,  // 추상적 설명
-    /저는|나는|제가/,  // 주관적 진술
+  // 1. 회사 설명/지원동기 필터링
+  const skipPatterns = [
+    /^.{0,20}(회사|기업).*?(위해|통해|에서는)/,  // 회사 설명
+    /기여하고\s*싶|기여하겠|열망|바람|희망|목표|다짐/,  // 지원동기
+    /중요성을\s*(느|깨달|배|알)/,  // 깨달음/배움
+    /^.{0,20}(이해하|습득|학습하|발전시켰)/,  // 학습 내용
+    /저는|나는|제가/,  // 1인칭 주어
   ];
 
-  if (nonActivityPatterns.some(pattern => pattern.test(normalized))) {
-    return '';  // 활동이 아니면 빈 문자열 반환
+  if (skipPatterns.some(p => p.test(text))) {
+    return '';
   }
 
-  // 첫 문장만 추출 (마침표 기준)
-  const sentences = normalized.split(/\.\s+/);
-  normalized = sentences[0];
+  // 2. 핵심 활동만 추출 (불필요한 부분 제거)
+  text = text
+    // 불필요한 앞부분 제거
+    .replace(/^.{0,20}(전|이전)\s*회사에서\s*/g, '')
+    .replace(/^.{0,20}에서\s*/g, '')
 
-  // 불필요한 어미 제거 (순서 중요)
-  normalized = normalized
-    .replace(/했습니다$/g, '함')
-    .replace(/했음$/g, '함')
-    .replace(/합니다$/g, '함')
-    .replace(/하였습니다$/g, '함')
-    .replace(/하였음$/g, '함')
-    .replace(/수행했습니다$/g, '수행')
-    .replace(/수행했음$/g, '수행')
-    .replace(/참여했습니다$/g, '참여')
-    .replace(/참여했음$/g, '참여')
-    .replace(/진행했습니다$/g, '진행')
-    .replace(/진행했음$/g, '진행')
-    .replace(/개발했습니다$/g, '개발')
-    .replace(/개발했음$/g, '개발');
+    // 불필요한 뒷부분 제거
+    .replace(/\s*요청을\s*받아.*$/g, '')
+    .replace(/\s*프로젝트를\s*주도.*$/g, '')
+    .replace(/\s*에서\s*여러\s*번의\s*실패를\s*겪.*$/g, '')
+    .replace(/\s*한\s*경험이\s*있습니다\.?$/g, '')
+    .replace(/\s*경험이\s*있습니다\.?$/g, '')
 
-  // 불필요한 접속사 제거
-  normalized = normalized
-    .replace(/하며/g, ',')
-    .replace(/하고/g, ',')
-    .replace(/,\s*,/g, ',')  // 이중 쉼표 제거
-    .replace(/,$/g, '');  // 마지막 쉼표 제거
+    // 어미 정리
+    .replace(/했습니다\.?$/g, '')
+    .replace(/했음\.?$/g, '')
+    .replace(/합니다\.?$/g, '')
+    .replace(/습니다\.?$/g, '')
+    .replace(/함\.?$/g, '')
+    .replace(/\.{3,}$/g, '');  // ... 제거
 
-  // 실제 행동 동사로 끝나는지 확인
-  const actionVerbs = ['수행', '참여', '진행', '개발', '구현', '설계', '분석', '연구', '작성', '구축', '제작', '운영', '관리', '개선', '최적화', '함'];
-  const endsWithAction = actionVerbs.some(verb => normalized.endsWith(verb));
+  // 3. 첫 문장만 추출
+  text = text.split(/\.\s+/)[0];
 
-  // 행동 동사로 끝나지 않으면 추가하지 않음 (이미 의미가 완성된 문장일 수 있음)
-  if (!endsWithAction && normalized.length > 20 && normalized.length < 60) {
-    // '을/를'로 끝나면 동사 추가
-    if (/[을를]$/.test(normalized)) {
-      normalized += ' 수행';
-    }
-  }
+  // 4. 쉼표로 분리된 여러 활동을 개별 추출 (나중에 분리 처리)
+  text = text.replace(/\s*,\s*/g, ' | ');
 
-  // 쉼표 뒤 공백 정리
-  normalized = normalized.replace(/,\s*/g, ', ').replace(/\s+/g, ' ').trim();
+  // 5. 최종 정리
+  text = text.replace(/\s+/g, ' ').trim();
 
-  return normalized.slice(0, 70);
+  return text;
 }
 
 function generateAdditionalExamples(activityType: string, keywords: string[], count: number): string[] {
@@ -299,88 +287,102 @@ function generateAdditionalExamples(activityType: string, keywords: string[], co
 
   const exampleTemplates: { [key: string]: string[] } = {
     '프로젝트': [
-      `${prefix} 웹 애플리케이션 개발 및 배포`,
-      `${prefix} 모바일 앱 UI/UX 설계 및 구현`,
-      `${prefix} 시스템 성능 개선 (응답속도 30% 향상)`,
-      `${prefix} RESTful API 서버 개발 및 테스트`,
-      `${prefix} 데이터베이스 설계 및 최적화 작업`,
+      `React/Next.js 기반 웹 애플리케이션 개발`,
+      `모바일 앱 UI/UX 설계 및 Flutter 구현`,
+      `RESTful API 서버 개발 (Node.js/Express)`,
+      `실시간 채팅 시스템 구축 (WebSocket)`,
+      `관리자 대시보드 개발 (데이터 시각화)`,
     ],
     '개발': [
-      `${prefix} 프론트엔드 컴포넌트 라이브러리 구축`,
-      `${prefix} CI/CD 파이프라인 구축 및 자동화`,
-      `${prefix} 마이크로서비스 아키텍처 설계`,
-      `${prefix} 실시간 데이터 처리 시스템 구현`,
-      `${prefix} 레거시 코드 리팩토링 및 성능 개선`,
+      `${prefix} 백엔드 API 설계 및 개발`,
+      `${prefix} 프론트엔드 컴포넌트 시스템 구축`,
+      `${prefix} CI/CD 파이프라인 구축`,
+      `${prefix} 데이터베이스 스키마 설계 및 최적화`,
+      `${prefix} 테스트 자동화 환경 구축`,
     ],
     '연구': [
-      `${prefix} 분야 논문 작성 및 학술지 게재`,
-      `${prefix} 실험 설계 및 통계 분석 수행`,
-      `${prefix} 학회 발표 및 연구 결과 공유`,
+      `${prefix} 분야 실험 설계 및 데이터 수집`,
+      `${prefix} 관련 논문 작성 및 학술지 투고`,
       `${prefix} 신기술 검증 및 프로토타입 제작`,
-      `${prefix} 특허 출원 및 지식재산권 확보`,
+      `${prefix} 학회 발표 및 포스터 세션 참여`,
+      `${prefix} 특허 출원 및 기술 문서 작성`,
     ],
     '분석': [
-      `사용자 행동 ${prefix} 분석 및 인사이트 도출`,
-      `${prefix} 데이터 시각화 대시보드 구축`,
-      `A/B 테스트 설계 및 ${prefix} 결과 분석`,
-      `${prefix} 비즈니스 지표 모니터링 시스템 구축`,
-      `머신러닝 모델 활용한 ${prefix} 예측 분석`,
+      `사용자 행동 패턴 데이터 분석 (Python/SQL)`,
+      `A/B 테스트 설계 및 통계 분석`,
+      `비즈니스 지표 대시보드 구축 (Tableau)`,
+      `머신러닝 모델 활용한 예측 분석`,
+      `고객 세그먼테이션 및 인사이트 도출`,
     ],
     '인턴': [
-      `${prefix} 기업 실무 프로젝트 참여 (6개월)`,
-      `${prefix} 팀 협업 및 코드 리뷰 경험`,
-      `${prefix} 회사 기술 스택 학습 및 적용`,
+      `${prefix} 기업 실무 프로젝트 참여 (3-6개월)`,
+      `${prefix} 회사 기술 스택 학습 및 업무 적용`,
+      `${prefix} 팀 협업 및 코드 리뷰 참여`,
       `${prefix} 업무 자동화 스크립트 개발`,
-      `${prefix} 기술 문서 작성 및 지식 공유`,
+      `${prefix} 기술 문서 작성 및 위키 정리`,
     ],
     '공모전': [
-      `${prefix} 공모전 참가 및 우수상 수상`,
-      `${prefix} 아이디어 기획 및 프로토타입 제작`,
-      `${prefix} 팀 프로젝트 리딩 및 발표`,
+      `${prefix} 공모전 팀 프로젝트 기획 및 개발`,
+      `${prefix} 아이디어 구현 및 프로토타입 제작`,
+      `${prefix} 프레젠테이션 자료 작성 및 발표`,
       `${prefix} 비즈니스 모델 설계 및 검증`,
-      `${prefix} 공모전 수상작 실제 서비스화`,
+      `${prefix} 공모전 입상 (우수상/장려상 등)`,
     ],
     '해커톤': [
-      `${prefix} 해커톤 참가 (24시간 개발)`,
-      `${prefix} 아이디어 구현 및 MVP 제작`,
-      `${prefix} 팀원들과 협업하여 서비스 완성`,
-      `${prefix} 해커톤 수상 및 멘토링 피드백`,
-      `${prefix} 신기술 적용 및 빠른 프로토타이핑`,
+      `${prefix} 해커톤 24시간 집중 개발`,
+      `${prefix} 팀원과 협업하여 MVP 제작`,
+      `${prefix} 신기술 빠른 학습 및 적용`,
+      `${prefix} 멘토 피드백 기반 개선`,
+      `${prefix} 데모 시연 및 결과 발표`,
     ],
     '동아리': [
-      `${prefix} 동아리 활동 및 프로젝트 진행`,
-      `${prefix} 스터디 그룹 운영 및 지식 공유`,
-      `${prefix} 동아리 회장으로 팀 리딩`,
-      `${prefix} 세미나 개최 및 외부 교류`,
-      `${prefix} 동아리 연합 프로젝트 참여`,
+      `${prefix} 동아리 정기 세미나 및 스터디 운영`,
+      `${prefix} 동아리 프로젝트 팀 리딩`,
+      `${prefix} 외부 기업/학교와 교류 활동`,
+      `${prefix} 동아리 운영진 활동 (회장/총무 등)`,
+      `${prefix} 신입 회원 멘토링 및 교육`,
+    ],
+    '스터디': [
+      `${prefix} 스터디 그룹 운영 및 일정 관리`,
+      `${prefix} 주제 발표 및 지식 공유`,
+      `${prefix} 코딩 테스트 문제 풀이 스터디`,
+      `${prefix} 기술 서적 독서 스터디 진행`,
+      `${prefix} 프로젝트 기반 실습 스터디`,
+    ],
+    '수상': [
+      `${prefix} 대회 수상 (금상/은상/동상 등)`,
+      `${prefix} 공모전 입상 및 상금 수령`,
+      `${prefix} 학술 논문 우수 논문상 수상`,
+      `${prefix} 교내 경진대회 1등 수상`,
+      `${prefix} 해커톤 최우수상 수상`,
     ],
   };
 
-  let templates = exampleTemplates[baseType];
+  let templates = exampleTemplates[baseType] || [];
 
-  if (!templates) {
+  // 접두사가 있는 경우 맞춤형 생성
+  if (prefix && prefix !== baseType) {
     templates = [
-      `${activityType} 수행 및 목표 달성`,
-      `${activityType} 관련 역량 강화`,
-      `${activityType}를 통한 실무 경험 축적`,
-      `${activityType} 성과 창출 및 개선`,
+      `${prefix} ${baseType} 프로젝트 참여`,
+      `${prefix} 기반 ${baseType} 구현`,
+      `${prefix} 시스템 ${baseType} 수행`,
+      `${prefix} 관련 ${baseType} 경험`,
+      `${prefix} 분야 ${baseType} 활동`,
     ];
   }
 
-  // 키워드 기반 맞춤형 예시 생성
-  const keywordBased: string[] = [];
-  if (keywords.includes('협업') || keywords.includes('팀')) {
-    keywordBased.push(`${activityType}에서 팀 협업 및 의사소통 경험`);
-  }
-  if (keywords.includes('리더') || keywords.includes('팀장')) {
-    keywordBased.push(`${activityType} 팀 리더로서 프로젝트 주도`);
-  }
-  if (keywords.includes('성과') || keywords.includes('개선')) {
-    keywordBased.push(`${activityType}를 통한 성과 지표 개선`);
+  // 기본 템플릿이 없으면 일반 형식
+  if (templates.length === 0) {
+    templates = [
+      `${activityType} 프로젝트 수행`,
+      `${activityType} 실무 경험`,
+      `${activityType} 팀 프로젝트 참여`,
+      `${activityType} 개인 프로젝트 진행`,
+      `${activityType} 역량 강화 활동`,
+    ];
   }
 
-  const allTemplates = [...templates, ...keywordBased];
-  return allTemplates.slice(0, count);
+  return templates.slice(0, count);
 }
 
 function analyzeActivityPatterns(activities: Activity[], totalApplicants: number): ActivityPattern[] {
@@ -454,14 +456,19 @@ function analyzeActivityPatterns(activities: Activity[], totalApplicants: number
         existing.count++;
         existing.personCount.add(act.cover_letter_id);
 
-        // 중복 체크 및 명사화된 예시 추가
+        // 핵심 활동 추출 및 저장
         if (existing.examples.length < 10 && act.content.length > 20) {
-          const normalizedExample = normalizeActivityExample(act.content);
-          // 빈 문자열이 아니고, 중복되지 않으며, 의미있는 길이인 경우만 추가
-          if (normalizedExample &&
-              normalizedExample.length > 10 &&
-              !existing.examples.includes(normalizedExample)) {
-            existing.examples.push(normalizedExample);
+          const coreActivity = extractCoreActivity(act.content);
+
+          if (coreActivity) {
+            // | 로 분리된 여러 활동 처리
+            const activities = coreActivity.split(' | ').map(a => a.trim()).filter(a => a.length > 10);
+
+            activities.forEach(activity => {
+              if (!existing.examples.includes(activity) && activity.length > 10) {
+                existing.examples.push(activity);
+              }
+            });
           }
         }
 
