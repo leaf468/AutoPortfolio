@@ -442,50 +442,89 @@ export async function getPositionStats(position: string): Promise<PositionStats 
       });
     });
 
-    // 데이터가 부족하면 DB 기반으로 활동 생성
+    // 데이터가 부족하면 DB 기반으로 구체적인 활동 생성
     const extractedCount = Object.keys(combinedActivityCounts).length;
 
     if (extractedCount < 10) {
-      // 가장 빈번한 기술 키워드 기반으로 활동 생성
+      // 기술 스택과 활동 타입 조합을 분석해서 구체적인 활동 생성
+      const activityGenerationMap: { [key: string]: string[] } = {
+        'React': ['React 웹 프로젝트', 'React 프론트엔드 개발', 'React 컴포넌트 설계'],
+        'Vue': ['Vue.js 웹 프로젝트', 'Vue 프론트엔드 개발'],
+        'Angular': ['Angular 웹 애플리케이션', 'Angular 프론트엔드 개발'],
+        '웹': ['반응형 웹사이트 제작', '웹 서비스 개발 프로젝트', '웹 애플리케이션 구현'],
+        '프론트엔드': ['프론트엔드 UI/UX 개선', '프론트엔드 성능 최적화'],
+        'Node': ['Node.js 백엔드 개발', 'Express API 서버 구축'],
+        'Spring': ['Spring Boot API 개발', 'Spring MVC 웹 개발'],
+        'Django': ['Django REST API 개발', 'Django 백엔드 구현'],
+        '백엔드': ['RESTful API 설계 및 개발', '백엔드 서버 아키텍처 설계', '데이터베이스 설계 및 구현'],
+        '풀스택': ['풀스택 웹 서비스 개발', '프론트엔드-백엔드 통합 프로젝트'],
+        'Python': ['Python 자동화 스크립트 개발', 'Python 데이터 처리 파이프라인'],
+        '데이터': ['데이터 분석 프로젝트', '데이터 시각화 대시보드 제작', '빅데이터 처리 및 분석'],
+        'SQL': ['SQL 데이터베이스 최적화', 'SQL 쿼리 성능 개선'],
+        '분석': ['통계 분석 및 인사이트 도출', '비즈니스 데이터 분석'],
+        'AI': ['AI 챗봇 개발', '인공지능 모델 학습 및 배포', 'AI 기반 추천 시스템 구현'],
+        '머신러닝': ['머신러닝 예측 모델 개발', 'ML 파이프라인 구축'],
+        '딥러닝': ['딥러닝 이미지 분류 모델', 'CNN 기반 객체 인식 시스템'],
+        '인공지능': ['AI 서비스 기획 및 개발', '인공지능 알고리즘 최적화'],
+        '앱': ['모바일 앱 UI/UX 개발', '크로스플랫폼 앱 개발'],
+        '모바일': ['안드로이드 앱 개발', 'iOS 앱 개발', '모바일 서비스 기획 및 출시'],
+        'AWS': ['AWS 클라우드 인프라 구축', 'AWS 서버리스 아키텍처 설계'],
+        '클라우드': ['클라우드 마이그레이션 프로젝트', '클라우드 네이티브 애플리케이션 개발'],
+        'DevOps': ['CI/CD 파이프라인 구축', 'Docker 컨테이너화 및 배포'],
+        '게임': ['Unity 2D/3D 게임 개발', 'Unreal Engine 게임 제작', '멀티플레이어 게임 서버 개발'],
+        'Unity': ['Unity 모바일 게임 개발', 'Unity VR 콘텐츠 제작'],
+        'Unreal': ['Unreal Engine 3D 게임 프로젝트'],
+        '블록체인': ['블록체인 DApp 개발', '스마트 컨트랙트 구현'],
+        'NFT': ['NFT 마켓플레이스 구축', 'NFT 민팅 시스템 개발'],
+        'IoT': ['IoT 센서 데이터 수집 시스템', 'IoT 디바이스 제어 앱 개발'],
+        '임베디드': ['임베디드 펌웨어 개발', '아두이노 기반 프로젝트'],
+        '하드웨어': ['하드웨어-소프트웨어 통합 프로젝트'],
+        'UX': ['사용자 경험 개선 프로젝트', 'UX 리서치 및 프로토타이핑'],
+        'UI': ['UI 디자인 시스템 구축', '모바일 UI 개선'],
+        '디자인': ['그래픽 디자인 및 브랜딩', 'UI/UX 디자인 프로젝트'],
+        '마케팅': ['디지털 마케팅 캠페인 기획', 'SNS 마케팅 전략 수립 및 실행'],
+        'SNS': ['소셜미디어 콘텐츠 기획 및 제작', 'SNS 채널 운영 및 성장'],
+        '브랜딩': ['브랜드 아이덴티티 구축', '브랜딩 전략 수립'],
+        '창업': ['스타트업 창업 및 운영', '비즈니스 모델 개발 및 검증'],
+        '스타트업': ['초기 스타트업 제품 개발', '스타트업 성장 전략 수립'],
+      };
+
       const topTechKeywords = Object.entries(techKeywordCounts)
         .sort((a, b) => b[1] - a[1])
-        .slice(0, 15);
+        .slice(0, 20);
 
       topTechKeywords.forEach(([tech, count]) => {
         if (Object.keys(combinedActivityCounts).length >= 10) return;
 
-        // 기술 키워드에 맞는 활동 타입 생성
-        const activityTypes = ['프로젝트', '개발', '스터디'];
+        const activities = activityGenerationMap[tech];
+        if (!activities) return;
 
-        activityTypes.forEach(type => {
+        activities.forEach(activity => {
           if (Object.keys(combinedActivityCounts).length >= 10) return;
 
-          const generatedActivity = `${tech} ${type}`;
-
-          // 이미 존재하지 않는 경우만 추가
-          if (!combinedActivityCounts[generatedActivity]) {
-            combinedActivityCounts[generatedActivity] = Math.max(1, Math.floor(count * 0.3));
+          if (!combinedActivityCounts[activity]) {
+            combinedActivityCounts[activity] = Math.max(1, Math.floor(count * 0.4));
           }
         });
       });
     }
 
-    // 여전히 부족하면 일반적인 활동 추가
+    // 여전히 부족하면 직무 맞춤 활동 추가
     if (Object.keys(combinedActivityCounts).length < 10) {
-      const commonActivities = [
-        { name: '팀 프로젝트', count: Math.floor(totalApplicants * 0.4) },
-        { name: '웹 개발', count: Math.floor(totalApplicants * 0.35) },
-        { name: '데이터 분석', count: Math.floor(totalApplicants * 0.3) },
-        { name: '인턴십', count: Math.floor(totalApplicants * 0.25) },
-        { name: '공모전', count: Math.floor(totalApplicants * 0.2) },
-        { name: '알고리즘 스터디', count: Math.floor(totalApplicants * 0.2) },
-        { name: '개인 프로젝트', count: Math.floor(totalApplicants * 0.15) },
-        { name: '해커톤', count: Math.floor(totalApplicants * 0.15) },
-        { name: '졸업 프로젝트', count: Math.floor(totalApplicants * 0.1) },
-        { name: 'IT 동아리', count: Math.floor(totalApplicants * 0.1) },
+      const positionBasedActivities = [
+        { name: '웹 서비스 풀스택 개발', count: Math.floor(totalApplicants * 0.35) },
+        { name: 'REST API 백엔드 개발', count: Math.floor(totalApplicants * 0.3) },
+        { name: '데이터베이스 설계 및 최적화', count: Math.floor(totalApplicants * 0.25) },
+        { name: '협업 도구 및 Git 활용 프로젝트', count: Math.floor(totalApplicants * 0.25) },
+        { name: '알고리즘 문제 해결 및 코딩테스트 준비', count: Math.floor(totalApplicants * 0.2) },
+        { name: '오픈소스 기여 및 코드 리뷰', count: Math.floor(totalApplicants * 0.15) },
+        { name: '소프트웨어 테스트 자동화', count: Math.floor(totalApplicants * 0.15) },
+        { name: '팀 프로젝트 리더 경험', count: Math.floor(totalApplicants * 0.12) },
+        { name: '기술 블로그 운영 및 지식 공유', count: Math.floor(totalApplicants * 0.1) },
+        { name: 'IT 관련 자격증 취득', count: Math.floor(totalApplicants * 0.1) },
       ];
 
-      commonActivities.forEach(({ name, count }) => {
+      positionBasedActivities.forEach(({ name, count }) => {
         if (Object.keys(combinedActivityCounts).length >= 10) return;
 
         if (!combinedActivityCounts[name] && count > 0) {
