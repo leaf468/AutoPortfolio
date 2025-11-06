@@ -233,12 +233,20 @@ function calculateToeicDistribution(coverLetters: CoverLetter[]): { range: strin
 }
 
 function analyzeActivityPatterns(activities: Activity[], totalApplicants: number): ActivityPattern[] {
-  // content에서 의미있는 활동 키워드 추출
-  const activityKeywords = [
-    '프로젝트', '개발', '데이터 분석', '인턴', '공모전', '해커톤',
-    '봉사', '동아리', '스터디', '연구', '논문', '특허',
-    '수상', '대회', '경진대회', '창업', '멘토링', '강의',
-    '리더', '팀장', '기획', '설계', '운영', '마케팅'
+  // 구체적인 활동명 추출을 위한 패턴
+  const activityPatterns = [
+    { keyword: '프로젝트', pattern: /([가-힣a-zA-Z\s]{2,15})\s*프로젝트/g },
+    { keyword: '개발', pattern: /([가-힣a-zA-Z\s]{2,15})\s*개발/g },
+    { keyword: '분석', pattern: /([가-힣a-zA-Z\s]{2,15})\s*(데이터\s*)?분석/g },
+    { keyword: '인턴', pattern: /([가-힣a-zA-Z\s]{2,15})\s*인턴/g },
+    { keyword: '공모전', pattern: /([가-힣a-zA-Z\s]{2,15})\s*공모전/g },
+    { keyword: '해커톤', pattern: /([가-힣a-zA-Z\s]{2,15})\s*해커톤/g },
+    { keyword: '대회', pattern: /([가-힣a-zA-Z\s]{2,15})\s*대회/g },
+    { keyword: '연구', pattern: /([가-힣a-zA-Z\s]{2,15})\s*연구/g },
+    { keyword: '동아리', pattern: /([가-힣a-zA-Z\s]{2,15})\s*동아리/g },
+    { keyword: '스터디', pattern: /([가-힣a-zA-Z\s]{2,15})\s*스터디/g },
+    { keyword: '기획', pattern: /([가-힣a-zA-Z\s]{2,15})\s*기획/g },
+    { keyword: '운영', pattern: /([가-힣a-zA-Z\s]{2,15})\s*운영/g },
   ];
 
   const activityMap = new Map<string, {
@@ -253,33 +261,41 @@ function analyzeActivityPatterns(activities: Activity[], totalApplicants: number
       return;
     }
 
-    // content에서 의미있는 활동 키워드 찾기
-    const foundKeywords = activityKeywords.filter(keyword =>
-      act.content.includes(keyword)
-    );
+    activityPatterns.forEach(({ keyword, pattern }) => {
+      const matches = [...act.content.matchAll(pattern)];
 
-    foundKeywords.forEach(keyword => {
-      const existing = activityMap.get(keyword) || {
-        count: 0,
-        personCount: new Set<number>(),
-        examples: [],
-        relatedKeywords: new Map(),
-      };
+      matches.forEach(match => {
+        const prefix = match[1].trim();
+        // 너무 일반적이거나 의미없는 접두사 필터링
+        const skipPrefixes = ['핵심', '주요', '중요', '다양한', '여러', '기타', '관련', '전반'];
+        if (skipPrefixes.some(skip => prefix.includes(skip)) || prefix.length < 2) {
+          return;
+        }
 
-      existing.count++;
-      existing.personCount.add(act.cover_letter_id);
+        const activityName = `${prefix} ${keyword}`;
 
-      if (existing.examples.length < 3 && act.content.length > 20) {
-        existing.examples.push(act.content.slice(0, 100));
-      }
+        const existing = activityMap.get(activityName) || {
+          count: 0,
+          personCount: new Set<number>(),
+          examples: [],
+          relatedKeywords: new Map(),
+        };
 
-      // 관련 키워드 추출
-      const relatedWords = extractKeywords(act.content);
-      relatedWords.forEach((word) => {
-        existing.relatedKeywords.set(word, (existing.relatedKeywords.get(word) || 0) + 1);
+        existing.count++;
+        existing.personCount.add(act.cover_letter_id);
+
+        if (existing.examples.length < 3 && act.content.length > 20) {
+          existing.examples.push(act.content.slice(0, 100));
+        }
+
+        // 관련 키워드 추출
+        const relatedWords = extractKeywords(act.content);
+        relatedWords.forEach((word) => {
+          existing.relatedKeywords.set(word, (existing.relatedKeywords.get(word) || 0) + 1);
+        });
+
+        activityMap.set(activityName, existing);
       });
-
-      activityMap.set(keyword, existing);
     });
   });
 
