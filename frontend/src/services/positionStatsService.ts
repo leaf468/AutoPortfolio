@@ -1,6 +1,61 @@
 import { supabase } from '../lib/supabaseClient';
 import { extractCoreActivity } from './comprehensiveAnalysisService';
 
+// 유사 직무 매핑
+function getSimilarPositions(position: string): string[] {
+  const normalizedPosition = position.toLowerCase().trim();
+
+  const similarityMap: { [key: string]: string[] } = {
+    // 개발 직군
+    '백엔드': ['서버', 'backend', 'server', '개발', 'api', '풀스택'],
+    '프론트엔드': ['frontend', 'front', '웹', 'ui', '프론트', '풀스택'],
+    '풀스택': ['백엔드', '프론트엔드', '웹개발', '개발'],
+    '웹개발': ['웹', '프론트엔드', '백엔드', '풀스택'],
+    '앱개발': ['모바일', 'android', 'ios', '안드로이드', '아이폰'],
+    '모바일': ['앱', 'android', 'ios', '앱개발'],
+    '게임': ['게임개발', '게임프로그래머', '클라이언트', '유니티', 'unity'],
+    'ai': ['인공지능', '머신러닝', '딥러닝', 'ml', 'dl', '데이터사이언스'],
+    '인공지능': ['ai', '머신러닝', '딥러닝', 'ml'],
+    '머신러닝': ['ai', '인공지능', '딥러닝', '데이터사이언스'],
+    '데이터': ['데이터분석', '데이터사이언스', 'da', 'ds', '빅데이터', '분석'],
+    '데이터분석': ['데이터', 'da', '분석', '비즈니스분석'],
+    'devops': ['인프라', '시스템', '클라우드', 'sre', '운영'],
+    '인프라': ['시스템', 'devops', '클라우드', '네트워크'],
+    '보안': ['정보보안', '시큐리티', 'security', '인프라'],
+
+    // 기획/디자인
+    '기획': ['서비스기획', '사업기획', '전략기획', 'pm', 'po'],
+    '서비스기획': ['기획', 'pm', 'po', '프로덕트'],
+    'pm': ['기획', '프로덕트', '서비스기획', 'po'],
+    'ux': ['ui', '디자인', '프로덕트디자인', '서비스디자인'],
+    'ui': ['ux', '디자인', 'gui'],
+    '디자인': ['ui', 'ux', '프로덕트디자인', '그래픽'],
+
+    // 마케팅/영업
+    '마케팅': ['디지털마케팅', '퍼포먼스마케팅', '그로스', 'cmo'],
+    '디지털마케팅': ['마케팅', '퍼포먼스', 'sns', '그로스'],
+    '영업': ['세일즈', 'sales', '비즈니스개발', 'bd'],
+
+    // 기타
+    'hr': ['인사', '채용', '인사관리', '조직문화'],
+    '재무': ['회계', '경영', '투자', 'finance'],
+  };
+
+  // 정확히 매칭되는 키 찾기
+  for (const [key, similar] of Object.entries(similarityMap)) {
+    if (normalizedPosition.includes(key)) {
+      return similar;
+    }
+  }
+
+  // 매칭 안 되면 일반 개발 직무 반환
+  if (normalizedPosition.includes('개발') || normalizedPosition.includes('엔지니어')) {
+    return ['개발', '백엔드', '프론트엔드', '웹개발'];
+  }
+
+  return [];
+}
+
 export interface PositionStats {
   position: string;
   totalApplicants: number;
@@ -60,11 +115,37 @@ export async function getPositionStats(position: string): Promise<PositionStats 
       .select('*')
       .ilike('job_position', `%${position}%`);
 
-    if (clError || !coverLetters || coverLetters.length === 0) {
+    if (clError) {
       return null;
     }
 
-    const totalApplicants = coverLetters.length;
+    let finalCoverLetters = coverLetters || [];
+    const totalApplicants = finalCoverLetters.length;
+
+    // 데이터가 부족하면 유사 직무 데이터 추가
+    if (totalApplicants < 10) {
+      const similarPositions = getSimilarPositions(position);
+
+      for (const similarPos of similarPositions) {
+        if (finalCoverLetters.length >= 10) break;
+
+        const { data: similarData } = await supabase
+          .from('cover_letters')
+          .select('*')
+          .ilike('job_position', `%${similarPos}%`)
+          .limit(10 - finalCoverLetters.length);
+
+        if (similarData && similarData.length > 0) {
+          finalCoverLetters = [...finalCoverLetters, ...similarData];
+        }
+      }
+    }
+
+    if (finalCoverLetters.length === 0) {
+      return null;
+    }
+
+    const actualTotalApplicants = finalCoverLetters.length;
 
     // 2. specific_info 파싱하여 통계 계산
     const gpas: number[] = [];
@@ -73,7 +154,7 @@ export async function getPositionStats(position: string): Promise<PositionStats 
     const years: { [key: string]: number } = {};
     const certificates: { [key: string]: number } = {};
 
-    coverLetters.forEach((cl) => {
+    finalCoverLetters.forEach((cl) => {
       const info = cl.specific_info || '';
 
       // 학점 추출
@@ -117,7 +198,7 @@ export async function getPositionStats(position: string): Promise<PositionStats 
     });
 
     // 3. 활동 데이터 가져오기 및 매우 구체적으로 카테고리화
-    const coverLetterIds = coverLetters.map(cl => cl.id);
+    const coverLetterIds = finalCoverLetters.map(cl => cl.id);
     const { data: activities } = await supabase
       .from('activities')
       .select('activity_type, content')
@@ -512,16 +593,16 @@ export async function getPositionStats(position: string): Promise<PositionStats 
     // 여전히 부족하면 직무 맞춤 활동 추가
     if (Object.keys(combinedActivityCounts).length < 10) {
       const positionBasedActivities = [
-        { name: '웹 서비스 풀스택 개발', count: Math.floor(totalApplicants * 0.35) },
-        { name: 'REST API 백엔드 개발', count: Math.floor(totalApplicants * 0.3) },
-        { name: '데이터베이스 설계 및 최적화', count: Math.floor(totalApplicants * 0.25) },
-        { name: '협업 도구 및 Git 활용 프로젝트', count: Math.floor(totalApplicants * 0.25) },
-        { name: '알고리즘 문제 해결 및 코딩테스트 준비', count: Math.floor(totalApplicants * 0.2) },
-        { name: '오픈소스 기여 및 코드 리뷰', count: Math.floor(totalApplicants * 0.15) },
-        { name: '소프트웨어 테스트 자동화', count: Math.floor(totalApplicants * 0.15) },
-        { name: '팀 프로젝트 리더 경험', count: Math.floor(totalApplicants * 0.12) },
-        { name: '기술 블로그 운영 및 지식 공유', count: Math.floor(totalApplicants * 0.1) },
-        { name: 'IT 관련 자격증 취득', count: Math.floor(totalApplicants * 0.1) },
+        { name: '웹 서비스 풀스택 개발', count: Math.floor(actualTotalApplicants * 0.35) },
+        { name: 'REST API 백엔드 개발', count: Math.floor(actualTotalApplicants * 0.3) },
+        { name: '데이터베이스 설계 및 최적화', count: Math.floor(actualTotalApplicants * 0.25) },
+        { name: '협업 도구 및 Git 활용 프로젝트', count: Math.floor(actualTotalApplicants * 0.25) },
+        { name: '알고리즘 문제 해결 및 코딩테스트 준비', count: Math.floor(actualTotalApplicants * 0.2) },
+        { name: '오픈소스 기여 및 코드 리뷰', count: Math.floor(actualTotalApplicants * 0.15) },
+        { name: '소프트웨어 테스트 자동화', count: Math.floor(actualTotalApplicants * 0.15) },
+        { name: '팀 프로젝트 리더 경험', count: Math.floor(actualTotalApplicants * 0.12) },
+        { name: '기술 블로그 운영 및 지식 공유', count: Math.floor(actualTotalApplicants * 0.1) },
+        { name: 'IT 관련 자격증 취득', count: Math.floor(actualTotalApplicants * 0.1) },
       ];
 
       positionBasedActivities.forEach(({ name, count }) => {
@@ -579,7 +660,7 @@ export async function getPositionStats(position: string): Promise<PositionStats 
       .map(([certificate, count]) => ({
         certificate,
         count,
-        percentage: (count / totalApplicants) * 100,
+        percentage: (count / actualTotalApplicants) * 100,
       }));
 
     // 전공 분포 (상위 10개)
@@ -589,7 +670,7 @@ export async function getPositionStats(position: string): Promise<PositionStats 
       .map(([major, count]) => ({
         major,
         count,
-        percentage: (count / totalApplicants) * 100,
+        percentage: (count / actualTotalApplicants) * 100,
       }));
 
     // 학년 분포
@@ -598,12 +679,12 @@ export async function getPositionStats(position: string): Promise<PositionStats 
       .map(([year, count]) => ({
         year,
         count,
-        percentage: (count / totalApplicants) * 100,
+        percentage: (count / actualTotalApplicants) * 100,
       }));
 
     return {
       position,
-      totalApplicants,
+      totalApplicants: actualTotalApplicants,
       avgGpa,
       gpaDistribution,
       avgToeic,
