@@ -233,28 +233,28 @@ function calculateToeicDistribution(coverLetters: CoverLetter[]): { range: strin
 }
 
 function analyzeActivityPatterns(activities: Activity[], totalApplicants: number): ActivityPattern[] {
-  // 구체적인 활동명 추출을 위한 패턴
+  // 구체적인 활동명 추출을 위한 패턴 (명사만 매칭)
   const activityPatterns = [
-    { keyword: '프로젝트', pattern: /([가-힣a-zA-Z\s]{2,15})\s*프로젝트/g },
-    { keyword: '개발', pattern: /([가-힣a-zA-Z\s]{2,15})\s*개발/g },
-    { keyword: '분석', pattern: /([가-힣a-zA-Z\s]{2,15})\s*(데이터\s*)?분석/g },
-    { keyword: '인턴', pattern: /([가-힣a-zA-Z\s]{2,15})\s*인턴(십)?/g },
-    { keyword: '공모전', pattern: /([가-힣a-zA-Z\s]{2,15})\s*공모전/g },
-    { keyword: '해커톤', pattern: /([가-힣a-zA-Z\s]{2,15})\s*해커톤/g },
-    { keyword: '대회', pattern: /([가-힣a-zA-Z\s]{2,15})\s*(대회|경진대회)/g },
-    { keyword: '연구', pattern: /([가-힣a-zA-Z\s]{2,15})\s*연구/g },
-    { keyword: '동아리', pattern: /([가-힣a-zA-Z\s]{2,15})\s*동아리/g },
-    { keyword: '스터디', pattern: /([가-힣a-zA-Z\s]{2,15})\s*스터디/g },
-    { keyword: '기획', pattern: /([가-힣a-zA-Z\s]{2,15})\s*기획/g },
-    { keyword: '운영', pattern: /([가-힣a-zA-Z\s]{2,15})\s*운영/g },
-    { keyword: '설계', pattern: /([가-힣a-zA-Z\s]{2,15})\s*설계/g },
-    { keyword: '봉사', pattern: /([가-힣a-zA-Z\s]{2,15})\s*봉사/g },
-    { keyword: '멘토링', pattern: /([가-힣a-zA-Z\s]{2,15})\s*멘토링/g },
-    { keyword: '교육', pattern: /([가-힣a-zA-Z\s]{2,15})\s*교육/g },
-    { keyword: '수상', pattern: /([가-힣a-zA-Z\s]{2,15})\s*(수상|상)/g },
-    { keyword: '논문', pattern: /([가-힣a-zA-Z\s]{2,15})\s*논문/g },
-    { keyword: '특허', pattern: /([가-힣a-zA-Z\s]{2,15})\s*특허/g },
-    { keyword: '창업', pattern: /([가-힣a-zA-Z\s]{2,15})\s*창업/g },
+    { keyword: '프로젝트', pattern: /([\w가-힣]{2,10})\s*프로젝트/g },
+    { keyword: '개발', pattern: /([\w가-힣]{2,10})\s*개발/g },
+    { keyword: '분석', pattern: /([\w가-힣]{2,10})\s*분석/g },
+    { keyword: '인턴', pattern: /([\w가-힣]{2,10})\s*인턴(십)?/g },
+    { keyword: '공모전', pattern: /([\w가-힣]{2,10})\s*공모전/g },
+    { keyword: '해커톤', pattern: /([\w가-힣]{2,10})\s*해커톤/g },
+    { keyword: '대회', pattern: /([\w가-힣]{2,10})\s*(대회|경진대회)/g },
+    { keyword: '연구', pattern: /([\w가-힣]{2,10})\s*연구/g },
+    { keyword: '동아리', pattern: /([\w가-힣]{2,10})\s*동아리/g },
+    { keyword: '스터디', pattern: /([\w가-힣]{2,10})\s*스터디/g },
+    { keyword: '기획', pattern: /([\w가-힣]{2,10})\s*기획/g },
+    { keyword: '운영', pattern: /([\w가-힣]{2,10})\s*운영/g },
+    { keyword: '설계', pattern: /([\w가-힣]{2,10})\s*설계/g },
+    { keyword: '봉사', pattern: /([\w가-힣]{2,10})\s*봉사/g },
+    { keyword: '멘토링', pattern: /([\w가-힣]{2,10})\s*멘토링/g },
+    { keyword: '교육', pattern: /([\w가-힣]{2,10})\s*교육/g },
+    { keyword: '수상', pattern: /([\w가-힣]{2,10})\s*(수상|상)/g },
+    { keyword: '논문', pattern: /([\w가-힣]{2,10})\s*논문/g },
+    { keyword: '특허', pattern: /([\w가-힣]{2,10})\s*특허/g },
+    { keyword: '창업', pattern: /([\w가-힣]{2,10})\s*창업/g },
   ];
 
   const activityMap = new Map<string, {
@@ -274,9 +274,20 @@ function analyzeActivityPatterns(activities: Activity[], totalApplicants: number
 
       matches.forEach(match => {
         const prefix = match[1].trim();
-        // 너무 일반적이거나 의미없는 접두사 필터링
-        const skipPrefixes = ['핵심', '주요', '중요', '다양한', '여러', '기타', '관련', '전반'];
-        if (skipPrefixes.some(skip => prefix.includes(skip)) || prefix.length < 2) {
+
+        // 문장 조각이나 불완전한 접두사 필터링
+        const skipPrefixes = ['핵심', '주요', '중요', '다양한', '여러', '기타', '관련', '전반', '의', '을', '를', '이', '가'];
+        const invalidChars = ['하는', '하고', '되는', '되고', '및', '등', '에서', '으로', '에게'];
+
+        // 조사나 불완전한 문장 조각 필터링
+        if (
+          skipPrefixes.some(skip => prefix.includes(skip)) ||
+          invalidChars.some(invalid => prefix.includes(invalid)) ||
+          prefix.length < 2 ||
+          prefix.includes('  ') || // 이중 공백
+          /^[의를이가을에]/.test(prefix) || // 조사로 시작
+          /[의를이가을에]$/.test(prefix) // 조사로 끝남
+        ) {
           return;
         }
 
