@@ -16,9 +16,56 @@ export default function HomePage() {
   const navigate = useNavigate();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('login');
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  const slides = [
+    {
+      img: '/page1.png',
+      title: '마음에 드는 템플릿을 선택하세요',
+      subtitle: '다양한 디자인 중 직무에 맞는 템플릿 선택',
+      badge: '포트폴리오 1단계'
+    },
+    {
+      img: '/page2.png',
+      title: '경력과 프로젝트 정보를 입력하세요',
+      subtitle: '간단한 정보만 입력하면 AI가 자동으로 정리',
+      badge: '포트폴리오 2단계'
+    },
+    {
+      img: '/page3.png',
+      title: 'AI가 포트폴리오를 자동으로 생성합니다',
+      subtitle: '채용 담당자가 원하는 형태로 최적화',
+      badge: '포트폴리오 3단계'
+    },
+    {
+      img: '/page4.png',
+      title: '세부 내용을 편집하고 다운로드하세요',
+      subtitle: 'PDF, HTML 등 다양한 형식으로 즉시 다운로드',
+      badge: '포트폴리오 4단계'
+    },
+    {
+      img: '/page5.png',
+      title: '지원 정보를 입력하면 AI가 실시간 분석합니다',
+      subtitle: '합격자 데이터 기반으로 스펙 비교 및 통계 제공',
+      badge: '자소서 1단계'
+    },
+    {
+      img: '/page6.png',
+      title: '작성 중 AI가 개선점을 실시간으로 제안합니다',
+      subtitle: '문장력, 구조, 키워드 등 종합적인 피드백',
+      badge: '자소서 2단계'
+    },
+  ];
 
   useEffect(() => {
     trackMainPageVisit();
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % slides.length);
+    }, 3000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleGetStarted = () => {
@@ -74,7 +121,7 @@ export default function HomePage() {
 
       {/* Hero Section */}
       <section className="pt-32 pb-20 px-6">
-        <div className="max-w-7xl mx-auto text-center">
+        <div className="max-w-[1400px] mx-auto text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -93,30 +140,97 @@ export default function HomePage() {
               AI가 당신의 경험을 분석하고, 채용 담당자의 마음을 사로잡는<br />
               전문적인 포트폴리오를 자동으로 생성합니다.
             </p>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleGetStarted}
-              className="px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl text-lg shadow-lg hover:shadow-xl transition-all"
-            >
-              무료로 시작하기
-            </motion.button>
+            <div className="flex items-center justify-center space-x-4">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleGetStarted}
+                className="px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl text-lg shadow-lg hover:shadow-xl transition-all"
+              >
+                무료로 시작하기
+              </motion.button>
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => navigate('/cover-letter?mode=guest')}
+                className="px-8 py-4 bg-white text-gray-900 font-semibold rounded-xl text-lg border-2 border-gray-200 hover:border-gray-300 transition-all"
+              >
+                데모 체험하기
+              </motion.button>
+            </div>
             <p className="mt-4 text-sm text-gray-500">
               ✓ 신용카드 불필요 ✓ 5분이면 완성 ✓ 무료 템플릿 제공
             </p>
           </motion.div>
 
-          {/* Hero Image/Preview */}
+          {/* Hero Image Slider */}
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.2 }}
-            className="mt-16 relative"
+            className="mt-20 relative"
           >
-            <div className="relative rounded-2xl overflow-hidden shadow-2xl border border-gray-200 bg-gradient-to-br from-gray-50 to-gray-100 p-12">
-              <div className="aspect-video bg-white rounded-lg shadow-lg flex items-center justify-center">
-                <DocumentTextIcon className="w-24 h-24 text-gray-300" />
+            <div className="relative rounded-3xl overflow-hidden shadow-2xl border-2 border-gray-200 max-w-6xl mx-auto">
+              <div className="aspect-[16/9] bg-white flex items-center justify-center relative overflow-hidden">
+                {/* Slides */}
+                {slides.map((slide, index) => (
+                  <div
+                    key={index}
+                    className={`absolute inset-0 transition-opacity duration-500 ${
+                      index === currentSlide ? 'opacity-100' : 'opacity-0'
+                    }`}
+                  >
+                    <img
+                      src={slide.img}
+                      alt={slide.title}
+                      className="w-full h-full object-contain"
+                    />
+                    {/* Badge */}
+                    <div className="absolute top-4 left-4 px-4 py-2 bg-black/70 backdrop-blur-sm text-white rounded-lg font-semibold">
+                      {slide.badge}
+                    </div>
+                  </div>
+                ))}
+
+                {/* Navigation Dots */}
+                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
+                  {slides.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setCurrentSlide(index)}
+                      className={`w-3 h-3 rounded-full transition-all ${
+                        index === currentSlide
+                          ? 'bg-indigo-600 w-8'
+                          : 'bg-gray-300 hover:bg-gray-400'
+                      }`}
+                    />
+                  ))}
+                </div>
+
+                {/* Arrow Navigation */}
+                <button
+                  onClick={() => setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length)}
+                  className="absolute left-4 top-1/2 transform -translate-y-1/2 w-10 h-10 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center transition-all"
+                >
+                  ‹
+                </button>
+                <button
+                  onClick={() => setCurrentSlide((prev) => (prev + 1) % slides.length)}
+                  className="absolute right-4 top-1/2 transform -translate-y-1/2 w-10 h-10 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center transition-all"
+                >
+                  ›
+                </button>
               </div>
+            </div>
+
+            {/* Slide Info */}
+            <div className="text-center mt-12 max-w-4xl mx-auto px-4">
+              <h3 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4 leading-tight">
+                {slides[currentSlide].title}
+              </h3>
+              <p className="text-xl md:text-2xl text-gray-600 leading-relaxed">
+                {slides[currentSlide].subtitle}
+              </p>
             </div>
           </motion.div>
         </div>
@@ -143,7 +257,7 @@ export default function HomePage() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-24 px-6">
+      <section id="features" className="py-24 px-6 bg-gray-50">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">

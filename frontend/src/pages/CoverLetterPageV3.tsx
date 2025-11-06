@@ -53,6 +53,10 @@ export const CoverLetterPageV3: React.FC = () => {
   const location = useLocation();
   const editState = location.state as { editMode?: boolean; documentId?: number; savedData?: any } | null;
 
+  // URL 파라미터에서 guest mode 확인
+  const searchParams = new URLSearchParams(location.search);
+  const isGuestMode = searchParams.get('mode') === 'guest';
+
   // 기본 정보
   const [userSpec, setUserSpec] = useState<UserSpec>({
     targetCompany: '',
@@ -398,6 +402,13 @@ export const CoverLetterPageV3: React.FC = () => {
               </Link>
               <button
                 onClick={async () => {
+                  if (isGuestMode) {
+                    if (window.confirm('회원가입하시면 작성한 자소서를 저장하고 다운로드할 수 있습니다. 회원가입 페이지로 이동하시겠습니까?')) {
+                      window.location.href = '/signup';
+                    }
+                    return;
+                  }
+
                   if (!user) {
                     alert('로그인이 필요합니다.');
                     return;
@@ -442,7 +453,7 @@ export const CoverLetterPageV3: React.FC = () => {
                 }}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium whitespace-nowrap"
               >
-                저장하기
+                {isGuestMode ? '회원가입하고 저장하기' : '저장하기'}
               </button>
             </div>
           </div>

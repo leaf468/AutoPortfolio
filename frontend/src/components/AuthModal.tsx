@@ -104,6 +104,17 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
                   {mode === 'login' ? '로그인하기' : '회원가입하기'}
                 </button>
 
+                {/* Guest Experience Button */}
+                <button
+                  onClick={() => {
+                    onClose();
+                    navigate('/cover-letter?mode=guest');
+                  }}
+                  className="w-full mt-3 py-3 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-all"
+                >
+                  비회원으로 체험하기
+                </button>
+
                 {/* Additional Info */}
                 <div className="mt-6 text-center text-sm text-gray-500">
                   {mode === 'login' ? (
