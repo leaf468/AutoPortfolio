@@ -1,6 +1,7 @@
 import React from 'react';
 import { PositionStats } from '../services/positionStatsService';
-import { ChartBarIcon, AcademicCapIcon, DocumentTextIcon, TrophyIcon } from '@heroicons/react/24/outline';
+import { ChartBarIcon, AcademicCapIcon, DocumentTextIcon, TrophyIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
+import { useNavigate } from 'react-router-dom';
 
 interface PositionStatsPanelProps {
   stats: PositionStats | null;
@@ -8,6 +9,7 @@ interface PositionStatsPanelProps {
 }
 
 export const PositionStatsPanel: React.FC<PositionStatsPanelProps> = ({ stats, isLoading }) => {
+  const navigate = useNavigate();
   if (isLoading) {
     return (
       <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg p-4 border border-blue-200">
@@ -30,13 +32,29 @@ export const PositionStatsPanel: React.FC<PositionStatsPanelProps> = ({ stats, i
     );
   }
 
+  const handleViewDetails = () => {
+    if (stats) {
+      // position을 URL 파라미터로 전달하여 새 페이지에서 전체 데이터 로드
+      navigate('/position-stats', { state: { position: stats.position } });
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* 헤더 */}
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg p-4 text-white">
-        <div className="flex items-center gap-2 mb-2">
-          <ChartBarIcon className="w-5 h-5" />
-          <h3 className="font-bold text-lg">{stats.position} 통계</h3>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <ChartBarIcon className="w-5 h-5" />
+            <h3 className="font-bold text-lg">{stats.position} 통계</h3>
+          </div>
+          <button
+            onClick={handleViewDetails}
+            className="flex items-center gap-1 text-sm bg-white/20 hover:bg-white/30 px-3 py-1 rounded-lg transition-colors"
+          >
+            <span>자세히</span>
+            <ArrowTopRightOnSquareIcon className="w-4 h-4" />
+          </button>
         </div>
         <p className="text-sm opacity-90">분석 데이터: {stats.totalApplicants}개</p>
       </div>

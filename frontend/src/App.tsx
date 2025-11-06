@@ -13,6 +13,7 @@ import TemplateEditPage from './pages/TemplateEditPage';
 import CompletePage from './pages/CompletePage';
 import CoverLetterPageV2 from './pages/CoverLetterPageV2';
 import CoverLetterPageV3 from './pages/CoverLetterPageV3';
+import { PositionStatsDetailPage } from './pages/PositionStatsDetailPage';
 
 // GA 페이지뷰 추적 컴포넌트
 function PageViewTracker() {
@@ -63,6 +64,7 @@ function App() {
           <Route path="/complete" element={<CompletePage />} />
           <Route path="/cover-letter" element={<CoverLetterPageV3 />} />
           <Route path="/cover-letter-v2" element={<CoverLetterPageV2 />} />
+          <Route path="/position-stats" element={<PositionStatsDetailPage />} />
         </Routes>
       </Router>
     </PortfolioProvider>
