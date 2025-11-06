@@ -647,6 +647,97 @@ export async function getPositionStats(position: string): Promise<PositionStats 
           { name: '디자인 툴 활용 (Figma, Sketch 등)', count: Math.floor(actualTotalApplicants * 0.1) },
           { name: '반응형 디자인 구현', count: Math.floor(actualTotalApplicants * 0.1) },
         ];
+      } else if (normalizedPosition.includes('데이터') || normalizedPosition.includes('data') || normalizedPosition.includes('분석')) {
+        positionBasedActivities = [
+          { name: 'Python/R 기반 데이터 분석', count: Math.floor(actualTotalApplicants * 0.4) },
+          { name: 'SQL 쿼리 작성 및 데이터 추출', count: Math.floor(actualTotalApplicants * 0.35) },
+          { name: '데이터 시각화 대시보드 구축', count: Math.floor(actualTotalApplicants * 0.3) },
+          { name: '통계 분석 및 인사이트 도출', count: Math.floor(actualTotalApplicants * 0.28) },
+          { name: 'A/B 테스트 설계 및 분석', count: Math.floor(actualTotalApplicants * 0.25) },
+          { name: '비즈니스 지표(KPI) 분석', count: Math.floor(actualTotalApplicants * 0.2) },
+          { name: '머신러닝 모델 구축 및 평가', count: Math.floor(actualTotalApplicants * 0.18) },
+          { name: '데이터 파이프라인 구축', count: Math.floor(actualTotalApplicants * 0.15) },
+          { name: '빅데이터 처리 (Spark, Hadoop)', count: Math.floor(actualTotalApplicants * 0.12) },
+          { name: '데이터 품질 관리 및 정제', count: Math.floor(actualTotalApplicants * 0.1) },
+        ];
+      } else if (normalizedPosition.includes('ai') || normalizedPosition.includes('머신러닝') || normalizedPosition.includes('딥러닝') || normalizedPosition.includes('인공지능')) {
+        positionBasedActivities = [
+          { name: '머신러닝 모델 개발 및 학습', count: Math.floor(actualTotalApplicants * 0.4) },
+          { name: '딥러닝 알고리즘 연구 및 구현', count: Math.floor(actualTotalApplicants * 0.35) },
+          { name: '자연어처리(NLP) 프로젝트', count: Math.floor(actualTotalApplicants * 0.3) },
+          { name: '컴퓨터 비전 모델 개발', count: Math.floor(actualTotalApplicants * 0.28) },
+          { name: 'AI 모델 최적화 및 배포', count: Math.floor(actualTotalApplicants * 0.25) },
+          { name: '데이터 전처리 및 특성 엔지니어링', count: Math.floor(actualTotalApplicants * 0.2) },
+          { name: 'PyTorch/TensorFlow 활용 개발', count: Math.floor(actualTotalApplicants * 0.18) },
+          { name: 'AI 논문 리뷰 및 구현', count: Math.floor(actualTotalApplicants * 0.15) },
+          { name: '추천 시스템 개발', count: Math.floor(actualTotalApplicants * 0.12) },
+          { name: 'MLOps 파이프라인 구축', count: Math.floor(actualTotalApplicants * 0.1) },
+        ];
+      } else if (normalizedPosition.includes('영업') || normalizedPosition.includes('sales') || normalizedPosition.includes('세일즈')) {
+        positionBasedActivities = [
+          { name: '신규 고객 발굴 및 영업 전략 수립', count: Math.floor(actualTotalApplicants * 0.4) },
+          { name: 'B2B/B2C 영업 및 계약 성사', count: Math.floor(actualTotalApplicants * 0.35) },
+          { name: '고객 관계 관리(CRM) 및 유지', count: Math.floor(actualTotalApplicants * 0.3) },
+          { name: '제품 프레젠테이션 및 제안서 작성', count: Math.floor(actualTotalApplicants * 0.28) },
+          { name: '시장 조사 및 경쟁사 분석', count: Math.floor(actualTotalApplicants * 0.25) },
+          { name: '영업 목표 달성 및 성과 관리', count: Math.floor(actualTotalApplicants * 0.2) },
+          { name: '파트너사 발굴 및 협력 관계 구축', count: Math.floor(actualTotalApplicants * 0.18) },
+          { name: '고객 니즈 분석 및 맞춤 솔루션 제안', count: Math.floor(actualTotalApplicants * 0.15) },
+          { name: '영업 데이터 분석 및 인사이트 도출', count: Math.floor(actualTotalApplicants * 0.12) },
+          { name: '계약 협상 및 조율', count: Math.floor(actualTotalApplicants * 0.1) },
+        ];
+      } else if (normalizedPosition.includes('hr') || normalizedPosition.includes('인사') || normalizedPosition.includes('채용')) {
+        positionBasedActivities = [
+          { name: '채용 프로세스 기획 및 운영', count: Math.floor(actualTotalApplicants * 0.4) },
+          { name: '인재 소싱 및 면접 진행', count: Math.floor(actualTotalApplicants * 0.35) },
+          { name: '직무 분석 및 채용 공고 작성', count: Math.floor(actualTotalApplicants * 0.3) },
+          { name: '조직문화 기획 및 실행', count: Math.floor(actualTotalApplicants * 0.28) },
+          { name: '인사 평가 제도 설계 및 운영', count: Math.floor(actualTotalApplicants * 0.25) },
+          { name: '교육 프로그램 기획 및 진행', count: Math.floor(actualTotalApplicants * 0.2) },
+          { name: '직원 만족도 조사 및 개선', count: Math.floor(actualTotalApplicants * 0.18) },
+          { name: '온보딩 프로세스 개선', count: Math.floor(actualTotalApplicants * 0.15) },
+          { name: '복리후생 제도 설계', count: Math.floor(actualTotalApplicants * 0.12) },
+          { name: 'HR 데이터 분석 및 리포팅', count: Math.floor(actualTotalApplicants * 0.1) },
+        ];
+      } else if (normalizedPosition.includes('재무') || normalizedPosition.includes('회계') || normalizedPosition.includes('finance') || normalizedPosition.includes('경영')) {
+        positionBasedActivities = [
+          { name: '재무제표 작성 및 분석', count: Math.floor(actualTotalApplicants * 0.4) },
+          { name: '예산 편성 및 관리', count: Math.floor(actualTotalApplicants * 0.35) },
+          { name: '재무 데이터 분석 및 리포팅', count: Math.floor(actualTotalApplicants * 0.3) },
+          { name: '투자 분석 및 의사결정 지원', count: Math.floor(actualTotalApplicants * 0.28) },
+          { name: '원가 관리 및 분석', count: Math.floor(actualTotalApplicants * 0.25) },
+          { name: '세무 신고 및 세무 전략 수립', count: Math.floor(actualTotalApplicants * 0.2) },
+          { name: '내부 회계 관리 및 감사', count: Math.floor(actualTotalApplicants * 0.18) },
+          { name: '재무 모델링 및 시뮬레이션', count: Math.floor(actualTotalApplicants * 0.15) },
+          { name: '자금 조달 및 운용', count: Math.floor(actualTotalApplicants * 0.12) },
+          { name: 'ERP 시스템 운영 및 개선', count: Math.floor(actualTotalApplicants * 0.1) },
+        ];
+      } else if (normalizedPosition.includes('cs') || normalizedPosition.includes('고객') || normalizedPosition.includes('상담')) {
+        positionBasedActivities = [
+          { name: '고객 문의 응대 및 문제 해결', count: Math.floor(actualTotalApplicants * 0.4) },
+          { name: '고객 만족도 향상 프로젝트', count: Math.floor(actualTotalApplicants * 0.35) },
+          { name: 'VOC 분석 및 개선안 도출', count: Math.floor(actualTotalApplicants * 0.3) },
+          { name: 'CS 프로세스 개선 및 매뉴얼 작성', count: Math.floor(actualTotalApplicants * 0.28) },
+          { name: '고객 경험(CX) 개선 활동', count: Math.floor(actualTotalApplicants * 0.25) },
+          { name: '상담 데이터 분석 및 리포팅', count: Math.floor(actualTotalApplicants * 0.2) },
+          { name: '챗봇/자동화 도구 도입 및 운영', count: Math.floor(actualTotalApplicants * 0.18) },
+          { name: '클레임 처리 및 고객 유지', count: Math.floor(actualTotalApplicants * 0.15) },
+          { name: '상담원 교육 및 품질 관리', count: Math.floor(actualTotalApplicants * 0.12) },
+          { name: '고객 피드백 수집 및 전달', count: Math.floor(actualTotalApplicants * 0.1) },
+        ];
+      } else if (normalizedPosition.includes('게임') || normalizedPosition.includes('game')) {
+        positionBasedActivities = [
+          { name: 'Unity/Unreal 게임 개발', count: Math.floor(actualTotalApplicants * 0.4) },
+          { name: '게임 시스템 설계 및 구현', count: Math.floor(actualTotalApplicants * 0.35) },
+          { name: '게임 밸런싱 및 튜닝', count: Math.floor(actualTotalApplicants * 0.3) },
+          { name: '게임 클라이언트/서버 개발', count: Math.floor(actualTotalApplicants * 0.28) },
+          { name: '게임 기획 및 레벨 디자인', count: Math.floor(actualTotalApplicants * 0.25) },
+          { name: '멀티플레이어 네트워크 구현', count: Math.floor(actualTotalApplicants * 0.2) },
+          { name: '게임 UI/UX 개선', count: Math.floor(actualTotalApplicants * 0.18) },
+          { name: '게임 성능 최적화', count: Math.floor(actualTotalApplicants * 0.15) },
+          { name: '게임 QA 및 테스트', count: Math.floor(actualTotalApplicants * 0.12) },
+          { name: '라이브 운영 및 업데이트', count: Math.floor(actualTotalApplicants * 0.1) },
+        ];
       } else {
         // 개발 직무 (기본)
         positionBasedActivities = [
