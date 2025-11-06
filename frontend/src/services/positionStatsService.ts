@@ -471,6 +471,10 @@ export async function getPositionStats(position: string): Promise<PositionStats 
       '했던', '진행한', '수행한', '참여한', '만든', '개발한',
       '첫', '두번째', '세번째', '마지막',
       '학교', '대학', '회사', '기업',
+      // 의미 없는 명사/동사 추가
+      '방안', '연계', '통한', '있게', '위한', '통해', '대한',
+      '인재', '소그룹', '혁신', '전략', '운영', '관리',
+      '효율', '최적', '개선', '향상', '지원', '협력',
     ];
 
     // 기술 키워드 빈도수 (생성에 사용)
@@ -512,7 +516,8 @@ export async function getPositionStats(position: string): Promise<PositionStats 
         '블록체인', 'NFT',
         '게임', 'Unity', 'Unreal',
         'UX', 'UI', '디자인',
-        '마케팅', 'SNS', '브랜딩',
+        '마케팅', 'SNS', '브랜딩', '광고', '캠페인',
+        '기획', '서비스', '제품', '비즈니스',
         '창업', '스타트업',
       ];
 
@@ -563,11 +568,17 @@ export async function getPositionStats(position: string): Promise<PositionStats 
         'UX': ['사용자 경험 개선 프로젝트', 'UX 리서치 및 프로토타이핑'],
         'UI': ['UI 디자인 시스템 구축', '모바일 UI 개선'],
         '디자인': ['그래픽 디자인 및 브랜딩', 'UI/UX 디자인 프로젝트'],
-        '마케팅': ['디지털 마케팅 캠페인 기획', 'SNS 마케팅 전략 수립 및 실행'],
-        'SNS': ['소셜미디어 콘텐츠 기획 및 제작', 'SNS 채널 운영 및 성장'],
-        '브랜딩': ['브랜드 아이덴티티 구축', '브랜딩 전략 수립'],
-        '창업': ['스타트업 창업 및 운영', '비즈니스 모델 개발 및 검증'],
-        '스타트업': ['초기 스타트업 제품 개발', '스타트업 성장 전략 수립'],
+        '마케팅': ['디지털 마케팅 캠페인 기획 및 실행', 'SNS 마케팅 전략 수립', '브랜드 마케팅 프로젝트'],
+        'SNS': ['소셜미디어 콘텐츠 기획 및 제작', 'SNS 채널 운영 및 성장', '인플루언서 마케팅 협업'],
+        '브랜딩': ['브랜드 아이덴티티 구축', '브랜딩 전략 수립', '브랜드 경험 디자인'],
+        '광고': ['온라인 광고 캠페인 기획', '광고 크리에이티브 제작', '퍼포먼스 마케팅 운영'],
+        '캠페인': ['통합 마케팅 캠페인 기획', '바이럴 캠페인 실행', '고객 참여 캠페인 운영'],
+        '기획': ['신규 서비스 기획 및 런칭', '사용자 리서치 및 기획', '제품 로드맵 수립'],
+        '서비스': ['서비스 개선 프로젝트', '고객 경험 최적화', '서비스 전략 수립'],
+        '제품': ['제품 기획 및 출시', '제품 시장 조사 및 분석', 'MVP 개발 및 검증'],
+        '비즈니스': ['비즈니스 모델 개발', '시장 분석 및 전략 수립', '파트너십 구축'],
+        '창업': ['스타트업 창업 및 운영', '비즈니스 모델 개발 및 검증', '초기 투자 유치'],
+        '스타트업': ['초기 스타트업 제품 개발', '스타트업 성장 전략 수립', '린 스타트업 방법론 적용'],
       };
 
       const topTechKeywords = Object.entries(techKeywordCounts)
@@ -590,20 +601,67 @@ export async function getPositionStats(position: string): Promise<PositionStats 
       });
     }
 
-    // 여전히 부족하면 직무 맞춤 활동 추가
+    // 여전히 부족하면 직무별 맞춤 활동 추가
     if (Object.keys(combinedActivityCounts).length < 10) {
-      const positionBasedActivities = [
-        { name: '웹 서비스 풀스택 개발', count: Math.floor(actualTotalApplicants * 0.35) },
-        { name: 'REST API 백엔드 개발', count: Math.floor(actualTotalApplicants * 0.3) },
-        { name: '데이터베이스 설계 및 최적화', count: Math.floor(actualTotalApplicants * 0.25) },
-        { name: '협업 도구 및 Git 활용 프로젝트', count: Math.floor(actualTotalApplicants * 0.25) },
-        { name: '알고리즘 문제 해결 및 코딩테스트 준비', count: Math.floor(actualTotalApplicants * 0.2) },
-        { name: '오픈소스 기여 및 코드 리뷰', count: Math.floor(actualTotalApplicants * 0.15) },
-        { name: '소프트웨어 테스트 자동화', count: Math.floor(actualTotalApplicants * 0.15) },
-        { name: '팀 프로젝트 리더 경험', count: Math.floor(actualTotalApplicants * 0.12) },
-        { name: '기술 블로그 운영 및 지식 공유', count: Math.floor(actualTotalApplicants * 0.1) },
-        { name: 'IT 관련 자격증 취득', count: Math.floor(actualTotalApplicants * 0.1) },
-      ];
+      let positionBasedActivities: { name: string; count: number }[] = [];
+
+      // 직무별 활동 결정
+      const normalizedPosition = position.toLowerCase();
+
+      if (normalizedPosition.includes('마케팅') || normalizedPosition.includes('marketing')) {
+        positionBasedActivities = [
+          { name: 'SNS 마케팅 캠페인 기획 및 운영', count: Math.floor(actualTotalApplicants * 0.4) },
+          { name: '디지털 광고 집행 및 성과 분석', count: Math.floor(actualTotalApplicants * 0.35) },
+          { name: '브랜드 콘텐츠 제작 및 배포', count: Math.floor(actualTotalApplicants * 0.3) },
+          { name: '고객 데이터 분석 및 인사이트 도출', count: Math.floor(actualTotalApplicants * 0.25) },
+          { name: '마케팅 전략 수립 및 실행', count: Math.floor(actualTotalApplicants * 0.2) },
+          { name: '브랜드 협업 및 파트너십 구축', count: Math.floor(actualTotalApplicants * 0.18) },
+          { name: '온오프라인 이벤트 기획 및 운영', count: Math.floor(actualTotalApplicants * 0.15) },
+          { name: '고객 여정 분석 및 최적화', count: Math.floor(actualTotalApplicants * 0.12) },
+          { name: '마케팅 자동화 도구 활용', count: Math.floor(actualTotalApplicants * 0.1) },
+          { name: '브랜드 커뮤니티 운영', count: Math.floor(actualTotalApplicants * 0.1) },
+        ];
+      } else if (normalizedPosition.includes('기획') || normalizedPosition.includes('pm') || normalizedPosition.includes('po')) {
+        positionBasedActivities = [
+          { name: '신규 서비스 기획 및 런칭', count: Math.floor(actualTotalApplicants * 0.4) },
+          { name: '사용자 리서치 및 니즈 분석', count: Math.floor(actualTotalApplicants * 0.35) },
+          { name: 'MVP 개발 및 시장 검증', count: Math.floor(actualTotalApplicants * 0.3) },
+          { name: '제품 로드맵 수립 및 관리', count: Math.floor(actualTotalApplicants * 0.25) },
+          { name: '데이터 기반 의사결정 및 A/B 테스트', count: Math.floor(actualTotalApplicants * 0.2) },
+          { name: '서비스 개선 프로젝트 주도', count: Math.floor(actualTotalApplicants * 0.18) },
+          { name: '개발팀과 협업 및 요구사항 정의', count: Math.floor(actualTotalApplicants * 0.15) },
+          { name: '시장 트렌드 분석 및 경쟁사 조사', count: Math.floor(actualTotalApplicants * 0.12) },
+          { name: '비즈니스 모델 설계', count: Math.floor(actualTotalApplicants * 0.1) },
+          { name: 'KPI 설정 및 성과 측정', count: Math.floor(actualTotalApplicants * 0.1) },
+        ];
+      } else if (normalizedPosition.includes('디자인') || normalizedPosition.includes('ux') || normalizedPosition.includes('ui')) {
+        positionBasedActivities = [
+          { name: 'UI/UX 디자인 및 프로토타이핑', count: Math.floor(actualTotalApplicants * 0.4) },
+          { name: '사용자 리서치 및 테스트', count: Math.floor(actualTotalApplicants * 0.35) },
+          { name: '디자인 시스템 구축 및 관리', count: Math.floor(actualTotalApplicants * 0.3) },
+          { name: '브랜드 아이덴티티 디자인', count: Math.floor(actualTotalApplicants * 0.25) },
+          { name: '사용자 경험 개선 프로젝트', count: Math.floor(actualTotalApplicants * 0.2) },
+          { name: '인터랙션 디자인', count: Math.floor(actualTotalApplicants * 0.18) },
+          { name: '와이어프레임 및 플로우 설계', count: Math.floor(actualTotalApplicants * 0.15) },
+          { name: '그래픽 및 비주얼 디자인', count: Math.floor(actualTotalApplicants * 0.12) },
+          { name: '디자인 툴 활용 (Figma, Sketch 등)', count: Math.floor(actualTotalApplicants * 0.1) },
+          { name: '반응형 디자인 구현', count: Math.floor(actualTotalApplicants * 0.1) },
+        ];
+      } else {
+        // 개발 직무 (기본)
+        positionBasedActivities = [
+          { name: '웹 서비스 풀스택 개발', count: Math.floor(actualTotalApplicants * 0.35) },
+          { name: 'REST API 백엔드 개발', count: Math.floor(actualTotalApplicants * 0.3) },
+          { name: '데이터베이스 설계 및 최적화', count: Math.floor(actualTotalApplicants * 0.25) },
+          { name: '협업 도구 및 Git 활용 프로젝트', count: Math.floor(actualTotalApplicants * 0.25) },
+          { name: '알고리즘 문제 해결 및 코딩테스트 준비', count: Math.floor(actualTotalApplicants * 0.2) },
+          { name: '오픈소스 기여 및 코드 리뷰', count: Math.floor(actualTotalApplicants * 0.15) },
+          { name: '소프트웨어 테스트 자동화', count: Math.floor(actualTotalApplicants * 0.15) },
+          { name: '팀 프로젝트 리더 경험', count: Math.floor(actualTotalApplicants * 0.12) },
+          { name: '기술 블로그 운영 및 지식 공유', count: Math.floor(actualTotalApplicants * 0.1) },
+          { name: 'IT 관련 자격증 취득', count: Math.floor(actualTotalApplicants * 0.1) },
+        ];
+      }
 
       positionBasedActivities.forEach(({ name, count }) => {
         if (Object.keys(combinedActivityCounts).length >= 10) return;
