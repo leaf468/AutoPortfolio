@@ -62,17 +62,30 @@ export const PositionStatsDetailPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 py-4">
           <button
             onClick={() => navigate(-1)}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-2 transition-colors"
+            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-3 transition-colors"
           >
             <ArrowLeftIcon className="w-5 h-5" />
             <span>돌아가기</span>
           </button>
-          <h1 className="text-3xl font-bold text-gray-900">
-            {position} 직무 합격자 상세 통계
-          </h1>
-          <p className="text-sm text-gray-600 mt-1">
-            실제 합격자 데이터를 기반으로 한 종합 분석 결과입니다
-          </p>
+          <div className="flex items-center gap-4">
+            <img
+              src="/Careeroad_logo.png"
+              alt="Careeroad"
+              className="h-16 w-auto object-contain"
+              style={{ maxHeight: '64px' }}
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+              }}
+            />
+            <div className="border-l-2 border-gray-300 pl-4 py-1">
+              <h1 className="text-2xl font-bold text-gray-900">
+                {position} 직무 합격자 상세 통계
+              </h1>
+              <p className="text-xs text-gray-600 mt-0.5">
+                실제 합격자 데이터를 기반으로 한 종합 분석 결과입니다
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
