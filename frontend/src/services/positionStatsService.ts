@@ -368,36 +368,58 @@ export async function getPositionStats(position: string): Promise<PositionStats 
       '재무/회계': ['재무', '회계', 'accounting'],
     };
 
-    // extractCoreActivity를 사용하여 핵심 활동만 추출
+    // DB에서 구체적인 프로젝트명/활동명만 추출
     const combinedActivityCounts: { [key: string]: number} = {};
 
+    // 구체적인 활동 패턴들 (prefix + keyword 형태)
+    const activityPatterns = [
+      { keyword: '프로젝트', pattern: /([\w가-힣]{2,15})\s*프로젝트/g },
+      { keyword: '개발', pattern: /([\w가-힣]{2,15})\s*개발/g },
+      { keyword: '인턴', pattern: /([\w가-힣]{2,15})\s*인턴/g },
+      { keyword: '공모전', pattern: /([\w가-힣]{2,15})\s*공모전/g },
+      { keyword: '대회', pattern: /([\w가-힣]{2,15})\s*대회/g },
+      { keyword: '해커톤', pattern: /([\w가-힣]{2,15})\s*해커톤/g },
+      { keyword: '연구', pattern: /([\w가-힣]{2,15})\s*연구/g },
+      { keyword: '스터디', pattern: /([\w가-힣]{2,15})\s*스터디/g },
+      { keyword: '동아리', pattern: /([\w가-힣]{2,15})\s*동아리/g },
+    ];
+
+    // 제외할 prefix (너무 일반적이거나 의미 없는 것들)
+    const skipPrefixes = [
+      '핵심', '주요', '중요', '다양한', '여러', '기타', '관련', '전반',
+      '의', '을', '를', '이', '가', '에서', '에게', '으로', '로',
+      '했던', '진행한', '수행한', '참여한', '만든', '개발한',
+      '첫', '두번째', '세번째', '마지막',
+      '학교', '대학', '회사', '기업',
+    ];
+
     activities?.forEach(activity => {
-      const activityContent = activity.content || activity.activity_type;
-      if (!activityContent || activityContent.length < 10) {
-        return;
-      }
+      const content = activity.content || '';
 
-      // 핵심 활동 추출
-      const coreActivity = extractCoreActivity(activityContent);
+      if (content.length < 20) return;
 
-      if (!coreActivity || coreActivity.length < 15) {
-        return;
-      }
+      // 각 패턴별로 매칭 시도
+      activityPatterns.forEach(({ keyword, pattern }) => {
+        const matches = Array.from(content.matchAll(pattern));
 
-      // | 로 분리된 여러 활동 처리
-      const activities = coreActivity.split(' | ').map(a => a.trim());
+        matches.forEach(match => {
+          let prefix = match[1].trim();
 
-      activities.forEach(act => {
-        if (act.length >= 15) {
-          // 너무 일반적인 표현 필터링
-          if (!act.includes('프로젝트 참여') &&
-              !act.includes('기반 개발') &&
-              !act.includes('시스템 개발 수행') &&
-              !act.includes('관련 개발 경험') &&
-              !act.includes('분야 개발 활동')) {
-            combinedActivityCounts[act] = (combinedActivityCounts[act] || 0) + 1;
+          // 제외 패턴 체크
+          if (skipPrefixes.some(skip => prefix.includes(skip))) {
+            return;
           }
-        }
+
+          // prefix가 너무 짧거나 숫자로만 이루어진 경우 제외
+          if (prefix.length < 2 || /^\d+$/.test(prefix)) {
+            return;
+          }
+
+          const activityName = `${prefix} ${keyword}`;
+
+          // 카운트 증가
+          combinedActivityCounts[activityName] = (combinedActivityCounts[activityName] || 0) + 1;
+        });
       });
     });
 
