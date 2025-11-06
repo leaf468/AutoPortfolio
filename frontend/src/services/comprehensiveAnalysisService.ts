@@ -306,7 +306,62 @@ function extractCoreActivity(content: string): string {
   return text;
 }
 
-function generateAdditionalExamples(activityType: string, keywords: string[], count: number): string[] {
+function generateExamplesFromDB(
+  activityType: string,
+  keywords: string[],
+  allActivities: Activity[],
+  count: number
+): string[] {
+  const baseType = activityType.split(' ').pop() || activityType;
+  const prefix = activityType.split(' ')[0] || '';
+
+  // DB에서 관련 활동 찾기
+  const relatedActivities: string[] = [];
+
+  for (const act of allActivities) {
+    if (relatedActivities.length >= count * 3) break; // 충분히 수집
+
+    const content = act.content;
+
+    // 현재 활동 타입과 관련된 내용인지 확인
+    const isRelated =
+      content.includes(baseType) ||
+      keywords.some(kw => content.includes(kw)) ||
+      (prefix && prefix.length > 1 && content.includes(prefix));
+
+    if (!isRelated) continue;
+
+    // 핵심 활동 추출
+    const extracted = extractCoreActivity(content);
+    if (!extracted || extracted.length < 15) continue;
+
+    // | 로 분리된 활동들
+    const activities = extracted.split(' | ').map(a => a.trim());
+
+    activities.forEach(activity => {
+      if (activity.length > 15 && !relatedActivities.includes(activity)) {
+        // 너무 일반적인 표현 필터링
+        if (!activity.includes('프로젝트 참여') &&
+            !activity.includes('기반 개발') &&
+            !activity.includes('시스템 개발 수행') &&
+            !activity.includes('관련 개발 경험') &&
+            !activity.includes('분야 개발 활동')) {
+          relatedActivities.push(activity);
+        }
+      }
+    });
+  }
+
+  // 충분한 예시가 있으면 반환
+  if (relatedActivities.length >= count) {
+    return relatedActivities.slice(0, count);
+  }
+
+  // 부족하면 구체적인 템플릿 추가
+  return [...relatedActivities, ...generateConcreteExamples(activityType, keywords, count - relatedActivities.length)];
+}
+
+function generateConcreteExamples(activityType: string, keywords: string[], count: number): string[] {
   const prefix = activityType.split(' ')[0] || '';
   const baseType = activityType.split(' ').pop() || activityType;
 
@@ -518,10 +573,10 @@ function analyzeActivityPatterns(activities: Activity[], totalApplicants: number
         .slice(0, 5)
         .map(([kw]) => kw);
 
-      // 예시가 부족하면 키워드 기반으로 추가 생성
+      // 예시가 부족하면 DB에서 유사 활동 찾아서 생성
       let examples = [...data.examples];
       if (examples.length < 4) {
-        const additionalExamples = generateAdditionalExamples(keyword, topKeywords, 5 - examples.length);
+        const additionalExamples = generateExamplesFromDB(keyword, topKeywords, activities, 5 - examples.length);
         examples = [...examples, ...additionalExamples];
       }
 
