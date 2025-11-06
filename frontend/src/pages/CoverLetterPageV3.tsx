@@ -20,6 +20,7 @@ import { PositionStatsPanel } from '../components/PositionStatsPanel';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import Footer from '../components/Footer';
+import LandingFooter from '../components/LandingFooter';
 
 const DEFAULT_QUESTIONS: Omit<CoverLetterQuestion, 'answer'>[] = [
   {
@@ -803,7 +804,7 @@ export const CoverLetterPageV3: React.FC = () => {
           }))}
         />
       </div>
-      <Footer />
+      {isGuestMode ? <LandingFooter /> : <Footer />}
     </div>
   );
 };
