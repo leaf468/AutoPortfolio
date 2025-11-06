@@ -21,6 +21,7 @@ export interface AnalysisResult {
  * 직무 유사도 계산
  */
 export function calculatePositionSimilarity(pos1: string, pos2: string): number {
+  if (!pos1 || !pos2) return 0;
   const p1 = pos1.toLowerCase();
   const p2 = pos2.toLowerCase();
 

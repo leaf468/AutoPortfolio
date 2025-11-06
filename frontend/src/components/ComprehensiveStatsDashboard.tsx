@@ -73,32 +73,48 @@ export const ComprehensiveStatsDashboard: React.FC<ComprehensiveStatsDashboardPr
       )}
 
       {/* 학력 통계 */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
+      <div>
         <div className="flex items-center mb-4">
           <AcademicCapIcon className="w-6 h-6 text-blue-600 mr-2" />
           <h3 className="text-lg font-semibold">학력 통계</h3>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* 평균 학점 */}
-          <div>
-            <p className="text-sm text-gray-600 mb-2">평균 학점</p>
-            <p className="text-3xl font-bold text-blue-600">
-              {stats.avgGpa.toFixed(2)}<span className="text-lg text-gray-500">/4.5</span>
-            </p>
-          </div>
+        {/* 평균 학점 */}
+        <div className="mb-6">
+          <p className="text-sm text-gray-600 mb-2">평균 학점</p>
+          <p className="text-3xl font-bold text-blue-600">
+            {stats.avgGpa.toFixed(2)}<span className="text-lg text-gray-500">/4.5</span>
+          </p>
+        </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* 학점 분포 */}
           {stats.gpaDistribution.length > 0 && (
             <div>
               <p className="text-sm text-gray-600 mb-3">학점 분포</p>
-              <ResponsiveContainer width="100%" height={150}>
+              <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={stats.gpaDistribution}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="range" tick={{ fontSize: 12 }} />
                   <YAxis tick={{ fontSize: 12 }} domain={[0, 100]} />
                   <Tooltip />
                   <Bar dataKey="percentage" fill="#3B82F6" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {/* 전공 분포 */}
+          {stats.topMajors.length > 0 && (
+            <div>
+              <p className="text-sm text-gray-600 mb-3">전공 분포</p>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={stats.topMajors.slice(0, 5).map(m => ({ name: m.name, count: m.count }))}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" tick={{ fontSize: 11 }} angle={-15} textAnchor="end" height={60} />
+                  <YAxis tick={{ fontSize: 12 }} />
+                  <Tooltip />
+                  <Bar dataKey="count" fill="#8B5CF6" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -121,28 +137,11 @@ export const ComprehensiveStatsDashboard: React.FC<ComprehensiveStatsDashboardPr
             </div>
           </div>
         )}
-
-        {/* 상위 전공 */}
-        {stats.topMajors.length > 0 && (
-          <div className="mt-4">
-            <p className="text-sm text-gray-600 mb-2">상위 전공</p>
-            <div className="flex flex-wrap gap-2">
-              {stats.topMajors.slice(0, 10).map((major, index) => (
-                <span
-                  key={index}
-                  className="px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-sm border border-purple-200"
-                >
-                  {major.name} ({major.count}명)
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
       {/* 어학 통계 */}
       {stats.toeicDistribution.length > 0 && (
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div>
           <div className="flex items-center mb-4">
             <LanguageIcon className="w-6 h-6 text-green-600 mr-2" />
             <h3 className="text-lg font-semibold">어학 통계</h3>
@@ -176,10 +175,10 @@ export const ComprehensiveStatsDashboard: React.FC<ComprehensiveStatsDashboardPr
 
       {/* 활동 패턴 */}
       {stats.commonActivities.length > 0 && (
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div>
           <div className="flex items-center mb-4">
             <UserGroupIcon className="w-6 h-6 text-purple-600 mr-2" />
-            <h3 className="text-lg font-semibold">주요 활동 패턴</h3>
+            <h3 className="text-lg font-semibold">상위 10개 항목</h3>
           </div>
 
           <div className="space-y-4">
@@ -231,50 +230,6 @@ export const ComprehensiveStatsDashboard: React.FC<ComprehensiveStatsDashboardPr
               더 보기 ({Math.min(10, stats.commonActivities.length - visibleCount)}개 더) ▼
             </button>
           )}
-        </div>
-      )}
-
-      {/* 자격증 통계 */}
-      {stats.topCertificates.length > 0 && (
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <div className="flex items-center mb-4">
-            <TrophyIcon className="w-6 h-6 text-yellow-600 mr-2" />
-            <h3 className="text-lg font-semibold">주요 자격증</h3>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <ResponsiveContainer width="100%" height={250}>
-                <PieChart>
-                  <Pie
-                    data={stats.topCertificates.slice(0, 6)}
-                    dataKey="percentage"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={80}
-                    label={(entry: any) => `${entry.name} (${entry.percentage.toFixed(0)}%)`}
-                  >
-                    {stats.topCertificates.slice(0, 6).map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-
-            <div className="flex flex-col justify-center">
-              {stats.topCertificates.slice(0, 10).map((cert, index) => (
-                <div key={index} className="flex items-center justify-between py-2 border-b border-gray-100">
-                  <span className="text-sm text-gray-700">{cert.name}</span>
-                  <span className="text-sm font-semibold text-gray-900">
-                    {cert.percentage.toFixed(1)}%
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       )}
     </div>

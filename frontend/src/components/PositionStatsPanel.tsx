@@ -143,48 +143,6 @@ export const PositionStatsPanel: React.FC<PositionStatsPanelProps> = ({ stats, i
           </div>
         </div>
       )}
-
-      {/* 주요 자격증 */}
-      {stats.topCertificates.length > 0 && (
-        <div className="bg-white rounded-lg p-4 border border-gray-200">
-          <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-            <TrophyIcon className="w-4 h-4 text-yellow-600" />
-            주요 자격증 Top 10
-          </h4>
-          <div className="space-y-2">
-            {stats.topCertificates.slice(0, 10).map((item, idx) => (
-              <div key={idx} className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <span className="text-xs font-medium text-gray-400 w-5">{idx + 1}</span>
-                  <span className="text-gray-700 truncate">{item.certificate}</span>
-                </div>
-                <span className="text-xs font-semibold text-yellow-600 ml-2">{item.percentage.toFixed(0)}%</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* 전공 분포 */}
-      {stats.majorDistribution.length > 0 && (
-        <div className="bg-white rounded-lg p-4 border border-gray-200">
-          <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-            <AcademicCapIcon className="w-4 h-4 text-indigo-600" />
-            전공 분포 Top 10
-          </h4>
-          <div className="space-y-2">
-            {stats.majorDistribution.slice(0, 10).map((item, idx) => (
-              <div key={idx} className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <span className="text-xs font-medium text-gray-400 w-5">{idx + 1}</span>
-                  <span className="text-gray-700 truncate">{item.major}</span>
-                </div>
-                <span className="text-xs font-semibold text-indigo-600 ml-2">{item.percentage.toFixed(0)}%</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 };
