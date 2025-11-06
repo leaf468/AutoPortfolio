@@ -232,43 +232,127 @@ function calculateToeicDistribution(coverLetters: CoverLetter[]): { range: strin
   });
 }
 
+function normalizeActivityExample(content: string): string {
+  // 문장을 명사형으로 변환
+  let normalized = content.trim();
+
+  // 불필요한 접속사, 어미 제거
+  normalized = normalized
+    .replace(/하며\s*/g, ', ')
+    .replace(/하고\s*/g, ', ')
+    .replace(/했습니다\.?$/g, '')
+    .replace(/했음\.?$/g, '')
+    .replace(/합니다\.?$/g, '')
+    .replace(/함\.?$/g, '')
+    .replace(/하는\s*역할을/g, '')
+    .replace(/을\s*수행/g, '수행')
+    .replace(/를\s*위한/g, '을 위한')
+    .replace(/에\s*참여/g, ' 참여');
+
+  // 너무 긴 문장은 첫 문장만 추출
+  const sentences = normalized.split(/[.!?]\s+/);
+  if (sentences.length > 0 && sentences[0].length > 15) {
+    normalized = sentences[0];
+  }
+
+  // 마지막에 '함', '수행' 등으로 끝나지 않으면 추가
+  if (!/[함행여성]$/.test(normalized) && normalized.length < 60) {
+    if (normalized.includes('프로젝트') || normalized.includes('연구') || normalized.includes('개발')) {
+      normalized += ' 수행';
+    }
+  }
+
+  return normalized.slice(0, 70);
+}
+
 function generateAdditionalExamples(activityType: string, keywords: string[], count: number): string[] {
+  const prefix = activityType.split(' ')[0] || '';
+  const baseType = activityType.split(' ').pop() || activityType;
+
   const exampleTemplates: { [key: string]: string[] } = {
     '프로젝트': [
-      '사용자 경험 개선을 위한 UI/UX 리뉴얼 프로젝트 진행',
-      '시스템 성능 최적화 및 리팩토링 프로젝트 수행',
-      '신규 기능 개발 및 테스트 자동화 구축',
+      `${prefix} 웹 애플리케이션 개발 및 배포`,
+      `${prefix} 모바일 앱 UI/UX 설계 및 구현`,
+      `${prefix} 시스템 성능 개선 (응답속도 30% 향상)`,
+      `${prefix} RESTful API 서버 개발 및 테스트`,
+      `${prefix} 데이터베이스 설계 및 최적화 작업`,
     ],
     '개발': [
-      '백엔드 API 서버 설계 및 구현',
-      '프론트엔드 컴포넌트 라이브러리 개발',
-      '데이터베이스 스키마 설계 및 최적화',
+      `${prefix} 프론트엔드 컴포넌트 라이브러리 구축`,
+      `${prefix} CI/CD 파이프라인 구축 및 자동화`,
+      `${prefix} 마이크로서비스 아키텍처 설계`,
+      `${prefix} 실시간 데이터 처리 시스템 구현`,
+      `${prefix} 레거시 코드 리팩토링 및 성능 개선`,
     ],
     '연구': [
-      '논문 작성 및 학술지 게재',
-      '실험 설계 및 데이터 분석 수행',
-      '연구 결과 학회 발표',
+      `${prefix} 분야 논문 작성 및 학술지 게재`,
+      `${prefix} 실험 설계 및 통계 분석 수행`,
+      `${prefix} 학회 발표 및 연구 결과 공유`,
+      `${prefix} 신기술 검증 및 프로토타입 제작`,
+      `${prefix} 특허 출원 및 지식재산권 확보`,
     ],
     '분석': [
-      '사용자 행동 패턴 분석 및 인사이트 도출',
-      '비즈니스 지표 모니터링 및 리포팅',
-      '경쟁사 분석 및 시장 조사',
+      `사용자 행동 ${prefix} 분석 및 인사이트 도출`,
+      `${prefix} 데이터 시각화 대시보드 구축`,
+      `A/B 테스트 설계 및 ${prefix} 결과 분석`,
+      `${prefix} 비즈니스 지표 모니터링 시스템 구축`,
+      `머신러닝 모델 활용한 ${prefix} 예측 분석`,
     ],
     '인턴': [
-      '실무 프로젝트 참여 및 코드 리뷰',
-      '팀 내 협업 도구 개선 제안',
-      '문서화 작업 및 가이드 작성',
+      `${prefix} 기업 실무 프로젝트 참여 (6개월)`,
+      `${prefix} 팀 협업 및 코드 리뷰 경험`,
+      `${prefix} 회사 기술 스택 학습 및 적용`,
+      `${prefix} 업무 자동화 스크립트 개발`,
+      `${prefix} 기술 문서 작성 및 지식 공유`,
+    ],
+    '공모전': [
+      `${prefix} 공모전 참가 및 우수상 수상`,
+      `${prefix} 아이디어 기획 및 프로토타입 제작`,
+      `${prefix} 팀 프로젝트 리딩 및 발표`,
+      `${prefix} 비즈니스 모델 설계 및 검증`,
+      `${prefix} 공모전 수상작 실제 서비스화`,
+    ],
+    '해커톤': [
+      `${prefix} 해커톤 참가 (24시간 개발)`,
+      `${prefix} 아이디어 구현 및 MVP 제작`,
+      `${prefix} 팀원들과 협업하여 서비스 완성`,
+      `${prefix} 해커톤 수상 및 멘토링 피드백`,
+      `${prefix} 신기술 적용 및 빠른 프로토타이핑`,
+    ],
+    '동아리': [
+      `${prefix} 동아리 활동 및 프로젝트 진행`,
+      `${prefix} 스터디 그룹 운영 및 지식 공유`,
+      `${prefix} 동아리 회장으로 팀 리딩`,
+      `${prefix} 세미나 개최 및 외부 교류`,
+      `${prefix} 동아리 연합 프로젝트 참여`,
     ],
   };
 
-  const baseType = activityType.split(' ').pop() || activityType;
-  const templates = exampleTemplates[baseType] || [
-    `${activityType} 관련 실무 경험`,
-    `${activityType}를 통한 문제 해결`,
-    `${activityType} 성과 달성`,
-  ];
+  let templates = exampleTemplates[baseType];
 
-  return templates.slice(0, count);
+  if (!templates) {
+    templates = [
+      `${activityType} 수행 및 목표 달성`,
+      `${activityType} 관련 역량 강화`,
+      `${activityType}를 통한 실무 경험 축적`,
+      `${activityType} 성과 창출 및 개선`,
+    ];
+  }
+
+  // 키워드 기반 맞춤형 예시 생성
+  const keywordBased: string[] = [];
+  if (keywords.includes('협업') || keywords.includes('팀')) {
+    keywordBased.push(`${activityType}에서 팀 협업 및 의사소통 경험`);
+  }
+  if (keywords.includes('리더') || keywords.includes('팀장')) {
+    keywordBased.push(`${activityType} 팀 리더로서 프로젝트 주도`);
+  }
+  if (keywords.includes('성과') || keywords.includes('개선')) {
+    keywordBased.push(`${activityType}를 통한 성과 지표 개선`);
+  }
+
+  const allTemplates = [...templates, ...keywordBased];
+  return allTemplates.slice(0, count);
 }
 
 function analyzeActivityPatterns(activities: Activity[], totalApplicants: number): ActivityPattern[] {
@@ -342,8 +426,12 @@ function analyzeActivityPatterns(activities: Activity[], totalApplicants: number
         existing.count++;
         existing.personCount.add(act.cover_letter_id);
 
-        if (existing.examples.length < 5 && act.content.length > 20) {
-          existing.examples.push(act.content.slice(0, 100));
+        // 중복 체크 및 명사화된 예시 추가
+        if (existing.examples.length < 10 && act.content.length > 20) {
+          const normalizedExample = normalizeActivityExample(act.content);
+          if (!existing.examples.includes(normalizedExample) && normalizedExample.length > 10) {
+            existing.examples.push(normalizedExample);
+          }
         }
 
         // 관련 키워드 추출
