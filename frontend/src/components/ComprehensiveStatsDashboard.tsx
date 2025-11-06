@@ -27,6 +27,8 @@ interface ComprehensiveStatsDashboardProps {
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 
 export const ComprehensiveStatsDashboard: React.FC<ComprehensiveStatsDashboardProps> = ({ stats }) => {
+  const [showAllActivities, setShowAllActivities] = React.useState(false);
+
   console.log('📈 ComprehensiveStatsDashboard - Rendering with:', {
     totalApplicants: stats.totalApplicants,
     commonActivitiesCount: stats.commonActivities.length,
@@ -178,8 +180,8 @@ export const ComprehensiveStatsDashboard: React.FC<ComprehensiveStatsDashboardPr
           </div>
 
           <div className="space-y-4">
-            {stats.commonActivities.slice(0, 10).map((activity, index) => (
-              <div key={index} className="border-l-4 border-purple-500 pl-4 py-2">
+            {(showAllActivities ? stats.commonActivities : stats.commonActivities.slice(0, 5)).map((activity, index) => (
+              <div key={index} className="border-l-4 border-purple-500 pl-4 py-3">
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="font-medium text-gray-900">{activity.activityType}</h4>
                   <span className="text-sm font-semibold text-purple-600">
@@ -187,6 +189,21 @@ export const ComprehensiveStatsDashboard: React.FC<ComprehensiveStatsDashboardPr
                   </span>
                 </div>
                 <p className="text-sm text-gray-600 mb-2">{activity.insight}</p>
+
+                {/* 구체적인 활동 예시 */}
+                {activity.examples.length > 0 && (
+                  <div className="mt-2 mb-3">
+                    <p className="text-xs text-gray-500 mb-1">예시:</p>
+                    <div className="space-y-1">
+                      {activity.examples.slice(0, 2).map((example, idx) => (
+                        <p key={idx} className="text-xs text-gray-600 pl-2 border-l-2 border-gray-200">
+                          {example.length > 80 ? example.slice(0, 80) + '...' : example}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {activity.commonKeywords.length > 0 && (
                   <div className="flex flex-wrap gap-1">
                     {activity.commonKeywords.map((keyword, idx) => (
@@ -202,6 +219,15 @@ export const ComprehensiveStatsDashboard: React.FC<ComprehensiveStatsDashboardPr
               </div>
             ))}
           </div>
+
+          {stats.commonActivities.length > 5 && (
+            <button
+              onClick={() => setShowAllActivities(!showAllActivities)}
+              className="mt-4 w-full py-2 text-sm text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-lg transition-colors"
+            >
+              {showAllActivities ? '접기 ▲' : `더 보기 (${stats.commonActivities.length - 5}개 더) ▼`}
+            </button>
+          )}
         </div>
       )}
 
