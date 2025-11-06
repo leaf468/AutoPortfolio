@@ -233,34 +233,62 @@ function calculateToeicDistribution(coverLetters: CoverLetter[]): { range: strin
 }
 
 function normalizeActivityExample(content: string): string {
-  // 문장을 명사형으로 변환
   let normalized = content.trim();
 
-  // 불필요한 접속사, 어미 제거
-  normalized = normalized
-    .replace(/하며\s*/g, ', ')
-    .replace(/하고\s*/g, ', ')
-    .replace(/했습니다\.?$/g, '')
-    .replace(/했음\.?$/g, '')
-    .replace(/합니다\.?$/g, '')
-    .replace(/함\.?$/g, '')
-    .replace(/하는\s*역할을/g, '')
-    .replace(/을\s*수행/g, '수행')
-    .replace(/를\s*위한/g, '을 위한')
-    .replace(/에\s*참여/g, ' 참여');
+  // 활동이 아닌 문장 필터링
+  const nonActivityPatterns = [
+    /^.{0,10}(회사|기업|대기업|스타트업).*?(유명|선두|최고|세계적)/,  // 회사 소개
+    /기여하고\s*싶|기여하겠|열망|바람|희망|생각|느낌/,  // 지원동기/다짐
+    /이며|입니다|있습니다$/,  // 설명문
+    /^.{0,15}(중요|가치|의미|필요)/,  // 추상적 설명
+    /저는|나는|제가/,  // 주관적 진술
+  ];
 
-  // 너무 긴 문장은 첫 문장만 추출
-  const sentences = normalized.split(/[.!?]\s+/);
-  if (sentences.length > 0 && sentences[0].length > 15) {
-    normalized = sentences[0];
+  if (nonActivityPatterns.some(pattern => pattern.test(normalized))) {
+    return '';  // 활동이 아니면 빈 문자열 반환
   }
 
-  // 마지막에 '함', '수행' 등으로 끝나지 않으면 추가
-  if (!/[함행여성]$/.test(normalized) && normalized.length < 60) {
-    if (normalized.includes('프로젝트') || normalized.includes('연구') || normalized.includes('개발')) {
+  // 첫 문장만 추출 (마침표 기준)
+  const sentences = normalized.split(/\.\s+/);
+  normalized = sentences[0];
+
+  // 불필요한 어미 제거 (순서 중요)
+  normalized = normalized
+    .replace(/했습니다$/g, '함')
+    .replace(/했음$/g, '함')
+    .replace(/합니다$/g, '함')
+    .replace(/하였습니다$/g, '함')
+    .replace(/하였음$/g, '함')
+    .replace(/수행했습니다$/g, '수행')
+    .replace(/수행했음$/g, '수행')
+    .replace(/참여했습니다$/g, '참여')
+    .replace(/참여했음$/g, '참여')
+    .replace(/진행했습니다$/g, '진행')
+    .replace(/진행했음$/g, '진행')
+    .replace(/개발했습니다$/g, '개발')
+    .replace(/개발했음$/g, '개발');
+
+  // 불필요한 접속사 제거
+  normalized = normalized
+    .replace(/하며/g, ',')
+    .replace(/하고/g, ',')
+    .replace(/,\s*,/g, ',')  // 이중 쉼표 제거
+    .replace(/,$/g, '');  // 마지막 쉼표 제거
+
+  // 실제 행동 동사로 끝나는지 확인
+  const actionVerbs = ['수행', '참여', '진행', '개발', '구현', '설계', '분석', '연구', '작성', '구축', '제작', '운영', '관리', '개선', '최적화', '함'];
+  const endsWithAction = actionVerbs.some(verb => normalized.endsWith(verb));
+
+  // 행동 동사로 끝나지 않으면 추가하지 않음 (이미 의미가 완성된 문장일 수 있음)
+  if (!endsWithAction && normalized.length > 20 && normalized.length < 60) {
+    // '을/를'로 끝나면 동사 추가
+    if (/[을를]$/.test(normalized)) {
       normalized += ' 수행';
     }
   }
+
+  // 쉼표 뒤 공백 정리
+  normalized = normalized.replace(/,\s*/g, ', ').replace(/\s+/g, ' ').trim();
 
   return normalized.slice(0, 70);
 }
@@ -429,7 +457,10 @@ function analyzeActivityPatterns(activities: Activity[], totalApplicants: number
         // 중복 체크 및 명사화된 예시 추가
         if (existing.examples.length < 10 && act.content.length > 20) {
           const normalizedExample = normalizeActivityExample(act.content);
-          if (!existing.examples.includes(normalizedExample) && normalizedExample.length > 10) {
+          // 빈 문자열이 아니고, 중복되지 않으며, 의미있는 길이인 경우만 추가
+          if (normalizedExample &&
+              normalizedExample.length > 10 &&
+              !existing.examples.includes(normalizedExample)) {
             existing.examples.push(normalizedExample);
           }
         }
