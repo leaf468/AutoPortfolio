@@ -272,7 +272,7 @@ function analyzeActivityPatterns(activities: Activity[], totalApplicants: number
     activityMap.set(act.activity_type, existing);
   });
 
-  return Array.from(activityMap.entries())
+  const results = Array.from(activityMap.entries())
     .filter(([type, data]) => data.personCount.size >= 1) // 최소 1명 이상으로 완화
     .map(([type, data]) => {
       // 실제 해당 활동을 한 사람 수 기준으로 백분율 계산
@@ -294,6 +294,16 @@ function analyzeActivityPatterns(activities: Activity[], totalApplicants: number
     })
     .sort((a, b) => b.percentage - a.percentage)
     .slice(0, 15);
+
+  console.log('🔍 Activity Patterns Analysis:', {
+    totalActivities: activities.length,
+    totalApplicants,
+    uniqueActivityTypes: activityMap.size,
+    finalResults: results.length,
+    results: results.slice(0, 5)
+  });
+
+  return results;
 }
 
 function extractKeywords(text: string): string[] {

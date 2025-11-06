@@ -27,6 +27,12 @@ interface ComprehensiveStatsDashboardProps {
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 
 export const ComprehensiveStatsDashboard: React.FC<ComprehensiveStatsDashboardProps> = ({ stats }) => {
+  console.log('📈 ComprehensiveStatsDashboard - Rendering with:', {
+    totalApplicants: stats.totalApplicants,
+    commonActivitiesCount: stats.commonActivities.length,
+    firstActivity: stats.commonActivities[0]
+  });
+
   if (stats.totalApplicants === 0) {
     return (
       <div className="text-center py-12">

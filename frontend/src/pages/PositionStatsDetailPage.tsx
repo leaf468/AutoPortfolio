@@ -22,6 +22,12 @@ export const PositionStatsDetailPage: React.FC = () => {
       setIsLoading(true);
       try {
         const data = await getComprehensiveStats(position);
+        console.log('📊 Detail Page - Loaded stats:', {
+          position,
+          totalApplicants: data.totalApplicants,
+          commonActivitiesCount: data.commonActivities.length,
+          commonActivities: data.commonActivities.slice(0, 3)
+        });
         setStats(data);
       } catch (error) {
         console.error('통계 로드 실패:', error);
