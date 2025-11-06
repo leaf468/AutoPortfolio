@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabaseClient';
+import { extractCoreActivity } from './comprehensiveAnalysisService';
 
 export interface PositionStats {
   position: string;
@@ -367,77 +368,37 @@ export async function getPositionStats(position: string): Promise<PositionStats 
       '재무/회계': ['재무', '회계', 'accounting'],
     };
 
-    // 활동 타입 + 주제 조합으로 카운트 (예: "데이터 분석 관련 프로젝트")
-    const combinedActivityCounts: { [key: string]: number } = {};
-    const invalidTypes = ['활동', '느낀점', '배운점', '기타', '내용', '설명', '경험'];
+    // extractCoreActivity를 사용하여 핵심 활동만 추출
+    const combinedActivityCounts: { [key: string]: number} = {};
 
     activities?.forEach(activity => {
-      // content에서 실제 활동명 추출 시도
-      let activityName = activity.content?.trim();
-
-      // content가 너무 길거나 짧으면 activity_type 사용
-      if (!activityName || activityName.length < 2 || activityName.length > 200) {
-        activityName = activity.activity_type;
-      }
-
-      // 유효하지 않은 타입 필터링
-      if (!activityName || invalidTypes.includes(activityName)) {
+      const activityContent = activity.content || activity.activity_type;
+      if (!activityContent || activityContent.length < 10) {
         return;
       }
 
-      // 전체 텍스트 소문자 변환
-      const fullText = activityName.toLowerCase();
+      // 핵심 활동 추출
+      const coreActivity = extractCoreActivity(activityContent);
 
-      // 1. 활동 타입 매칭
-      let matchedType: string | null = null;
-      for (const [type, keywords] of Object.entries(activityTypeKeywords)) {
-        if (keywords.some(keyword => fullText.includes(keyword.toLowerCase()))) {
-          matchedType = type;
-          break;
-        }
+      if (!coreActivity || coreActivity.length < 15) {
+        return;
       }
 
-      // 2. 주제 매칭
-      let matchedTopic: string | null = null;
-      for (const [topic, keywords] of Object.entries(topicKeywords)) {
-        if (keywords.some(keyword => fullText.includes(keyword.toLowerCase()))) {
-          matchedTopic = topic;
-          break;
-        }
-      }
+      // | 로 분리된 여러 활동 처리
+      const activities = coreActivity.split(' | ').map(a => a.trim());
 
-      // 3. 타입과 주제 조합
-      if (matchedTopic && matchedType) {
-        // 주제 + 타입 조합 (예: "데이터 분석 관련 프로젝트")
-        const combined = `${matchedTopic} 관련 ${matchedType}`;
-        combinedActivityCounts[combined] = (combinedActivityCounts[combined] || 0) + 1;
-      } else if (matchedTopic) {
-        // 주제만 매칭된 경우
-        const combined = `${matchedTopic} 관련 활동`;
-        combinedActivityCounts[combined] = (combinedActivityCounts[combined] || 0) + 1;
-      } else if (matchedType) {
-        // 타입만 매칭된 경우
-        combinedActivityCounts[matchedType] = (combinedActivityCounts[matchedType] || 0) + 1;
-      } else {
-        // 둘 다 매칭 안 된 경우, 기존 상세 카테고리 매핑 시도
-        const firstSentence = activityName.split(/[\n.]/)[0].trim().toLowerCase();
-        let categorized = false;
-        for (const [category, keywords] of Object.entries(activityCategories)) {
-          if (keywords.some(keyword => firstSentence.includes(keyword.toLowerCase()))) {
-            combinedActivityCounts[category] = (combinedActivityCounts[category] || 0) + 1;
-            categorized = true;
-            break;
+      activities.forEach(act => {
+        if (act.length >= 15) {
+          // 너무 일반적인 표현 필터링
+          if (!act.includes('프로젝트 참여') &&
+              !act.includes('기반 개발') &&
+              !act.includes('시스템 개발 수행') &&
+              !act.includes('관련 개발 경험') &&
+              !act.includes('분야 개발 활동')) {
+            combinedActivityCounts[act] = (combinedActivityCounts[act] || 0) + 1;
           }
         }
-
-        // 마지막으로 유의미한 활동명 직접 추가
-        if (!categorized && firstSentence.length >= 2 && firstSentence.length <= 30) {
-          const cleanName = activityName.split(/[\n.]/)[0].trim();
-          if (cleanName.length >= 2 && cleanName.length <= 30) {
-            combinedActivityCounts[cleanName] = (combinedActivityCounts[cleanName] || 0) + 1;
-          }
-        }
-      }
+      });
     });
 
     // 4. 통계 계산

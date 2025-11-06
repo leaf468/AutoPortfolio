@@ -232,7 +232,7 @@ function calculateToeicDistribution(coverLetters: CoverLetter[]): { range: strin
   });
 }
 
-function extractCoreActivity(content: string): string {
+export function extractCoreActivity(content: string): string {
   let text = content.trim();
 
   // 1. 활동이 아닌 내용 필터링 (학습, 깨달음, 능력향상, 회사설명 등)
