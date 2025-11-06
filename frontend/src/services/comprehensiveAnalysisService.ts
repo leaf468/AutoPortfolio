@@ -243,6 +243,10 @@ function analyzeActivityPatterns(activities: Activity[], totalApplicants: number
     keywords: Map<string, number>;
   }>();
 
+  // 디버깅: 처음 10개 활동 타입 확인
+  const sampleTypes = activities.slice(0, 10).map(a => a.activity_type);
+  console.log('🔍 Sample activity types from DB:', sampleTypes);
+
   activities.forEach((act) => {
     // 무의미한 타입 필터링
     if (invalidTypes.includes(act.activity_type) || !act.activity_type || act.activity_type.length < 2) {
