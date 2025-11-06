@@ -89,18 +89,20 @@ export const ComprehensiveStatsDashboard: React.FC<ComprehensiveStatsDashboardPr
           </div>
 
           {/* 학점 분포 */}
-          <div>
-            <p className="text-sm text-gray-600 mb-3">학점 분포</p>
-            <ResponsiveContainer width="100%" height={150}>
-              <BarChart data={stats.gpaDistribution}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="range" tick={{ fontSize: 12 }} />
-                <YAxis tick={{ fontSize: 12 }} />
-                <Tooltip />
-                <Bar dataKey="percentage" fill="#3B82F6" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          {stats.gpaDistribution.length > 0 && (
+            <div>
+              <p className="text-sm text-gray-600 mb-3">학점 분포</p>
+              <ResponsiveContainer width="100%" height={150}>
+                <BarChart data={stats.gpaDistribution}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="range" tick={{ fontSize: 12 }} />
+                  <YAxis tick={{ fontSize: 12 }} domain={[0, 100]} />
+                  <Tooltip />
+                  <Bar dataKey="percentage" fill="#3B82F6" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
 
         {/* 상위 대학 */}
@@ -139,7 +141,7 @@ export const ComprehensiveStatsDashboard: React.FC<ComprehensiveStatsDashboardPr
       </div>
 
       {/* 어학 통계 */}
-      {stats.avgToeic > 0 && (
+      {stats.toeicDistribution.length > 0 && (
         <div className="bg-white rounded-lg border border-gray-200 p-6">
           <div className="flex items-center mb-4">
             <LanguageIcon className="w-6 h-6 text-green-600 mr-2" />
@@ -151,7 +153,7 @@ export const ComprehensiveStatsDashboard: React.FC<ComprehensiveStatsDashboardPr
             <div>
               <p className="text-sm text-gray-600 mb-2">평균 TOEIC 점수</p>
               <p className="text-3xl font-bold text-green-600">
-                {Math.round(stats.avgToeic)}<span className="text-lg text-gray-500">점</span>
+                {stats.avgToeic > 0 ? Math.round(stats.avgToeic) : '-'}<span className="text-lg text-gray-500">{stats.avgToeic > 0 ? '점' : ''}</span>
               </p>
             </div>
 
@@ -162,7 +164,7 @@ export const ComprehensiveStatsDashboard: React.FC<ComprehensiveStatsDashboardPr
                 <BarChart data={stats.toeicDistribution}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="range" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} />
+                  <YAxis tick={{ fontSize: 12 }} domain={[0, 100]} />
                   <Tooltip />
                   <Bar dataKey="percentage" fill="#10B981" />
                 </BarChart>

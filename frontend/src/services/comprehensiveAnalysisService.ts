@@ -1,6 +1,15 @@
 import { supabase } from '../lib/supabaseClient';
 import { calculatePositionSimilarity } from './flexibleAnalysisService';
-import { CoverLetter, Activity } from './coverLetterAnalysisService';
+import { IntegratedCoverLetter, parseGpa, parseToeic, getAllActivities } from './integratedCoverLetterTypes';
+
+// Activity 타입 정의 (integrated_cover_letters용)
+interface Activity {
+  id: number;
+  cover_letter_id: number;
+  activity_type: string;
+  content: string;
+  created_at: string;
+}
 
 export interface ComprehensiveStats {
   position: string;
@@ -40,32 +49,50 @@ export interface ActivityPattern {
  */
 export async function getComprehensiveStats(position: string): Promise<ComprehensiveStats> {
   try {
-    // 전체 데이터 가져오기
+    // integrated_cover_letters에서 전체 데이터 가져오기
     const { data: allCoverLetters, error } = await supabase
-      .from('cover_letters')
+      .from('integrated_cover_letters')
       .select('*')
       .limit(1000);
 
+    console.log('🔍 DB 조회 결과:', {
+      error,
+      dataCount: allCoverLetters?.length,
+      firstItem: allCoverLetters?.[0]
+    });
+
     if (error || !allCoverLetters) {
+      console.error('데이터 조회 실패:', error);
       return getEmptyStats(position);
     }
 
     // 유사 직무 필터링
-    const relevantCoverLetters = allCoverLetters.filter((cl) => {
+    const relevantCoverLetters = (allCoverLetters as IntegratedCoverLetter[]).filter((cl) => {
+      if (!cl.job_position) return false;
       const similarity = calculatePositionSimilarity(cl.job_position, position);
       return similarity >= 50; // 50% 이상 유사도
+    });
+
+    console.log('🔍 필터링 후:', {
+      totalCount: allCoverLetters.length,
+      relevantCount: relevantCoverLetters.length,
+      position
     });
 
     if (relevantCoverLetters.length === 0) {
       return getEmptyStats(position);
     }
 
-    // 활동 데이터 가져오기
-    const coverLetterIds = relevantCoverLetters.map((cl) => cl.id);
-    const { data: activities } = await supabase
-      .from('activities')
-      .select('*')
-      .in('cover_letter_id', coverLetterIds);
+    // activities는 이제 각 자소서 내부에 JSON으로 있음
+    const allActivities = relevantCoverLetters.flatMap(cl =>
+      getAllActivities(cl.activities).map(content => ({
+        id: cl.id,
+        cover_letter_id: cl.id,
+        activity_type: 'integrated',
+        content,
+        created_at: ''
+      }))
+    );
 
     const stats: ComprehensiveStats = {
       position,
@@ -76,9 +103,9 @@ export async function getComprehensiveStats(position: string): Promise<Comprehen
       topMajors: extractTopMajors(relevantCoverLetters),
       avgToeic: calculateAvgToeic(relevantCoverLetters),
       toeicDistribution: calculateToeicDistribution(relevantCoverLetters),
-      commonActivities: analyzeActivityPatterns(activities || [], relevantCoverLetters.length),
+      commonActivities: analyzeActivityPatterns(allActivities, relevantCoverLetters.length),
       topCertificates: extractTopCertificates(relevantCoverLetters),
-      insights: generateInsights(relevantCoverLetters, activities || []),
+      insights: generateInsights(relevantCoverLetters, allActivities),
     };
 
     return stats;
@@ -104,21 +131,36 @@ function getEmptyStats(position: string): ComprehensiveStats {
   };
 }
 
-function calculateAvgGpa(coverLetters: CoverLetter[]): number {
+function calculateAvgGpa(coverLetters: IntegratedCoverLetter[]): number {
   const gpas: number[] = [];
-  coverLetters.forEach((cl) => {
-    const gpaMatch = cl.specific_info.match(/(\d+\.?\d*)\s*\/\s*(\d+\.?\d*)/);
-    if (gpaMatch) {
-      const gpa = parseFloat(gpaMatch[1]);
-      const maxGpa = parseFloat(gpaMatch[2]);
-      const normalized = (gpa / maxGpa) * 4.5;
-      gpas.push(normalized);
+  coverLetters.forEach((cl, index) => {
+    const gpaString = cl.user_spec?.gpa;
+    const normalizedGpa = parseGpa(gpaString);
+
+    if (index < 5) {
+      console.log(`📊 GPA 샘플 ${index + 1}:`, {
+        원본: gpaString,
+        파싱결과: normalizedGpa,
+        user_spec: cl.user_spec
+      });
+    }
+
+    if (normalizedGpa !== null) {
+      gpas.push(normalizedGpa);
     }
   });
+
+  console.log(`✅ GPA 통계:`, {
+    전체인원: coverLetters.length,
+    유효데이터: gpas.length,
+    평균: gpas.length > 0 ? gpas.reduce((a, b) => a + b, 0) / gpas.length : 0,
+    샘플: gpas.slice(0, 5)
+  });
+
   return gpas.length > 0 ? gpas.reduce((a, b) => a + b, 0) / gpas.length : 0;
 }
 
-function calculateGpaDistribution(coverLetters: CoverLetter[]): { range: string; percentage: number }[] {
+function calculateGpaDistribution(coverLetters: IntegratedCoverLetter[]): { range: string; percentage: number }[] {
   const ranges = [
     { range: '4.0 이상', min: 4.0, max: 5.0 },
     { range: '3.5 ~ 3.99', min: 3.5, max: 3.99 },
@@ -128,25 +170,24 @@ function calculateGpaDistribution(coverLetters: CoverLetter[]): { range: string;
 
   const gpas: number[] = [];
   coverLetters.forEach((cl) => {
-    const gpaMatch = cl.specific_info.match(/(\d+\.?\d*)\s*\/\s*(\d+\.?\d*)/);
-    if (gpaMatch) {
-      const gpa = parseFloat(gpaMatch[1]);
-      const maxGpa = parseFloat(gpaMatch[2]);
-      const normalized = (gpa / maxGpa) * 4.5;
-      gpas.push(normalized);
+    const normalizedGpa = parseGpa(cl.user_spec?.gpa);
+    if (normalizedGpa !== null) {
+      gpas.push(normalizedGpa);
     }
   });
+
+  if (gpas.length === 0) return [];
 
   return ranges.map((range) => {
     const count = gpas.filter((gpa) => gpa >= range.min && gpa <= range.max).length;
     return {
       range: range.range,
-      percentage: gpas.length > 0 ? (count / gpas.length) * 100 : 0,
+      percentage: Math.min((count / gpas.length) * 100, 100),
     };
   });
 }
 
-function extractTopUniversities(coverLetters: CoverLetter[]): { name: string; count: number }[] {
+function extractTopUniversities(coverLetters: IntegratedCoverLetter[]): { name: string; count: number }[] {
   const univMap = new Map<string, number>();
   const univKeywords = [
     'SKY', '서울대', '연세대', '고려대',
@@ -156,9 +197,9 @@ function extractTopUniversities(coverLetters: CoverLetter[]): { name: string; co
   ];
 
   coverLetters.forEach((cl) => {
-    const info = cl.specific_info;
+    const school = cl.user_spec?.school || '';
     univKeywords.forEach((keyword) => {
-      if (info.includes(keyword)) {
+      if (school.includes(keyword)) {
         univMap.set(keyword, (univMap.get(keyword) || 0) + 1);
       }
     });
@@ -170,19 +211,19 @@ function extractTopUniversities(coverLetters: CoverLetter[]): { name: string; co
     .slice(0, 10);
 }
 
-function extractTopMajors(coverLetters: CoverLetter[]): { name: string; count: number }[] {
+function extractTopMajors(coverLetters: IntegratedCoverLetter[]): { name: string; count: number }[] {
   const majorMap = new Map<string, number>();
   const majorKeywords = [
     '컴퓨터공학', '소프트웨어', '전자공학', '정보통신',
-    '경영학', '경제학', '행정학', '국제학',
+    '경영학', '경영', '경제학', '행정학', '국제학',
     '기계공학', '화학공학', '산업공학',
     '수학', '통계학', '물리학',
   ];
 
   coverLetters.forEach((cl) => {
-    const info = cl.specific_info;
+    const major = cl.user_spec?.major || '';
     majorKeywords.forEach((keyword) => {
-      if (info.includes(keyword)) {
+      if (major.includes(keyword)) {
         majorMap.set(keyword, (majorMap.get(keyword) || 0) + 1);
       }
     });
@@ -194,40 +235,58 @@ function extractTopMajors(coverLetters: CoverLetter[]): { name: string; count: n
     .slice(0, 10);
 }
 
-function calculateAvgToeic(coverLetters: CoverLetter[]): number {
+function calculateAvgToeic(coverLetters: IntegratedCoverLetter[]): number {
   const toeics: number[] = [];
-  coverLetters.forEach((cl) => {
-    const toeicMatch =
-      cl.specific_info.match(/토익\s*(\d+)/i) || cl.specific_info.match(/toeic\s*(\d+)/i);
-    if (toeicMatch) {
-      toeics.push(parseInt(toeicMatch[1]));
+  coverLetters.forEach((cl, index) => {
+    const toeicString = cl.user_spec?.toeic;
+    const score = parseToeic(toeicString);
+
+    if (index < 5) {
+      console.log(`📊 TOEIC 샘플 ${index + 1}:`, {
+        원본: toeicString,
+        파싱결과: score,
+        user_spec: cl.user_spec
+      });
+    }
+
+    if (score !== null) {
+      toeics.push(score);
     }
   });
+
+  console.log(`✅ TOEIC 통계:`, {
+    전체인원: coverLetters.length,
+    유효데이터: toeics.length,
+    평균: toeics.length > 0 ? toeics.reduce((a, b) => a + b, 0) / toeics.length : 0,
+    샘플: toeics.slice(0, 5)
+  });
+
   return toeics.length > 0 ? toeics.reduce((a, b) => a + b, 0) / toeics.length : 0;
 }
 
-function calculateToeicDistribution(coverLetters: CoverLetter[]): { range: string; percentage: number }[] {
+function calculateToeicDistribution(coverLetters: IntegratedCoverLetter[]): { range: string; percentage: number }[] {
   const ranges = [
     { range: '900점 이상', min: 900, max: 1000 },
     { range: '800 ~ 899점', min: 800, max: 899 },
     { range: '700 ~ 799점', min: 700, max: 799 },
-    { range: '700점 미만', min: 0, max: 699 },
+    { range: '700점 미만', min: 300, max: 699 },
   ];
 
   const toeics: number[] = [];
   coverLetters.forEach((cl) => {
-    const toeicMatch =
-      cl.specific_info.match(/토익\s*(\d+)/i) || cl.specific_info.match(/toeic\s*(\d+)/i);
-    if (toeicMatch) {
-      toeics.push(parseInt(toeicMatch[1]));
+    const score = parseToeic(cl.user_spec?.toeic);
+    if (score !== null && score <= 990) {
+      toeics.push(score);
     }
   });
+
+  if (toeics.length === 0) return [];
 
   return ranges.map((range) => {
     const count = toeics.filter((score) => score >= range.min && score <= range.max).length;
     return {
       range: range.range,
-      percentage: toeics.length > 0 ? (count / toeics.length) * 100 : 0,
+      percentage: Math.min((count / toeics.length) * 100, 100),
     };
   });
 }
@@ -655,33 +714,31 @@ function generateActivityInsight(type: string, percentage: number, keywords: str
   }
 }
 
-function extractTopCertificates(coverLetters: CoverLetter[]): { name: string; percentage: number }[] {
+function extractTopCertificates(coverLetters: IntegratedCoverLetter[]): { name: string; percentage: number }[] {
   const certMap = new Map<string, number>();
 
   coverLetters.forEach((cl) => {
-    const certKeywords = [
-      '정보처리기사', '컴활', 'SQLD', 'SQLP',
-      'AWS', '토익스피킹', 'OPIc', 'HSK',
-      '한국사', '운전면허',
-    ];
-
-    certKeywords.forEach((cert) => {
-      if (cl.specific_info.includes(cert) || cl.full_text.includes(cert)) {
-        certMap.set(cert, (certMap.get(cert) || 0) + 1);
-      }
-    });
+    const certs = cl.user_spec?.certifications;
+    if (certs) {
+      const certList = certs.split(/[,、]/).map(c => c.trim());
+      certList.forEach(cert => {
+        if (cert && cert.length > 1 && cert.length < 50) {
+          certMap.set(cert, (certMap.get(cert) || 0) + 1);
+        }
+      });
+    }
   });
 
   return Array.from(certMap.entries())
     .map(([name, count]) => ({
       name,
-      percentage: (count / coverLetters.length) * 100,
+      percentage: Math.min((count / coverLetters.length) * 100, 100),
     }))
     .sort((a, b) => b.percentage - a.percentage)
     .slice(0, 10);
 }
 
-function generateInsights(coverLetters: CoverLetter[], activities: Activity[]): string[] {
+function generateInsights(coverLetters: IntegratedCoverLetter[], activities: {id: number, cover_letter_id: number, activity_type: string, content: string, created_at: string}[]): string[] {
   const insights: string[] = [];
   const total = coverLetters.length;
 

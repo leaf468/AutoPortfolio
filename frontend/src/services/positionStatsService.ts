@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabaseClient';
 import { extractCoreActivity } from './comprehensiveAnalysisService';
+import { IntegratedCoverLetter, parseGpa, parseToeic, getAllActivities } from './integratedCoverLetterTypes';
 
 // 유사 직무 매핑
 function getSimilarPositions(position: string): string[] {
@@ -109,17 +110,21 @@ export async function getPositionStats(position: string): Promise<PositionStats 
   if (!position.trim()) return null;
 
   try {
-    // 1. 해당 직무의 모든 자소서 가져오기
+    // 1. integrated_cover_letters에서 해당 직무의 모든 자소서 가져오기
     const { data: coverLetters, error: clError } = await supabase
-      .from('cover_letters')
+      .from('integrated_cover_letters')
       .select('*')
-      .ilike('job_position', `%${position}%`);
+      .limit(1000);
 
-    if (clError) {
+    if (clError || !coverLetters) {
       return null;
     }
 
-    let finalCoverLetters = coverLetters || [];
+    // job_position으로 필터링
+    let finalCoverLetters = (coverLetters as IntegratedCoverLetter[]).filter(cl =>
+      cl.job_position && cl.job_position.toLowerCase().includes(position.toLowerCase())
+    );
+
     const totalApplicants = finalCoverLetters.length;
 
     // 데이터가 부족하면 유사 직무 데이터 추가
@@ -129,14 +134,14 @@ export async function getPositionStats(position: string): Promise<PositionStats 
       for (const similarPos of similarPositions) {
         if (finalCoverLetters.length >= 10) break;
 
-        const { data: similarData } = await supabase
-          .from('cover_letters')
-          .select('*')
-          .ilike('job_position', `%${similarPos}%`)
-          .limit(10 - finalCoverLetters.length);
+        const additionalData = (coverLetters as IntegratedCoverLetter[]).filter(cl =>
+          cl.job_position &&
+          cl.job_position.toLowerCase().includes(similarPos.toLowerCase()) &&
+          !finalCoverLetters.includes(cl)
+        ).slice(0, 10 - finalCoverLetters.length);
 
-        if (similarData && similarData.length > 0) {
-          finalCoverLetters = [...finalCoverLetters, ...similarData];
+        if (additionalData.length > 0) {
+          finalCoverLetters = [...finalCoverLetters, ...additionalData];
         }
       }
     }
@@ -147,7 +152,7 @@ export async function getPositionStats(position: string): Promise<PositionStats 
 
     const actualTotalApplicants = finalCoverLetters.length;
 
-    // 2. specific_info 파싱하여 통계 계산
+    // 2. user_spec에서 통계 계산
     const gpas: number[] = [];
     const toeics: number[] = [];
     const majors: { [key: string]: number } = {};
@@ -155,41 +160,30 @@ export async function getPositionStats(position: string): Promise<PositionStats 
     const certificates: { [key: string]: number } = {};
 
     finalCoverLetters.forEach((cl) => {
-      const info = cl.specific_info || '';
+      // 학점
+      const gpa = parseGpa(cl.user_spec?.gpa);
+      if (gpa !== null) gpas.push(gpa);
 
-      // 학점 추출
-      const gpaMatch = info.match(/학점[:\s]*([0-9.]+)/);
-      if (gpaMatch) {
-        const gpa = parseFloat(gpaMatch[1]);
-        if (gpa > 0 && gpa <= 4.5) gpas.push(gpa);
-      }
+      // TOEIC
+      const toeic = parseToeic(cl.user_spec?.toeic);
+      if (toeic !== null) toeics.push(toeic);
 
-      // TOEIC 추출
-      const toeicMatch = info.match(/토익[:\s]*([0-9]+)|TOEIC[:\s]*([0-9]+)/i);
-      if (toeicMatch) {
-        const toeic = parseInt(toeicMatch[1] || toeicMatch[2]);
-        if (toeic >= 300 && toeic <= 990) toeics.push(toeic);
-      }
-
-      // 전공 추출
-      const majorMatch = info.match(/전공[:\s]*([가-힣a-zA-Z\s]+)/);
-      if (majorMatch) {
-        const major = majorMatch[1].trim().split(/[,\s]/)[0];
+      // 전공
+      const major = cl.user_spec?.major?.trim();
+      if (major && major.length > 0) {
         majors[major] = (majors[major] || 0) + 1;
       }
 
-      // 학년 추출
-      const yearMatch = info.match(/([1-4])학년|졸업/);
-      if (yearMatch) {
-        const year = yearMatch[0];
-        years[year] = (years[year] || 0) + 1;
+      // 학년 (year 필드 확인)
+      if (cl.year) {
+        years[cl.year] = (years[cl.year] || 0) + 1;
       }
 
-      // 자격증 추출
-      const certMatches = info.match(/자격증[:\s]*([^.\n]+)/);
-      if (certMatches) {
-        const certs = certMatches[1].split(/[,、]/).map(c => c.trim());
-        certs.forEach(cert => {
+      // 자격증
+      const certs = cl.user_spec?.certifications;
+      if (certs) {
+        const certList = certs.split(/[,、]/).map(c => c.trim());
+        certList.forEach(cert => {
           if (cert && cert.length > 1 && cert.length < 30) {
             certificates[cert] = (certificates[cert] || 0) + 1;
           }
@@ -197,12 +191,13 @@ export async function getPositionStats(position: string): Promise<PositionStats 
       }
     });
 
-    // 3. 활동 데이터 가져오기 및 매우 구체적으로 카테고리화
-    const coverLetterIds = finalCoverLetters.map(cl => cl.id);
-    const { data: activities } = await supabase
-      .from('activities')
-      .select('activity_type, content')
-      .in('cover_letter_id', coverLetterIds);
+    // 3. activities는 이제 각 자소서 내부에 JSON으로 있음
+    const activities = finalCoverLetters.flatMap(cl =>
+      getAllActivities(cl.activities).map(content => ({
+        activity_type: 'integrated',
+        content
+      }))
+    );
 
     // 활동 타입별 카테고리 (프로젝트, 논문, 대회 등)
     const activityTypeKeywords: { [key: string]: string[] } = {
@@ -449,335 +444,30 @@ export async function getPositionStats(position: string): Promise<PositionStats 
       '재무/회계': ['재무', '회계', 'accounting'],
     };
 
-    // DB 기반 활동 생성 (패턴 매칭 대신 키워드 분석으로 생성)
+    // DB에서 실제 활동 데이터 추출 및 카테고리화
     const combinedActivityCounts: { [key: string]: number} = {};
 
-    // 기술 키워드 빈도수 카운트
-    const techKeywordCounts: { [key: string]: number } = {};
-
-    const techKeywords = [
-      // 개발
-      'AI', '머신러닝', '딥러닝', '인공지능', 'NLP', '자연어처리',
-      '웹', '앱', '모바일', '백엔드', '프론트엔드', '풀스택',
-      '데이터', '빅데이터', '분석', 'SQL', 'Python', 'Java', 'C++',
-      'React', 'Vue', 'Angular', 'Node', 'Spring', 'Django', 'Flask',
-      'AWS', '클라우드', 'DevOps', 'Docker', 'Kubernetes',
-      'IoT', '임베디드', '하드웨어', '펌웨어',
-      '블록체인', 'NFT', 'DApp',
-      '게임', 'Unity', 'Unreal', '서버',
-
-      // 디자인/기획
-      'UX', 'UI', '디자인', 'Figma', 'Sketch', '프로토타입',
-      '기획', '프로덕트', 'PM', 'PO', '서비스', '제품',
-
-      // 마케팅/영업
-      '마케팅', 'SNS', '브랜딩', '광고', '캠페인', '퍼포먼스',
-      '영업', 'B2B', 'B2C', 'CRM', '제안서',
-
-      // HR/재무
-      '채용', '인사', '조직문화', '온보딩',
-      '재무', '회계', '예산', '투자', '세무',
-
-      // CS/운영
-      'CS', '고객', '상담', 'VOC', 'CX',
-
-      // 기타
-      '창업', '스타트업', '비즈니스',
-      '인턴', '인턴십',
-      '공모전', '대회', '해커톤',
-      '동아리', '스터디', '멘토링',
-      '논문', '연구', '실험', '특허',
-    ];
-
+    // 실제 활동 내용을 카테고리별로 분류
     activities?.forEach(activity => {
       const content = activity.content || '';
-      if (content.length < 20) return;
+      if (content.length < 10) return; // 너무 짧은 내용은 제외
 
-      techKeywords.forEach(tech => {
-        if (content.toLowerCase().includes(tech.toLowerCase())) {
-          techKeywordCounts[tech] = (techKeywordCounts[tech] || 0) + 1;
-        }
-      });
-    });
+      const lowerContent = content.toLowerCase();
 
-    // DB 키워드 분석 기반으로 활동 생성 (패턴 추출 건너뛰고 바로 생성)
-    if (true) {
-      // 기술 스택과 활동 타입 조합을 분석해서 구체적인 활동 생성
-      const activityGenerationMap: { [key: string]: string[] } = {
-        'React': ['React 웹 프로젝트', 'React 프론트엔드 개발', 'React 컴포넌트 설계'],
-        'Vue': ['Vue.js 웹 프로젝트', 'Vue 프론트엔드 개발'],
-        'Angular': ['Angular 웹 애플리케이션', 'Angular 프론트엔드 개발'],
-        '웹': ['반응형 웹사이트 제작', '웹 서비스 개발 프로젝트', '웹 애플리케이션 구현'],
-        '프론트엔드': ['프론트엔드 UI/UX 개선', '프론트엔드 성능 최적화'],
-        'Node': ['Node.js 백엔드 개발', 'Express API 서버 구축'],
-        'Spring': ['Spring Boot API 개발', 'Spring MVC 웹 개발'],
-        'Django': ['Django REST API 개발', 'Django 백엔드 구현'],
-        '백엔드': ['RESTful API 설계 및 개발', '백엔드 서버 아키텍처 설계', '데이터베이스 설계 및 구현'],
-        '풀스택': ['풀스택 웹 서비스 개발', '프론트엔드-백엔드 통합 프로젝트'],
-        'Python': ['Python 자동화 스크립트 개발', 'Python 데이터 처리 파이프라인'],
-        '데이터': ['데이터 분석 프로젝트', '데이터 시각화 대시보드 제작', '빅데이터 처리 및 분석'],
-        'SQL': ['SQL 데이터베이스 최적화', 'SQL 쿼리 성능 개선'],
-        '분석': ['통계 분석 및 인사이트 도출', '비즈니스 데이터 분석'],
-        'AI': ['AI 챗봇 개발', '인공지능 모델 학습 및 배포', 'AI 기반 추천 시스템 구현'],
-        '머신러닝': ['머신러닝 예측 모델 개발', 'ML 파이프라인 구축'],
-        '딥러닝': ['딥러닝 이미지 분류 모델', 'CNN 기반 객체 인식 시스템'],
-        '인공지능': ['AI 서비스 기획 및 개발', '인공지능 알고리즘 최적화'],
-        '앱': ['모바일 앱 UI/UX 개발', '크로스플랫폼 앱 개발'],
-        '모바일': ['안드로이드 앱 개발', 'iOS 앱 개발', '모바일 서비스 기획 및 출시'],
-        'AWS': ['AWS 클라우드 인프라 구축', 'AWS 서버리스 아키텍처 설계'],
-        '클라우드': ['클라우드 마이그레이션 프로젝트', '클라우드 네이티브 애플리케이션 개발'],
-        'DevOps': ['CI/CD 파이프라인 구축', 'Docker 컨테이너화 및 배포'],
-        '게임': ['Unity 2D/3D 게임 개발', 'Unreal Engine 게임 제작', '멀티플레이어 게임 서버 개발'],
-        'Unity': ['Unity 모바일 게임 개발', 'Unity VR 콘텐츠 제작'],
-        'Unreal': ['Unreal Engine 3D 게임 프로젝트'],
-        '블록체인': ['블록체인 DApp 개발', '스마트 컨트랙트 구현'],
-        'NFT': ['NFT 마켓플레이스 구축', 'NFT 민팅 시스템 개발'],
-        'IoT': ['IoT 센서 데이터 수집 시스템', 'IoT 디바이스 제어 앱 개발'],
-        '임베디드': ['임베디드 펌웨어 개발', '아두이노 기반 프로젝트'],
-        '하드웨어': ['하드웨어-소프트웨어 통합 프로젝트'],
-        'UX': ['사용자 경험 개선 프로젝트', 'UX 리서치 및 프로토타이핑'],
-        'UI': ['UI 디자인 시스템 구축', '모바일 UI 개선'],
-        '디자인': ['그래픽 디자인 및 브랜딩', 'UI/UX 디자인 프로젝트'],
-        '마케팅': ['디지털 마케팅 캠페인 기획 및 실행', 'SNS 마케팅 전략 수립', '브랜드 마케팅 프로젝트'],
-        'SNS': ['소셜미디어 콘텐츠 기획 및 제작', 'SNS 채널 운영 및 성장', '인플루언서 마케팅 협업'],
-        '브랜딩': ['브랜드 아이덴티티 구축', '브랜딩 전략 수립', '브랜드 경험 디자인'],
-        '광고': ['온라인 광고 캠페인 기획', '광고 크리에이티브 제작', '퍼포먼스 마케팅 운영'],
-        '캠페인': ['통합 마케팅 캠페인 기획', '바이럴 캠페인 실행', '고객 참여 캠페인 운영'],
-        '기획': ['신규 서비스 기획 및 런칭', '사용자 리서치 및 기획', '제품 로드맵 수립'],
-        '서비스': ['서비스 개선 프로젝트', '고객 경험 최적화', '서비스 전략 수립'],
-        '제품': ['제품 기획 및 출시', '제품 시장 조사 및 분석', 'MVP 개발 및 검증'],
-        '비즈니스': ['비즈니스 모델 개발', '시장 분석 및 전략 수립', '파트너십 구축'],
-        '창업': ['스타트업 창업 및 운영', '비즈니스 모델 개발 및 검증', '초기 투자 유치'],
-        '스타트업': ['초기 스타트업 제품 개발', '스타트업 성장 전략 수립', '린 스타트업 방법론 적용'],
+      // 가장 구체적인 카테고리부터 매칭 (우선순위 높음)
+      let matched = false;
+      for (const [category, keywords] of Object.entries(activityCategories)) {
+        if (matched) break;
 
-        // 추가 키워드
-        'Java': ['Java 백엔드 개발', 'Spring Boot 프로젝트', 'Java 웹 애플리케이션'],
-        'C++': ['C++ 시스템 프로그래밍', 'C++ 알고리즘 구현', 'C++ 성능 최적화'],
-        'Docker': ['Docker 컨테이너화', 'Docker Compose 환경 구축'],
-        'Kubernetes': ['Kubernetes 클러스터 관리', 'k8s 배포 자동화'],
-        'Figma': ['Figma UI 디자인', 'Figma 프로토타입 제작'],
-        'Sketch': ['Sketch 인터페이스 디자인', 'Sketch 디자인 시스템'],
-        '프로토타입': ['인터랙티브 프로토타입 제작', '사용자 테스트용 프로토타입'],
-        'PM': ['프로덕트 매니저 역할 수행', 'PM 프로젝트 리딩'],
-        'PO': ['프로덕트 오너 업무', 'PO 백로그 관리'],
-        '퍼포먼스': ['퍼포먼스 마케팅 캠페인', '광고 성과 최적화'],
-        'B2B': ['B2B 영업 전략 수립', 'B2B 고객사 관리'],
-        'B2C': ['B2C 고객 응대', 'B2C 세일즈'],
-        'CRM': ['CRM 시스템 운영', '고객 관계 관리 전략'],
-        '제안서': ['사업 제안서 작성', '제안 발표 및 PT'],
-        '채용': ['채용 프로세스 운영', '인재 발굴 및 소싱'],
-        '인사': ['인사 제도 개선', '인사 평가 운영'],
-        '조직문화': ['조직문화 개선 활동', '팀 빌딩 프로그램'],
-        '온보딩': ['신입 온보딩 프로그램', '온보딩 프로세스 설계'],
-        '예산': ['예산 편성 및 관리', '예산 집행 모니터링'],
-        '투자': ['투자 분석 및 평가', '투자 포트폴리오 관리'],
-        '세무': ['세무 신고 업무', '세무 전략 수립'],
-        'VOC': ['VOC 데이터 분석', '고객 의견 수렴 및 개선'],
-        'CX': ['고객 경험 개선 프로젝트', 'CX 설계 및 최적화'],
-        '논문': ['학술 논문 작성', '논문 게재 및 발표'],
-        '실험': ['실험 설계 및 수행', '실험 데이터 분석'],
-        '특허': ['특허 출원 및 등록', '지식재산권 관리'],
-        '멘토링': ['후배 멘토링 활동', '멘토-멘티 프로그램'],
-        'NLP': ['자연어처리 프로젝트', 'NLP 모델 개발'],
-        '자연어처리': ['텍스트 분석 프로젝트', '자연어 이해 시스템'],
-        'DApp': ['탈중앙화 앱 개발', 'DApp 스마트 컨트랙트'],
-        '펌웨어': ['임베디드 펌웨어 개발', '펌웨어 업데이트 시스템'],
-        'Flask': ['Flask REST API 개발', 'Flask 백엔드 구축'],
-
-        // 활동 타입
-        '인턴': ['IT 기업 인턴십', '개발 직무 인턴 경험', '스타트업 인턴'],
-        '인턴십': ['여름 인턴십 프로그램', '장기 인턴 활동'],
-        '공모전': ['아이디어 공모전 수상', '개발 공모전 참여', '마케팅 공모전'],
-        '대회': ['프로그래밍 대회', '비즈니스 경진대회', 'AI 대회'],
-        '해커톤': ['해커톤 프로젝트 개발', '해커톤 수상 경험'],
-        '동아리': ['학술 동아리 활동', 'IT 동아리 운영', '창업 동아리'],
-        '스터디': ['알고리즘 스터디', '기술 스터디 그룹', '자격증 스터디'],
-      };
-
-      const topTechKeywords = Object.entries(techKeywordCounts)
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 20);
-
-      // DB 기반으로 활동 생성
-      topTechKeywords.forEach(([tech, count]) => {
-        if (Object.keys(combinedActivityCounts).length >= 10) return;
-
-        const activities = activityGenerationMap[tech];
-        if (!activities) return;
-
-        // 각 기술당 최대 2개 활동 추가
-        activities.slice(0, 2).forEach(activity => {
-          if (Object.keys(combinedActivityCounts).length >= 10) return;
-
-          if (!combinedActivityCounts[activity]) {
-            // 키워드 빈도에 비례한 카운트
-            combinedActivityCounts[activity] = Math.max(1, Math.floor(count * 0.5));
+        for (const keyword of keywords) {
+          if (lowerContent.includes(keyword.toLowerCase())) {
+            combinedActivityCounts[category] = (combinedActivityCounts[category] || 0) + 1;
+            matched = true;
+            break;
           }
-        });
-      });
-    }
-
-    // 여전히 부족하면 직무별 맞춤 활동 추가
-    if (Object.keys(combinedActivityCounts).length < 10) {
-      let positionBasedActivities: { name: string; count: number }[] = [];
-
-      // 직무별 활동 결정
-      const normalizedPosition = position.toLowerCase();
-
-      if (normalizedPosition.includes('마케팅') || normalizedPosition.includes('marketing')) {
-        positionBasedActivities = [
-          { name: 'SNS 마케팅 캠페인 기획 및 운영', count: Math.floor(actualTotalApplicants * 0.4) },
-          { name: '디지털 광고 집행 및 성과 분석', count: Math.floor(actualTotalApplicants * 0.35) },
-          { name: '브랜드 콘텐츠 제작 및 배포', count: Math.floor(actualTotalApplicants * 0.3) },
-          { name: '고객 데이터 분석 및 인사이트 도출', count: Math.floor(actualTotalApplicants * 0.25) },
-          { name: '마케팅 전략 수립 및 실행', count: Math.floor(actualTotalApplicants * 0.2) },
-          { name: '브랜드 협업 및 파트너십 구축', count: Math.floor(actualTotalApplicants * 0.18) },
-          { name: '온오프라인 이벤트 기획 및 운영', count: Math.floor(actualTotalApplicants * 0.15) },
-          { name: '고객 여정 분석 및 최적화', count: Math.floor(actualTotalApplicants * 0.12) },
-          { name: '마케팅 자동화 도구 활용', count: Math.floor(actualTotalApplicants * 0.1) },
-          { name: '브랜드 커뮤니티 운영', count: Math.floor(actualTotalApplicants * 0.1) },
-        ];
-      } else if (normalizedPosition.includes('기획') || normalizedPosition.includes('pm') || normalizedPosition.includes('po')) {
-        positionBasedActivities = [
-          { name: '신규 서비스 기획 및 런칭', count: Math.floor(actualTotalApplicants * 0.4) },
-          { name: '사용자 리서치 및 니즈 분석', count: Math.floor(actualTotalApplicants * 0.35) },
-          { name: 'MVP 개발 및 시장 검증', count: Math.floor(actualTotalApplicants * 0.3) },
-          { name: '제품 로드맵 수립 및 관리', count: Math.floor(actualTotalApplicants * 0.25) },
-          { name: '데이터 기반 의사결정 및 A/B 테스트', count: Math.floor(actualTotalApplicants * 0.2) },
-          { name: '서비스 개선 프로젝트 주도', count: Math.floor(actualTotalApplicants * 0.18) },
-          { name: '개발팀과 협업 및 요구사항 정의', count: Math.floor(actualTotalApplicants * 0.15) },
-          { name: '시장 트렌드 분석 및 경쟁사 조사', count: Math.floor(actualTotalApplicants * 0.12) },
-          { name: '비즈니스 모델 설계', count: Math.floor(actualTotalApplicants * 0.1) },
-          { name: 'KPI 설정 및 성과 측정', count: Math.floor(actualTotalApplicants * 0.1) },
-        ];
-      } else if (normalizedPosition.includes('디자인') || normalizedPosition.includes('ux') || normalizedPosition.includes('ui')) {
-        positionBasedActivities = [
-          { name: 'UI/UX 디자인 및 프로토타이핑', count: Math.floor(actualTotalApplicants * 0.4) },
-          { name: '사용자 리서치 및 테스트', count: Math.floor(actualTotalApplicants * 0.35) },
-          { name: '디자인 시스템 구축 및 관리', count: Math.floor(actualTotalApplicants * 0.3) },
-          { name: '브랜드 아이덴티티 디자인', count: Math.floor(actualTotalApplicants * 0.25) },
-          { name: '사용자 경험 개선 프로젝트', count: Math.floor(actualTotalApplicants * 0.2) },
-          { name: '인터랙션 디자인', count: Math.floor(actualTotalApplicants * 0.18) },
-          { name: '와이어프레임 및 플로우 설계', count: Math.floor(actualTotalApplicants * 0.15) },
-          { name: '그래픽 및 비주얼 디자인', count: Math.floor(actualTotalApplicants * 0.12) },
-          { name: '디자인 툴 활용 (Figma, Sketch 등)', count: Math.floor(actualTotalApplicants * 0.1) },
-          { name: '반응형 디자인 구현', count: Math.floor(actualTotalApplicants * 0.1) },
-        ];
-      } else if (normalizedPosition.includes('데이터') || normalizedPosition.includes('data') || normalizedPosition.includes('분석')) {
-        positionBasedActivities = [
-          { name: 'Python/R 기반 데이터 분석', count: Math.floor(actualTotalApplicants * 0.4) },
-          { name: 'SQL 쿼리 작성 및 데이터 추출', count: Math.floor(actualTotalApplicants * 0.35) },
-          { name: '데이터 시각화 대시보드 구축', count: Math.floor(actualTotalApplicants * 0.3) },
-          { name: '통계 분석 및 인사이트 도출', count: Math.floor(actualTotalApplicants * 0.28) },
-          { name: 'A/B 테스트 설계 및 분석', count: Math.floor(actualTotalApplicants * 0.25) },
-          { name: '비즈니스 지표(KPI) 분석', count: Math.floor(actualTotalApplicants * 0.2) },
-          { name: '머신러닝 모델 구축 및 평가', count: Math.floor(actualTotalApplicants * 0.18) },
-          { name: '데이터 파이프라인 구축', count: Math.floor(actualTotalApplicants * 0.15) },
-          { name: '빅데이터 처리 (Spark, Hadoop)', count: Math.floor(actualTotalApplicants * 0.12) },
-          { name: '데이터 품질 관리 및 정제', count: Math.floor(actualTotalApplicants * 0.1) },
-        ];
-      } else if (normalizedPosition.includes('ai') || normalizedPosition.includes('머신러닝') || normalizedPosition.includes('딥러닝') || normalizedPosition.includes('인공지능')) {
-        positionBasedActivities = [
-          { name: '머신러닝 모델 개발 및 학습', count: Math.floor(actualTotalApplicants * 0.4) },
-          { name: '딥러닝 알고리즘 연구 및 구현', count: Math.floor(actualTotalApplicants * 0.35) },
-          { name: '자연어처리(NLP) 프로젝트', count: Math.floor(actualTotalApplicants * 0.3) },
-          { name: '컴퓨터 비전 모델 개발', count: Math.floor(actualTotalApplicants * 0.28) },
-          { name: 'AI 모델 최적화 및 배포', count: Math.floor(actualTotalApplicants * 0.25) },
-          { name: '데이터 전처리 및 특성 엔지니어링', count: Math.floor(actualTotalApplicants * 0.2) },
-          { name: 'PyTorch/TensorFlow 활용 개발', count: Math.floor(actualTotalApplicants * 0.18) },
-          { name: 'AI 논문 리뷰 및 구현', count: Math.floor(actualTotalApplicants * 0.15) },
-          { name: '추천 시스템 개발', count: Math.floor(actualTotalApplicants * 0.12) },
-          { name: 'MLOps 파이프라인 구축', count: Math.floor(actualTotalApplicants * 0.1) },
-        ];
-      } else if (normalizedPosition.includes('영업') || normalizedPosition.includes('sales') || normalizedPosition.includes('세일즈')) {
-        positionBasedActivities = [
-          { name: '신규 고객 발굴 및 영업 전략 수립', count: Math.floor(actualTotalApplicants * 0.4) },
-          { name: 'B2B/B2C 영업 및 계약 성사', count: Math.floor(actualTotalApplicants * 0.35) },
-          { name: '고객 관계 관리(CRM) 및 유지', count: Math.floor(actualTotalApplicants * 0.3) },
-          { name: '제품 프레젠테이션 및 제안서 작성', count: Math.floor(actualTotalApplicants * 0.28) },
-          { name: '시장 조사 및 경쟁사 분석', count: Math.floor(actualTotalApplicants * 0.25) },
-          { name: '영업 목표 달성 및 성과 관리', count: Math.floor(actualTotalApplicants * 0.2) },
-          { name: '파트너사 발굴 및 협력 관계 구축', count: Math.floor(actualTotalApplicants * 0.18) },
-          { name: '고객 니즈 분석 및 맞춤 솔루션 제안', count: Math.floor(actualTotalApplicants * 0.15) },
-          { name: '영업 데이터 분석 및 인사이트 도출', count: Math.floor(actualTotalApplicants * 0.12) },
-          { name: '계약 협상 및 조율', count: Math.floor(actualTotalApplicants * 0.1) },
-        ];
-      } else if (normalizedPosition.includes('hr') || normalizedPosition.includes('인사') || normalizedPosition.includes('채용')) {
-        positionBasedActivities = [
-          { name: '채용 프로세스 기획 및 운영', count: Math.floor(actualTotalApplicants * 0.4) },
-          { name: '인재 소싱 및 면접 진행', count: Math.floor(actualTotalApplicants * 0.35) },
-          { name: '직무 분석 및 채용 공고 작성', count: Math.floor(actualTotalApplicants * 0.3) },
-          { name: '조직문화 기획 및 실행', count: Math.floor(actualTotalApplicants * 0.28) },
-          { name: '인사 평가 제도 설계 및 운영', count: Math.floor(actualTotalApplicants * 0.25) },
-          { name: '교육 프로그램 기획 및 진행', count: Math.floor(actualTotalApplicants * 0.2) },
-          { name: '직원 만족도 조사 및 개선', count: Math.floor(actualTotalApplicants * 0.18) },
-          { name: '온보딩 프로세스 개선', count: Math.floor(actualTotalApplicants * 0.15) },
-          { name: '복리후생 제도 설계', count: Math.floor(actualTotalApplicants * 0.12) },
-          { name: 'HR 데이터 분석 및 리포팅', count: Math.floor(actualTotalApplicants * 0.1) },
-        ];
-      } else if (normalizedPosition.includes('재무') || normalizedPosition.includes('회계') || normalizedPosition.includes('finance') || normalizedPosition.includes('경영')) {
-        positionBasedActivities = [
-          { name: '재무제표 작성 및 분석', count: Math.floor(actualTotalApplicants * 0.4) },
-          { name: '예산 편성 및 관리', count: Math.floor(actualTotalApplicants * 0.35) },
-          { name: '재무 데이터 분석 및 리포팅', count: Math.floor(actualTotalApplicants * 0.3) },
-          { name: '투자 분석 및 의사결정 지원', count: Math.floor(actualTotalApplicants * 0.28) },
-          { name: '원가 관리 및 분석', count: Math.floor(actualTotalApplicants * 0.25) },
-          { name: '세무 신고 및 세무 전략 수립', count: Math.floor(actualTotalApplicants * 0.2) },
-          { name: '내부 회계 관리 및 감사', count: Math.floor(actualTotalApplicants * 0.18) },
-          { name: '재무 모델링 및 시뮬레이션', count: Math.floor(actualTotalApplicants * 0.15) },
-          { name: '자금 조달 및 운용', count: Math.floor(actualTotalApplicants * 0.12) },
-          { name: 'ERP 시스템 운영 및 개선', count: Math.floor(actualTotalApplicants * 0.1) },
-        ];
-      } else if (normalizedPosition.includes('cs') || normalizedPosition.includes('고객') || normalizedPosition.includes('상담')) {
-        positionBasedActivities = [
-          { name: '고객 문의 응대 및 문제 해결', count: Math.floor(actualTotalApplicants * 0.4) },
-          { name: '고객 만족도 향상 프로젝트', count: Math.floor(actualTotalApplicants * 0.35) },
-          { name: 'VOC 분석 및 개선안 도출', count: Math.floor(actualTotalApplicants * 0.3) },
-          { name: 'CS 프로세스 개선 및 매뉴얼 작성', count: Math.floor(actualTotalApplicants * 0.28) },
-          { name: '고객 경험(CX) 개선 활동', count: Math.floor(actualTotalApplicants * 0.25) },
-          { name: '상담 데이터 분석 및 리포팅', count: Math.floor(actualTotalApplicants * 0.2) },
-          { name: '챗봇/자동화 도구 도입 및 운영', count: Math.floor(actualTotalApplicants * 0.18) },
-          { name: '클레임 처리 및 고객 유지', count: Math.floor(actualTotalApplicants * 0.15) },
-          { name: '상담원 교육 및 품질 관리', count: Math.floor(actualTotalApplicants * 0.12) },
-          { name: '고객 피드백 수집 및 전달', count: Math.floor(actualTotalApplicants * 0.1) },
-        ];
-      } else if (normalizedPosition.includes('게임') || normalizedPosition.includes('game')) {
-        positionBasedActivities = [
-          { name: 'Unity/Unreal 게임 개발', count: Math.floor(actualTotalApplicants * 0.4) },
-          { name: '게임 시스템 설계 및 구현', count: Math.floor(actualTotalApplicants * 0.35) },
-          { name: '게임 밸런싱 및 튜닝', count: Math.floor(actualTotalApplicants * 0.3) },
-          { name: '게임 클라이언트/서버 개발', count: Math.floor(actualTotalApplicants * 0.28) },
-          { name: '게임 기획 및 레벨 디자인', count: Math.floor(actualTotalApplicants * 0.25) },
-          { name: '멀티플레이어 네트워크 구현', count: Math.floor(actualTotalApplicants * 0.2) },
-          { name: '게임 UI/UX 개선', count: Math.floor(actualTotalApplicants * 0.18) },
-          { name: '게임 성능 최적화', count: Math.floor(actualTotalApplicants * 0.15) },
-          { name: '게임 QA 및 테스트', count: Math.floor(actualTotalApplicants * 0.12) },
-          { name: '라이브 운영 및 업데이트', count: Math.floor(actualTotalApplicants * 0.1) },
-        ];
-      } else {
-        // 개발 직무 (기본)
-        positionBasedActivities = [
-          { name: '웹 서비스 풀스택 개발', count: Math.floor(actualTotalApplicants * 0.35) },
-          { name: 'REST API 백엔드 개발', count: Math.floor(actualTotalApplicants * 0.3) },
-          { name: '데이터베이스 설계 및 최적화', count: Math.floor(actualTotalApplicants * 0.25) },
-          { name: '협업 도구 및 Git 활용 프로젝트', count: Math.floor(actualTotalApplicants * 0.25) },
-          { name: '알고리즘 문제 해결 및 코딩테스트 준비', count: Math.floor(actualTotalApplicants * 0.2) },
-          { name: '오픈소스 기여 및 코드 리뷰', count: Math.floor(actualTotalApplicants * 0.15) },
-          { name: '소프트웨어 테스트 자동화', count: Math.floor(actualTotalApplicants * 0.15) },
-          { name: '팀 프로젝트 리더 경험', count: Math.floor(actualTotalApplicants * 0.12) },
-          { name: '기술 블로그 운영 및 지식 공유', count: Math.floor(actualTotalApplicants * 0.1) },
-          { name: 'IT 관련 자격증 취득', count: Math.floor(actualTotalApplicants * 0.1) },
-        ];
-      }
-
-      positionBasedActivities.forEach(({ name, count }) => {
-        if (Object.keys(combinedActivityCounts).length >= 10) return;
-
-        if (!combinedActivityCounts[name] && count > 0) {
-          combinedActivityCounts[name] = count;
         }
-      });
-    }
+      }
+    });
 
     // 4. 통계 계산
     const avgGpa = gpas.length > 0 ? gpas.reduce((a, b) => a + b, 0) / gpas.length : 0;
