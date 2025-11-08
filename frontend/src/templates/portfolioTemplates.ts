@@ -1118,7 +1118,7 @@ export const cleanTemplate: PortfolioTemplate = {
 // Template 3: Colorful - Colorful Cards
 export const colorfulTemplate: PortfolioTemplate = {
     id: 'colorful',
-    name: '컴러풀 레이아웃',
+    name: '컬러풀 레이아웃',
     description: '하늘색 배경과 이모지 아이콘의 컬러풀 레이아웃',
     thumbnail: '/templates/eunseong.png',
     author: 'Colorful Template',

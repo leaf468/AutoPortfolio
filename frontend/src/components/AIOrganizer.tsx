@@ -20,12 +20,38 @@ const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
   const [input, setInput] = useState('');
   const [inputType, setInputType] = useState<'freetext' | 'resume' | 'markdown'>('freetext');
   const [jobPosting, setJobPosting] = useState('');
+  const [jobPosition, setJobPosition] = useState(''); // 직무 필드 추가
   const [isProcessing, setIsProcessing] = useState(false);
   const [showJobPosting, setShowJobPosting] = useState(false);
   const [showValidationModal, setShowValidationModal] = useState(false);
   const [showCoverLetterModal, setShowCoverLetterModal] = useState(false);
   const [coverLetters, setCoverLetters] = useState<any[]>([]);
   const [loadingCoverLetters, setLoadingCoverLetters] = useState(false);
+
+  // 로그인 사용자의 직무 정보 불러오기
+  useEffect(() => {
+    if (user) {
+      loadUserJobPosition();
+    }
+  }, [user]);
+
+  const loadUserJobPosition = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('position')
+        .eq('user_id', user.user_id)
+        .maybeSingle();
+
+      if (data && data.position) {
+        setJobPosition(data.position);
+      }
+    } catch (error) {
+      console.error('직무 정보 로드 오류:', error);
+    }
+  };
 
   // 자소서 목록 불러오기
   const loadCoverLetters = async () => {
@@ -107,13 +133,15 @@ const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
     console.log('사용자 입력 데이터:', input);
     console.log('입력 타입:', inputType);
     console.log('채용공고:', jobPosting);
+    console.log('직무:', jobPosition);
 
     // AI 처리 없이 바로 원본 데이터만 전달 (필수 필드들을 빈 값으로 채움)
     const rawData = {
       originalInput: {
         rawText: input,
         inputType: inputType,
-        jobPosting: jobPosting.trim() || undefined
+        jobPosting: jobPosting.trim() || undefined,
+        jobPosition: jobPosition.trim() || undefined
       },
       // 필수 필드들을 임시로 빈 값으로 채움
       oneLinerPitch: '',
@@ -161,6 +189,23 @@ const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
       </motion.div>
 
       <div className="space-y-4">
+        {/* 직무 입력 */}
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-2">
+            직무 (선택사항)
+          </label>
+          <input
+            type="text"
+            value={jobPosition}
+            onChange={(e) => setJobPosition(e.target.value)}
+            className="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent text-sm"
+            placeholder="예: 개발자, 기획자, 마케터, 은행원 등"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            {user ? '로그인하신 경우 마이페이지의 직무 정보가 자동으로 반영됩니다.' : '직무를 입력하시면 맞춤형 포트폴리오를 생성해드립니다.'}
+          </p>
+        </div>
+
         {/* 입력 타입 선택 */}
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-2">

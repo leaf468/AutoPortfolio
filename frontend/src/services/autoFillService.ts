@@ -991,5 +991,177 @@ ${examplesText}
     }
 }
 
+// ====================================================================
+// 직군별 프롬프트 맵핑
+// ====================================================================
+export const JOB_POSITION_PROMPTS: Record<string, {
+    selfIntro: string;
+    achievements: string;
+    projects: string;
+    skills: string;
+}> = {
+    '개발자': {
+        selfIntro: `개발자 관점에서 자기소개를 작성해주세요. 다음 요소를 포함하세요:
+- 주요 기술 스택 및 개발 경력
+- 문제 해결 능력과 기술적 성취
+- 코드 품질, 성능 최적화, 협업 경험
+- 지속적인 학습과 기술 트렌드 파악`,
+        achievements: `개발자의 성과를 작성할 때 다음을 강조하세요:
+- 구체적인 성능 개선 지표 (응답 시간, 처리량, 리소스 사용량)
+- 코드 품질 향상 (버그 감소율, 테스트 커버리지)
+- 시스템 안정성 및 확장성 개선
+- 비즈니스 임팩트 (매출 증대, 사용자 증가)`,
+        projects: `개발 프로젝트를 설명할 때 다음을 포함하세요:
+- 프로젝트 목적과 해결한 기술적 문제
+- 사용한 기술 스택과 아키텍처 설계
+- 본인의 역할 (프론트엔드/백엔드/풀스택, 리드/팀원)
+- 기술적 도전과 극복 과정
+- 프로젝트의 결과와 영향`,
+        skills: `개발자의 기술 스택을 작성할 때:
+- 언어, 프레임워크, 라이브러리 구분
+- 숙련도 수준 명시 (상/중/하 또는 년차)
+- 실무 프로젝트에서의 활용 경험
+- DevOps, 클라우드, 데이터베이스 등 인프라 기술`
+    },
+    '기획자': {
+        selfIntro: `기획자 관점에서 자기소개를 작성해주세요. 다음 요소를 포함하세요:
+- 서비스/제품 기획 경험과 전문 분야
+- 데이터 기반 의사결정 능력
+- 사용자 리서치 및 UX/UI 이해도
+- 팀 협업 및 이해관계자 커뮤니케이션 능력`,
+        achievements: `기획자의 성과를 작성할 때 다음을 강조하세요:
+- 기획한 기능/서비스의 비즈니스 성과 (MAU, DAU, 전환율, 매출)
+- 사용자 경험 개선 지표 (만족도, NPS, 리텐션)
+- 프로젝트 일정 및 리소스 관리 능력
+- 데이터 분석을 통한 인사이트 도출`,
+        projects: `기획 프로젝트를 설명할 때 다음을 포함하세요:
+- 프로젝트 배경과 목표
+- 기획 프로세스 (리서치, 요구사항 정의, 와이어프레임)
+- 협업한 팀과 이해관계자
+- 출시 후 성과 측정 및 개선 과정
+- 프로젝트가 비즈니스에 미친 영향`,
+        skills: `기획자의 역량을 작성할 때:
+- 기획 도구 (Figma, Sketch, Adobe XD 등)
+- 데이터 분석 도구 (SQL, Excel, GA, Amplitude 등)
+- 프로젝트 관리 도구 (Jira, Notion, Asana 등)
+- 소프트 스킬 (커뮤니케이션, 문제 해결, 리더십)`
+    },
+    '마케터': {
+        selfIntro: `마케터 관점에서 자기소개를 작성해주세요. 다음 요소를 포함하세요:
+- 마케팅 캠페인 경험과 전문 분야 (퍼포먼스, 브랜드, 콘텐츠 등)
+- 데이터 기반 마케팅 전략 수립 능력
+- 채널별 마케팅 경험 (SNS, 검색광고, 이메일 등)
+- ROI 최적화 및 성과 분석 능력`,
+        achievements: `마케터의 성과를 작성할 때 다음을 강조하세요:
+- 캠페인 성과 지표 (ROAS, CPA, CTR, CVR)
+- 고객 획득 및 유지 성과 (신규 고객 수, 리텐션율)
+- 매출 및 브랜드 인지도 향상
+- 예산 효율성 및 비용 절감`,
+        projects: `마케팅 프로젝트를 설명할 때 다음을 포함하세요:
+- 캠페인 목표와 타겟 고객
+- 마케팅 채널과 전략
+- 크리에이티브 및 메시지 전략
+- 예산 집행과 성과 분석
+- A/B 테스트 및 최적화 과정`,
+        skills: `마케터의 역량을 작성할 때:
+- 마케팅 툴 (Google Ads, Facebook Ads, Kakao Moment 등)
+- 분석 도구 (GA, GTM, Amplitude, Mixpanel 등)
+- 콘텐츠 제작 도구 (Photoshop, Premiere, Canva 등)
+- 마케팅 자동화 및 CRM 도구`
+    },
+    '은행원': {
+        selfIntro: `은행원 관점에서 자기소개를 작성해주세요. 다음 요소를 포함하세요:
+- 금융업무 경험과 전문 분야 (여신, 수신, 외환, PB 등)
+- 고객 상담 및 금융 상품 판매 경험
+- 리스크 관리 및 규정 준수 능력
+- 금융 시장 이해도와 전문성`,
+        achievements: `은행원의 성과를 작성할 때 다음을 강조하세요:
+- 영업 실적 (예금 유치, 대출 실행, 수수료 수익)
+- 고객 만족도 및 우수 고객 관리
+- 리스크 관리 및 부실채권 감소
+- 신규 고객 유치 및 크로스셀링 성과`,
+        projects: `금융 프로젝트를 설명할 때 다음을 포함하세요:
+- 프로젝트 목적 (신규 상품 출시, 프로세스 개선 등)
+- 담당 역할과 협업 부서
+- 고객 대응 및 규정 준수 과정
+- 프로젝트 성과 (실적, 효율성, 고객 만족도)`,
+        skills: `은행원의 역량을 작성할 때:
+- 금융 전문 지식 (여신 심사, 외환 거래, 투자 상품)
+- IT 시스템 활용 능력 (은행 전산 시스템, Excel)
+- 자격증 (은행FP, 투자자산운용사, 신용분석사 등)
+- 고객 커뮤니케이션 및 영업 능력`
+    },
+    '디자이너': {
+        selfIntro: `디자이너 관점에서 자기소개를 작성해주세요. 다음 요소를 포함하세요:
+- 디자인 전문 분야 (UI/UX, 그래픽, 브랜드, 영상 등)
+- 사용자 중심 디자인 철학
+- 디자인 도구 및 프로토타이핑 능력
+- 협업 경험 (기획자, 개발자와의 소통)`,
+        achievements: `디자이너의 성과를 작성할 때 다음을 강조하세요:
+- 디자인으로 인한 비즈니스 성과 (전환율, 사용자 만족도)
+- 어워드 수상 및 대외 인정
+- 디자인 시스템 구축 및 브랜드 일관성 확립
+- 사용자 리서치 기반 개선 사례`,
+        projects: `디자인 프로젝트를 설명할 때 다음을 포함하세요:
+- 프로젝트 목표와 타겟 사용자
+- 디자인 프로세스 (리서치, 와이어프레임, 프로토타입)
+- 사용한 도구와 기법
+- 디자인 의사결정 과정
+- 최종 결과물과 피드백`,
+        skills: `디자이너의 역량을 작성할 때:
+- 디자인 도구 (Figma, Sketch, Adobe CC 등)
+- 프로토타이핑 도구 (Framer, Principle 등)
+- 그래픽/영상 편집 (Photoshop, Illustrator, After Effects 등)
+- UI/UX 이론 및 사용자 리서치 방법론`
+    },
+    '공통': {
+        selfIntro: `전문가로서의 자기소개를 작성해주세요. 다음 요소를 포함하세요:
+- 주요 경력과 전문 분야
+- 핵심 역량과 강점
+- 대표 성과와 프로젝트
+- 커리어 목표와 비전`,
+        achievements: `성과를 작성할 때 다음을 강조하세요:
+- 구체적이고 정량적인 성과 지표
+- 본인의 기여도와 역할
+- 문제 해결 과정과 창의적 접근
+- 비즈니스 및 조직에 미친 영향`,
+        projects: `프로젝트를 설명할 때 다음을 포함하세요:
+- 프로젝트 배경과 목표
+- 본인의 역할과 책임
+- 주요 활동과 의사결정 과정
+- 결과와 성과
+- 배운 점과 개선사항`,
+        skills: `역량을 작성할 때:
+- 전문 기술 및 도구
+- 자격증 및 교육 이수
+- 소프트 스킬 (커뮤니케이션, 리더십, 문제 해결)
+- 실무 경험과 숙련도`
+    }
+};
+
+// 직군별 프롬프트 가져오기 헬퍼 함수
+export function getJobPositionPrompt(jobPosition: string | undefined, category: 'selfIntro' | 'achievements' | 'projects' | 'skills'): string {
+    if (!jobPosition) {
+        return JOB_POSITION_PROMPTS['공통'][category];
+    }
+
+    // 직군명에서 키워드 추출
+    const normalizedPosition = jobPosition.toLowerCase();
+
+    if (normalizedPosition.includes('개발') || normalizedPosition.includes('프로그래머') || normalizedPosition.includes('엔지니어')) {
+        return JOB_POSITION_PROMPTS['개발자'][category];
+    } else if (normalizedPosition.includes('기획') || normalizedPosition.includes('pm') || normalizedPosition.includes('po')) {
+        return JOB_POSITION_PROMPTS['기획자'][category];
+    } else if (normalizedPosition.includes('마케') || normalizedPosition.includes('퍼포먼스') || normalizedPosition.includes('그로스')) {
+        return JOB_POSITION_PROMPTS['마케터'][category];
+    } else if (normalizedPosition.includes('은행') || normalizedPosition.includes('금융') || normalizedPosition.includes('pb')) {
+        return JOB_POSITION_PROMPTS['은행원'][category];
+    } else if (normalizedPosition.includes('디자인') || normalizedPosition.includes('ui') || normalizedPosition.includes('ux')) {
+        return JOB_POSITION_PROMPTS['디자이너'][category];
+    }
+
+    return JOB_POSITION_PROMPTS['공통'][category];
+}
+
 const autoFillService = new AutoFillService();
 export default autoFillService;

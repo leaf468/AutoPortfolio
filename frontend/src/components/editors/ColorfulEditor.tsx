@@ -182,19 +182,67 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
 
             try {
                 const firstBlock = document.sections?.[0]?.blocks?.[0];
-                if (firstBlock && firstBlock.text) {
-                    const html = firstBlock.text;
+                if (firstBlock) {
+                    const html = firstBlock.text || '';
+                    console.log('🔍 ColorfulEditor Initial HTML Loading:');
+                    console.log('  - HTML preview (first 200 chars):', html.substring(0, 200));
+                    console.log('  - Has extractedData:', !!firstBlock.extractedData);
                     setCurrentHtml(html);
 
                     let actualData: ColorfulPortfolioData;
 
                     if (firstBlock.extractedData) {
                         const extracted = firstBlock.extractedData as any;
-                        actualData = {
-                            ...extracted,
-                            education: [] // Colorful 템플릿은 education 지원 안함
-                        };
-                        delete (actualData as any).location; // location 필드도 제거
+                        console.log('📦 ColorfulEditor extractedData:', extracted);
+                        console.log('📦 extractedData keys:', Object.keys(extracted));
+
+                        // DB에서 온 데이터가 summary, skills, projects 형태인지 확인
+                        if (extracted.summary || extracted.projects) {
+                            console.log('🔄 Converting AI analysis data to ColorfulPortfolioData format');
+
+                            // experiences를 experience로 변환
+                            const experienceData = Array.isArray(extracted.experiences)
+                                ? extracted.experiences.map((exp: any) => ({
+                                    company: exp.company || '',
+                                    position: exp.position || '',
+                                    period: exp.duration || exp.period || '',
+                                    description: exp.achievements?.join(' • ') || exp.description || '',
+                                    achievements: exp.achievements || []
+                                }))
+                                : Array.isArray(extracted.experience) ? extracted.experience : [];
+
+                            // skills 배열 처리
+                            const skillsFlat = Array.isArray(extracted.skills)
+                                ? extracted.skills.flatMap((s: any) =>
+                                    Array.isArray(s.skills) ? s.skills : (typeof s === 'string' ? [s] : [])
+                                  )
+                                : [];
+
+                            actualData = {
+                                name: extracted.name || '',
+                                title: extracted.originalInput?.jobPosition || extracted.position || extracted.title || '개발자',
+                                email: extracted.email || '',
+                                phone: extracted.phone || '',
+                                github: extracted.github || '',
+                                about: extracted.summary || '',
+                                skills: skillsFlat,
+                                skillCategories: [],
+                                projects: Array.isArray(extracted.projects) ? extracted.projects.map((p: any) => ({
+                                    name: p.name || p.title || '',
+                                    period: p.period || p.duration || '',
+                                    description: p.summary || p.description || '',
+                                    techStack: p.technologies || p.techStack || p.skills || [],
+                                    achievements: p.achievements || p.results || []
+                                })) : [],
+                                experience: experienceData
+                            };
+                        } else {
+                            actualData = {
+                                ...extracted
+                            };
+                            delete (actualData as any).location; // location 필드도 제거
+                            delete (actualData as any).education; // education 필드도 제거
+                        }
                     } else {
                         actualData = extractPortfolioData(html);
                     }
@@ -253,8 +301,12 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
                         }
                     }
 
-                    // 데이터가 부족한 경우 AI로 개선
-                    const needsEnhancement = !actualData.about || actualData.about.length < 50;
+                    // DB에서 불러온 데이터가 아니고 데이터가 부족한 경우에만 AI로 개선
+                    const isFromDB = firstBlock.extractedData && (firstBlock.extractedData as any).summary;
+                    const needsEnhancement = !isFromDB && (!actualData.about || actualData.about.length < 50);
+
+                    console.log('🔍 ColorfulEditor Enhancement check:', { isFromDB, needsEnhancement });
+
                     if (needsEnhancement) {
                         setIsEnhancing(true);
                         try {

@@ -16,7 +16,7 @@ import {
 
 const MyPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user, loading } = useAuth();
+  const { user, loading, setUser } = useAuth();
   const { setEditMode } = usePortfolio();
   const [activeTab, setActiveTab] = useState<'documents' | 'portfolios' | 'profile'>('documents');
 
@@ -213,6 +213,7 @@ const MyPage: React.FC = () => {
 
   const handleLogout = async () => {
     await logout();
+    setUser(null); // AuthContext의 user 상태를 null로 설정
     navigate('/login?logout=success');
   };
 
@@ -241,6 +242,7 @@ const MyPage: React.FC = () => {
 
       alert('회원 탈퇴가 완료되었습니다.');
       await logout();
+      setUser(null); // AuthContext의 user 상태를 null로 설정
       navigate('/');
     } catch (error) {
       console.error('Account deletion error:', error);
@@ -504,13 +506,18 @@ const MyPage: React.FC = () => {
                       <div className="flex gap-2 pt-3 border-t border-purple-100">
                         <button
                           onClick={() => {
-                            // 포트폴리오 편집 - 컨텍스트에 데이터 설정 후 편집 페이지로 이동
-                            setEditMode(
-                              portfolio.portfolio_id,
-                              portfolio.template_type,
-                              portfolio.sections
-                            );
-                            navigate('/edit');
+                            // 포트폴리오 편집 - DB 데이터를 직접 로드하여 편집 페이지로 이동
+                            // autofill 단계를 우회하고 바로 편집 페이지로
+                            if (portfolio.template_type) {
+                              navigate(`/edit/${portfolio.template_type}`, {
+                                state: {
+                                  portfolioData: portfolio,
+                                  editMode: true
+                                }
+                              });
+                            } else {
+                              alert('템플릿 정보를 찾을 수 없습니다.');
+                            }
                           }}
                           className="flex-1 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all duration-200 font-medium text-sm shadow-sm hover:shadow-md flex items-center justify-center"
                         >

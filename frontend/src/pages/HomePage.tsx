@@ -12,9 +12,11 @@ import {
 import { trackMainPageVisit, trackButtonClick } from '../utils/analytics';
 import AuthModal from '../components/AuthModal';
 import LandingFooter from '../components/LandingFooter';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function HomePage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('login');
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -71,8 +73,13 @@ export default function HomePage() {
 
   const handleGetStarted = () => {
     trackButtonClick('포트폴리오 만들기 시작', 'HomePage');
-    setAuthModalMode('signup');
-    setIsAuthModalOpen(true);
+    // 로그인 상태면 템플릿 선택으로, 아니면 회원가입 모달
+    if (user) {
+      navigate('/template-selection');
+    } else {
+      setAuthModalMode('signup');
+      setIsAuthModalOpen(true);
+    }
   };
 
   const handleLogin = () => {

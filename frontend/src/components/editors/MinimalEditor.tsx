@@ -203,21 +203,88 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
 
             try {
                 const firstBlock = document.sections?.[0]?.blocks?.[0];
-                if (firstBlock && firstBlock.text) {
-                    const html = firstBlock.text;
+                if (firstBlock) {
+                    const html = firstBlock.text || '';
                     console.log('🔍 MinimalEditor Initial HTML Loading:');
                     console.log('  - HTML preview (first 200 chars):', html.substring(0, 200));
                     console.log('  - HTML contains "colorful":', html.includes('colorful'));
                     console.log('  - HTML contains "minimal":', html.includes('minimal'));
                     console.log('  - HTML contains "clean":', html.includes('clean'));
                     console.log('  - HTML contains "elegant":', html.includes('elegant'));
+                    console.log('  - Has extractedData:', !!firstBlock.extractedData);
 
                     setCurrentHtml(html);
 
                     let actualData: MinimalPortfolioData;
 
                     if (firstBlock.extractedData) {
-                        actualData = firstBlock.extractedData as MinimalPortfolioData;
+                        const extracted = firstBlock.extractedData as any;
+                        console.log('📦 MinimalEditor extractedData:', extracted);
+                        console.log('📦 extractedData keys:', Object.keys(extracted));
+
+                        // DB에서 온 데이터가 summary, skills, projects 형태인지 확인
+                        if (extracted.summary || extracted.projects) {
+                            console.log('🔄 Converting AI analysis data to MinimalPortfolioData format');
+
+                            // experiences를 experience로 변환
+                            const experienceData = Array.isArray(extracted.experiences)
+                                ? extracted.experiences.map((exp: any) => ({
+                                    company: exp.company || '',
+                                    position: exp.position || '',
+                                    period: exp.duration || exp.period || '',
+                                    description: exp.achievements?.join(' • ') || exp.description || '',
+                                    achievements: exp.achievements || []
+                                }))
+                                : Array.isArray(extracted.experience) ? extracted.experience : [];
+
+                            // skills 배열 처리 (category별로 그룹화되어 있는 경우)
+                            const skillsFlat = Array.isArray(extracted.skills)
+                                ? extracted.skills.flatMap((s: any) =>
+                                    Array.isArray(s.skills) ? s.skills : (typeof s === 'string' ? [s] : [])
+                                  )
+                                : [];
+
+                            console.log('📊 Data mapping details:');
+                            console.log('  - extracted.name:', extracted.name);
+                            console.log('  - extracted.email:', extracted.email);
+                            console.log('  - extracted.phone:', extracted.phone);
+                            console.log('  - extracted.github:', extracted.github);
+                            console.log('  - originalInput:', extracted.originalInput);
+                            console.log('  - skills flat:', skillsFlat);
+                            console.log('  - projects (first item):', extracted.projects?.[0]);
+                            console.log('  - experiences (first item):', extracted.experiences?.[0]);
+
+                            actualData = {
+                                name: extracted.name || '',
+                                title: extracted.originalInput?.jobPosition || extracted.position || extracted.title || '개발자',
+                                email: extracted.email || '',
+                                phone: extracted.phone || '',
+                                github: extracted.github || '',
+                                location: extracted.location || '',
+                                about: extracted.summary || '',
+                                skills: skillsFlat,
+                                skillCategories: [],
+                                projects: Array.isArray(extracted.projects) ? extracted.projects.map((p: any) => ({
+                                    name: p.name || p.title || '',
+                                    period: p.period || p.duration || '',
+                                    description: p.summary || p.description || '',
+                                    techStack: p.technologies || p.techStack || p.skills || [],
+                                    achievements: p.achievements || p.results || []
+                                })) : [],
+                                experience: experienceData,
+                                education: Array.isArray(extracted.education) ? extracted.education.map((edu: any) => ({
+                                    school: edu.school || edu.institution || '',
+                                    degree: edu.degree || '',
+                                    major: edu.major || edu.field || '',
+                                    period: edu.period || edu.duration || '',
+                                    description: edu.description || edu.details || ''
+                                })) : []
+                            };
+
+                            console.log('✅ Final actualData:', actualData);
+                        } else {
+                            actualData = extracted as MinimalPortfolioData;
+                        }
                     } else {
                         actualData = extractPortfolioData(html);
                     }

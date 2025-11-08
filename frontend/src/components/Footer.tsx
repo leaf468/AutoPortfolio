@@ -16,10 +16,19 @@ const Footer: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             {/* 로고 및 회사 정보 */}
             <div className="col-span-1 md:col-span-2">
-              <Link to="/" className="flex items-center space-x-2 mb-4 hover:opacity-80 transition-opacity w-fit">
+              <button
+                onClick={() => {
+                  if (user) {
+                    navigate('/mypage');
+                  } else {
+                    navigate('/');
+                  }
+                }}
+                className="flex items-center space-x-2 mb-4 hover:opacity-80 transition-opacity w-fit"
+              >
                 <img src="/Careeroad_logo.png" alt="Careeroad" className="h-8" style={{ filter: 'brightness(0) invert(1)' }} />
                 <span className="text-xl font-bold text-white">Careeroad</span>
-              </Link>
+              </button>
               <p className="text-sm text-gray-400 mb-4">
                 AI 기반 자소서 작성 및 포트폴리오 생성 플랫폼
               </p>

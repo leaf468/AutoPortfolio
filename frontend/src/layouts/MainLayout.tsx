@@ -2,6 +2,7 @@ import React, { ReactNode } from 'react';
 import { motion } from 'framer-motion';
 import { CheckIcon, SparklesIcon, PencilSquareIcon } from '@heroicons/react/24/outline';
 import { usePortfolio } from '../contexts/PortfolioContext';
+import { useAuth } from '../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import Footer from '../components/Footer';
 
@@ -63,11 +64,17 @@ export default function MainLayout({
   showProgress = true
 }: MainLayoutProps) {
   const { state, reset } = usePortfolio();
+  const { user } = useAuth();
   const navigate = useNavigate();
 
   const handleLogoClick = () => {
-    reset();
-    navigate('/');
+    // 로그인 상태면 마이페이지로, 아니면 홈으로
+    if (user) {
+      navigate('/mypage');
+    } else {
+      reset();
+      navigate('/');
+    }
   };
 
   const getStepStatus = (stepId: string): 'complete' | 'current' | 'upcoming' => {
@@ -121,7 +128,7 @@ export default function MainLayout({
                   자기소개서 작성하기
                 </Link>
                 <Link
-                  to="/"
+                  to="/template-selection"
                   className="text-sm text-gray-700 hover:text-blue-600 transition font-medium whitespace-nowrap"
                 >
                   포트폴리오 제작하기
