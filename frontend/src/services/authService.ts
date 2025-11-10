@@ -113,12 +113,14 @@ export const signup = async (data: SignupRequest): Promise<AuthResponse> => {
     }
 
     // users 테이블에 사용자 정보 추가
+    // password_hash는 Supabase Auth에서 관리하므로 빈 문자열로 설정
     const { data: userData, error: insertError } = await supabase
       .from('users')
       .insert([
         {
           email: data.email,
           name: data.name,
+          password_hash: '', // Supabase Auth 사용 시 빈 값
           email_verified: false,
           is_active: true,
         }
