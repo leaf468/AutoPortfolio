@@ -226,18 +226,61 @@ export default function TemplateEditPage() {
       const isEditMode = loadedFromDB || (state.editMode && state.portfolioId);
       const portfolioId = locationState?.portfolioData?.portfolio_id || state.portfolioId;
 
+      console.log('🔍 Save mode check:', {
+        loadedFromDB,
+        isEditMode,
+        portfolioId,
+        locationPortfolioId: locationState?.portfolioData?.portfolio_id,
+        statePortfolioId: state.portfolioId
+      });
+
       if (isEditMode && portfolioId) {
         // 편집 모드: 업데이트
         console.log('📝 Updating portfolio:', portfolioId);
-        const { error } = await supabase
+        console.log('📝 Update data:', portfolioData);
+
+        // 먼저 해당 포트폴리오가 존재하는지 확인
+        const { data: existingData, error: checkError } = await supabase
+          .from('portfolios')
+          .select('*')
+          .eq('portfolio_id', portfolioId)
+          .maybeSingle();
+
+        console.log('🔍 Existing portfolio check:', existingData);
+        console.log('🔍 Check error:', checkError);
+
+        const { data, error } = await supabase
           .from('portfolios')
           .update(portfolioData)
-          .eq('portfolio_id', portfolioId);
+          .eq('portfolio_id', portfolioId)
+          .select();
 
         if (error) {
-          console.error('Update error:', error);
+          console.error('❌ Update error:', error);
           throw error;
         }
+        console.log('✅ Portfolio updated successfully:', data);
+        console.log('✅ Updated rows:', data?.length);
+
+        if (!data || data.length === 0) {
+          console.warn('⚠️ No rows updated - portfolio might not exist or RLS policy issue');
+          // 업데이트 실패 시 새로 삽입 시도
+          console.log('🔄 Attempting to insert as new portfolio instead');
+          const { error: insertError } = await supabase
+            .from('portfolios')
+            .insert({
+              user_id: user.user_id,
+              ...portfolioData,
+              published: false
+            });
+
+          if (insertError) {
+            console.error('❌ Insert error:', insertError);
+            throw insertError;
+          }
+          console.log('✅ Portfolio inserted successfully');
+        }
+
         alert('포트폴리오가 저장되었습니다!');
       } else {
         // 신규 작성 모드: 삽입
@@ -254,9 +297,11 @@ export default function TemplateEditPage() {
           console.error('Insert error:', error);
           throw error;
         }
+        console.log('✅ Portfolio saved successfully');
         alert('포트폴리오가 저장되었습니다!');
       }
-      navigate('/mypage');
+      // 저장 후 마이페이지로 이동하면서 강제 새로고침
+      navigate('/mypage', { replace: true, state: { refresh: Date.now() } });
     } catch (error) {
       console.error('저장 오류:', error);
       alert('저장 중 오류가 발생했습니다.');

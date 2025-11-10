@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { usePortfolio } from '../contexts/PortfolioContext';
 import { logout } from '../services/authService';
@@ -16,6 +16,7 @@ import {
 
 const MyPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, loading, setUser } = useAuth();
   const { setEditMode } = usePortfolio();
   const [activeTab, setActiveTab] = useState<'documents' | 'portfolios' | 'profile'>('documents');
@@ -58,6 +59,15 @@ const MyPage: React.FC = () => {
       loadPortfolios();
     }
   }, [user, loading, navigate]);
+
+  // location.state가 변경될 때 포트폴리오 다시 불러오기 (저장 후 돌아왔을 때)
+  useEffect(() => {
+    const locationState = location.state as any;
+    if (locationState?.refresh && user) {
+      console.log('🔄 Refreshing portfolios after save');
+      loadPortfolios();
+    }
+  }, [location.state, user]);
 
   const loadProfile = async () => {
     if (!user) return;
@@ -133,6 +143,7 @@ const MyPage: React.FC = () => {
   const loadPortfolios = async () => {
     if (!user) return;
 
+    console.log('📂 Loading portfolios for user:', user.user_id);
     setIsLoadingPortfolios(true);
     try {
       const { data, error } = await supabase
@@ -142,9 +153,11 @@ const MyPage: React.FC = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+      console.log('📂 Portfolios loaded:', data?.length, 'items');
+      console.log('📂 Portfolio data:', data);
       setPortfolios(data || []);
     } catch (error) {
-      console.error('Load portfolios error:', error);
+      console.error('❌ Load portfolios error:', error);
     } finally {
       setIsLoadingPortfolios(false);
     }
@@ -451,7 +464,7 @@ const MyPage: React.FC = () => {
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-gray-900">내 포트폴리오</h2>
               <button
-                onClick={() => navigate('/')}
+                onClick={() => navigate('/template-selection')}
                 className="px-5 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all duration-200 shadow-md hover:shadow-lg font-medium flex items-center"
               >
                 <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

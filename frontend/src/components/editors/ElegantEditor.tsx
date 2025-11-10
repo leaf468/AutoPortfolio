@@ -320,11 +320,27 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
                         }
                     }
 
-                    // DB에서 불러온 데이터가 아니고 데이터가 부족한 경우에만 AI로 개선
-                    const isFromDB = firstBlock.extractedData && (firstBlock.extractedData as any).summary;
+                    // DB에서 불러온 데이터인지 확인 (summary 또는 이미 충분한 데이터가 있는 경우)
+                    const extracted = firstBlock.extractedData as any;
+                    const isFromDB = extracted && (
+                        extracted.summary ||  // AI 분석 결과
+                        extracted.about ||    // 이미 저장된 about 필드
+                        (extracted.projects && extracted.projects.length > 0) ||  // 프로젝트 데이터 존재
+                        (extracted.experience && extracted.experience.length > 0) ||  // 경력 데이터 존재
+                        (extracted.experiences && extracted.experiences.length > 0)  // 경력 데이터 존재 (복수형)
+                    );
                     const needsEnhancement = !isFromDB && (!actualData.about || actualData.about.length < 50);
 
-                    console.log('🔍 ElegantEditor Enhancement check:', { isFromDB, needsEnhancement });
+                    console.log('🔍 ElegantEditor Enhancement check:', {
+                        isFromDB,
+                        hasExtractedData: !!extracted,
+                        hasSummary: !!(extracted?.summary),
+                        hasAbout: !!actualData.about,
+                        hasProjects: !!(extracted?.projects?.length),
+                        hasExperience: !!(extracted?.experience?.length || extracted?.experiences?.length),
+                        aboutLength: actualData.about?.length,
+                        needsEnhancement
+                    });
 
                     if (needsEnhancement) {
                         setIsEnhancing(true);
