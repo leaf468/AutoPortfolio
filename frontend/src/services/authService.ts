@@ -260,3 +260,30 @@ export const updateUserProfile = async (
 export const isAuthenticated = (): boolean => {
   return tokenService.getToken() !== null;
 };
+
+// 구글 로그인
+export const loginWithGoogle = async (): Promise<{ success: boolean; message?: string }> => {
+  try {
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      }
+    });
+
+    if (error) {
+      return {
+        success: false,
+        message: error.message || '구글 로그인에 실패했습니다.',
+      };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Google login error:', error);
+    return {
+      success: false,
+      message: '구글 로그인 중 오류가 발생했습니다.',
+    };
+  }
+};
