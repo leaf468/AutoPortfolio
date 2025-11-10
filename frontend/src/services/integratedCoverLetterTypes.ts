@@ -66,25 +66,23 @@ export function parseToeic(toeicString?: string): number | null {
 
 // 의미 없는 활동 카테고리 키워드 (카운트에서 제외)
 const MEANINGLESS_ACTIVITY_CATEGORIES = [
-  '활동', '경험', '느낀', '느낀점', '느낀 점', '생각', '배운', '배운점', '배운 점',
-  '깨달음', '느낌', '소감', '후기', '회고', '성장', '발전', '변화', '역량', '능력',
-  '자질', '태도', '마음가짐', '자세', '의지', '열정', '목표', '다짐', '희망', '바람',
-  '기여', '노력', '시간', '과정', '단계', '내용', '부분', '요소', '측면',
-  '특징', '장점', '강점', '매력', '가치', '의미', '중요성', '필요성',
-  '이해', '파악', '습득', '학습', '공부', '관심', '흥미', '동기', '계기',
-  '기회', '경우', '상황', '환경', '조건', '여건', '문제', '과제', '방법',
-  '전략', '계획', '목적', '이유', '원인', '결과', '영향', '효과', '성과',
-  '기타', '그외', '그 외', '등등', '기타 등등', '등', '기타사항', '기타 사항',
+  '활동', '경험', '느낀 점', '느낀점'
 ];
 
 export function getAllActivities(activities: IntegratedActivities): string[] {
   const allActivities: string[] = [];
 
   Object.entries(activities).forEach(([categoryKey, activityList]) => {
-    // 카테고리 키가 의미 없는 키워드를 포함하는지 확인
-    const isMeaninglessCategory = MEANINGLESS_ACTIVITY_CATEGORIES.some(meaningless =>
-      categoryKey.toLowerCase().includes(meaningless.toLowerCase())
-    );
+    // 카테고리 키를 정규화 (공백 및 특수문자 제거)
+    const normalizedKey = categoryKey.toLowerCase().trim();
+
+    // 카테고리 키가 정확히 의미 없는 키워드와 일치하는지 확인 (부분 일치가 아닌 정확한 일치)
+    const isMeaninglessCategory = MEANINGLESS_ACTIVITY_CATEGORIES.some(meaningless => {
+      const normalizedMeaningless = meaningless.toLowerCase().trim();
+      // 정확히 일치하거나, 키가 매우 짧고 의미 없는 단어로만 구성된 경우만 제외
+      return normalizedKey === normalizedMeaningless ||
+             (normalizedKey.length <= 4 && normalizedKey === normalizedMeaningless);
+    });
 
     // 의미 있는 카테고리만 포함
     if (!isMeaninglessCategory) {

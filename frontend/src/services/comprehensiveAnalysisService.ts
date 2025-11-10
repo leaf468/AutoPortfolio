@@ -767,26 +767,100 @@ function generateActivityInsight(type: string, percentage: number, keywords: str
 
 function extractTopCertificates(coverLetters: IntegratedCoverLetter[]): { name: string; percentage: number }[] {
   const certMap = new Map<string, number>();
+  let noCertCount = 0; // 자격증 없는 합격자 수
 
   coverLetters.forEach((cl) => {
     const certs = cl.user_spec?.certifications;
-    if (certs) {
-      const certList = certs.split(/[,、]/).map(c => c.trim());
-      certList.forEach(cert => {
-        if (cert && cert.length > 1 && cert.length < 50) {
-          certMap.set(cert, (certMap.get(cert) || 0) + 1);
-        }
-      });
+
+    // 자격증이 없거나 빈 문자열인 경우
+    if (!certs || certs.trim() === '' || certs.toLowerCase() === 'null' || certs === '{}') {
+      noCertCount++;
+      return;
     }
+
+    let certList: string[] = [];
+
+    // JSON 형식인지 확인 ('{' 로 시작하는 경우)
+    if (certs.trim().startsWith('{')) {
+      try {
+        // JSON 파싱 시도
+        const parsedCerts = JSON.parse(certs);
+        if (typeof parsedCerts === 'object' && parsedCerts !== null) {
+          // JSON 객체의 키(자격증 이름)만 추출
+          certList = Object.keys(parsedCerts).filter(key => {
+            const value = parsedCerts[key];
+            // null이 아니고 빈 문자열이 아닌 경우만 포함
+            return value !== null && value !== '' && value !== 'null';
+          });
+
+          // 모든 값이 null이면 자격증 없음으로 처리
+          if (certList.length === 0) {
+            noCertCount++;
+            return;
+          }
+        }
+      } catch (e) {
+        // JSON 파싱 실패 시 일반 문자열로 처리
+        certList = certs.split(/[,、]/).map(c => c.trim());
+      }
+    } else {
+      // 일반 문자열인 경우 쉼표나 가운뎃점으로 분리
+      certList = certs.split(/[,、]/).map(c => c.trim());
+    }
+
+    // 자격증이 하나도 없으면 카운트
+    if (certList.length === 0) {
+      noCertCount++;
+      return;
+    }
+
+    // 유효한 자격증만 필터링 및 카운트
+    certList.forEach(cert => {
+      // 불필요한 문자 제거
+      cert = cert
+        .replace(/["'{}[\]]/g, '') // JSON 특수문자 제거
+        .replace(/:\s*null/g, '')   // :null 제거
+        .replace(/null/gi, '')      // null 문자열 제거
+        .trim();
+
+      // 유효한 자격증만 추가 (길이 2~50, 특수문자만으로 구성되지 않음)
+      if (cert &&
+          cert.length >= 2 &&
+          cert.length <= 50 &&
+          !/^[^\w가-힣]+$/.test(cert) && // 특수문자만으로 구성되지 않음
+          cert !== 'null' &&
+          cert !== 'undefined') {
+        certMap.set(cert, (certMap.get(cert) || 0) + 1);
+      }
+    });
   });
 
-  return Array.from(certMap.entries())
+  // 자격증 데이터 수집
+  const certResults = Array.from(certMap.entries())
     .map(([name, count]) => ({
       name,
-      percentage: Math.min((count / coverLetters.length) * 100, 100),
+      percentage: (count / coverLetters.length) * 100,
+      count
     }))
-    .sort((a, b) => b.percentage - a.percentage)
-    .slice(0, 10);
+    .sort((a, b) => b.percentage - a.percentage);
+
+  // "자격증 없음" 항목 추가 (10% 이상인 경우만)
+  const noCertPercentage = (noCertCount / coverLetters.length) * 100;
+  if (noCertCount > 0 && noCertPercentage >= 10) {
+    certResults.push({
+      name: '자격증 없음',
+      percentage: noCertPercentage,
+      count: noCertCount
+    });
+  }
+
+  // 상위 10개만 반환
+  return certResults
+    .slice(0, 10)
+    .map(({ name, percentage }) => ({
+      name,
+      percentage: Math.min(percentage, 100)
+    }));
 }
 
 // 의미 있는 활동만 필터링하는 함수

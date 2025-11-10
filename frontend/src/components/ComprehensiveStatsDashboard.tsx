@@ -232,6 +232,101 @@ export const ComprehensiveStatsDashboard: React.FC<ComprehensiveStatsDashboardPr
           )}
         </div>
       )}
+
+      {/* 자격증 통계 */}
+      {stats.topCertificates.length > 0 && (
+        <div>
+          <div className="flex items-center mb-4">
+            <TrophyIcon className="w-6 h-6 text-yellow-600 mr-2" />
+            <h3 className="text-lg font-semibold">주요 자격증 분포</h3>
+          </div>
+
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
+            {/* 원형 그래프 */}
+            <ResponsiveContainer width="100%" height={400}>
+              <PieChart>
+                <Pie
+                  data={(() => {
+                    // 상위 10개 자격증만 선택
+                    const topCerts = stats.topCertificates.slice(0, 10);
+                    // 전체 합계 계산
+                    const totalPercentage = topCerts.reduce((sum, cert) => sum + cert.percentage, 0);
+                    // 비율 정규화 (합이 100%가 되도록)
+                    return topCerts.map(cert => ({
+                      name: cert.name,
+                      value: totalPercentage > 0 ? (cert.percentage / totalPercentage) * 100 : 0,
+                      originalPercentage: cert.percentage
+                    }));
+                  })()}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, value }: any) => {
+                    // 5% 이상인 경우만 라벨 표시
+                    if (value >= 5) {
+                      return `${name} (${value.toFixed(1)}%)`;
+                    }
+                    return '';
+                  }}
+                  outerRadius={120}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {stats.topCertificates.slice(0, 10).map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const data = payload[0].payload;
+                      return (
+                        <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-200">
+                          <p className="font-semibold text-gray-900">{data.name}</p>
+                          <p className="text-sm text-gray-600">
+                            그래프 비율: {data.value.toFixed(1)}%
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            합격자 보유율: {data.originalPercentage.toFixed(1)}%
+                          </p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+
+            {/* 범례 */}
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              {stats.topCertificates.slice(0, 10).map((cert, index) => (
+                <div key={index} className="flex items-center gap-2">
+                  <div
+                    className="w-4 h-4 rounded"
+                    style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                  ></div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-gray-900 truncate" title={cert.name}>
+                      {cert.name}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      합격자의 {cert.percentage.toFixed(1)}%
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+              <p className="text-xs text-blue-800">
+                💡 원형 그래프는 상위 10개 자격증의 <strong>상대적 비율</strong>을 나타냅니다.
+                범례의 퍼센티지는 해당 자격증을 보유한 <strong>합격자 비율</strong>입니다.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
