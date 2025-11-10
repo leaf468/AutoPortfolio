@@ -7,7 +7,7 @@ import LandingFooter from '../components/LandingFooter';
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { setUser } = useAuth();
+  const { setUser, user } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -50,7 +50,7 @@ const LoginPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div
             className="flex items-center gap-4 cursor-pointer hover:opacity-80 transition-opacity"
-            onClick={() => navigate('/')}
+            onClick={() => navigate(user ? '/mypage' : '/')}
           >
             <img
               src="/Careeroad_logo.png"

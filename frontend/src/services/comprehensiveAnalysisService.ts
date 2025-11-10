@@ -572,6 +572,18 @@ function generateConcreteExamples(activityType: string, keywords: string[], coun
   return templates.slice(0, count);
 }
 
+// 의미 없는 키워드 필터 (활동으로 카운트하지 않을 키워드)
+const MEANINGLESS_KEYWORDS = [
+  '활동', '경험', '느낀', '느낀점', '생각', '배운', '배운점', '깨달음', '느낌',
+  '소감', '후기', '회고', '성장', '발전', '변화', '역량', '능력', '자질',
+  '태도', '마음가짐', '자세', '의지', '열정', '목표', '다짐', '희망', '바람',
+  '기여', '노력', '시간', '과정', '단계', '내용', '부분', '요소', '측면',
+  '특징', '장점', '강점', '매력', '가치', '의미', '중요성', '필요성',
+  '이해', '파악', '습득', '학습', '공부', '관심', '흥미', '동기', '계기',
+  '기회', '경우', '상황', '환경', '조건', '여건', '문제', '과제', '방법',
+  '전략', '계획', '목적', '이유', '원인', '결과', '영향', '효과', '성과',
+];
+
 function analyzeActivityPatterns(activities: Activity[], totalApplicants: number): ActivityPattern[] {
   // 구체적인 활동명 추출을 위한 패턴 (명사만 매칭)
   const activityPatterns = [
@@ -619,8 +631,14 @@ function analyzeActivityPatterns(activities: Activity[], totalApplicants: number
         const skipPrefixes = ['핵심', '주요', '중요', '다양한', '여러', '기타', '관련', '전반', '의', '을', '를', '이', '가'];
         const invalidChars = ['하는', '하고', '되는', '되고', '및', '등', '에서', '으로', '에게'];
 
+        // 의미 없는 키워드 필터링 추가
+        const isMeaningless = MEANINGLESS_KEYWORDS.some(meaningless =>
+          prefix === meaningless || prefix.includes(meaningless)
+        );
+
         // 조사나 불완전한 문장 조각 필터링
         if (
+          isMeaningless ||
           skipPrefixes.some(skip => prefix.includes(skip)) ||
           invalidChars.some(invalid => prefix.includes(invalid)) ||
           prefix.length < 2 ||
@@ -771,6 +789,23 @@ function extractTopCertificates(coverLetters: IntegratedCoverLetter[]): { name: 
     .slice(0, 10);
 }
 
+// 의미 있는 활동만 필터링하는 함수
+function isValidActivity(content: string): boolean {
+  if (!content || content.length < 15) return false;
+
+  // 의미 없는 키워드가 주요 내용인 경우 제외
+  const hasMeaninglessKeyword = MEANINGLESS_KEYWORDS.some(keyword => {
+    const pattern = new RegExp(`^[^가-힣]{0,5}${keyword}[^가-힣]`, 'i');
+    return pattern.test(content);
+  });
+
+  if (hasMeaninglessKeyword) return false;
+
+  // extractCoreActivity로 검증
+  const coreActivity = extractCoreActivity(content);
+  return coreActivity.length > 0;
+}
+
 function generateInsights(coverLetters: IntegratedCoverLetter[], activities: {id: number, cover_letter_id: number, activity_type: string, content: string, created_at: string}[]): string[] {
   const insights: string[] = [];
   const total = coverLetters.length;
@@ -787,37 +822,39 @@ function generateInsights(coverLetters: IntegratedCoverLetter[], activities: {id
     insights.push(`합격자의 평균 토익 점수는 ${Math.round(avgToeic)}점입니다.`);
   }
 
-  // 활동 인사이트
+  // 활동 인사이트 (의미 있는 활동만 필터링)
+  const validActivities = activities.filter(a => isValidActivity(a.content));
+
   const activityCounts = new Map<number, number>();
   coverLetters.forEach((cl) => {
-    const clActivities = activities.filter((a) => a.cover_letter_id === cl.id);
+    const clActivities = validActivities.filter((a) => a.cover_letter_id === cl.id);
     const count = clActivities.length;
     activityCounts.set(count, (activityCounts.get(count) || 0) + 1);
   });
 
-  const avgActivityCount = activities.length / total;
+  const avgActivityCount = validActivities.length / total;
   if (avgActivityCount > 0) {
     insights.push(`합격자는 평균 ${avgActivityCount.toFixed(1)}개의 활동을 자소서에 언급합니다.`);
   }
 
-  // 팀 프로젝트 인사이트
-  const teamProjectCount = activities.filter((a) =>
+  // 팀 프로젝트 인사이트 (유효한 활동만 사용)
+  const teamProjectCount = validActivities.filter((a) =>
     a.content.includes('팀') || a.content.includes('협업') || a.content.includes('프로젝트')
   ).length;
   if (teamProjectCount > total * 0.5) {
     insights.push(`합격자의 ${((teamProjectCount / total) * 100).toFixed(0)}%가 팀 프로젝트 경험을 강조합니다.`);
   }
 
-  // 리더십 인사이트
-  const leadershipCount = activities.filter((a) =>
+  // 리더십 인사이트 (유효한 활동만 사용)
+  const leadershipCount = validActivities.filter((a) =>
     a.content.includes('리더') || a.content.includes('팀장') || a.content.includes('주도')
   ).length;
   if (leadershipCount > total * 0.3) {
     insights.push(`합격자의 ${((leadershipCount / total) * 100).toFixed(0)}%가 리더십 경험을 언급합니다.`);
   }
 
-  // 수상 경험 인사이트
-  const awardCount = activities.filter((a) =>
+  // 수상 경험 인사이트 (유효한 활동만 사용)
+  const awardCount = validActivities.filter((a) =>
     a.content.includes('수상') || a.content.includes('대상') || a.content.includes('우수상')
   ).length;
   if (awardCount > total * 0.2) {

@@ -282,8 +282,8 @@ const MyPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-8">
-              {/* 로고 */}
-              <Link to="/" className="flex items-center space-x-2">
+              {/* 로고 - 로그인 상태에서는 마이페이지로 이동 */}
+              <Link to="/mypage" className="flex items-center space-x-2">
                 <img src="/Careeroad_logo.png" alt="Careeroad" className="h-14" />
               </Link>
 

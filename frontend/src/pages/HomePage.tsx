@@ -10,15 +10,12 @@ import {
   CheckCircleIcon
 } from '@heroicons/react/24/outline';
 import { trackMainPageVisit, trackButtonClick } from '../utils/analytics';
-import AuthModal from '../components/AuthModal';
 import LandingFooter from '../components/LandingFooter';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function HomePage() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('login');
   const [currentSlide, setCurrentSlide] = useState(0);
 
   const slides = [
@@ -64,6 +61,13 @@ export default function HomePage() {
     trackMainPageVisit();
   }, []);
 
+  // 로그인된 유저는 마이페이지로 리다이렉트
+  useEffect(() => {
+    if (user) {
+      navigate('/mypage');
+    }
+  }, [user, navigate]);
+
   useEffect(() => {
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % slides.length);
@@ -73,31 +77,21 @@ export default function HomePage() {
 
   const handleGetStarted = () => {
     trackButtonClick('포트폴리오 만들기 시작', 'HomePage');
-    // 로그인 상태면 템플릿 선택으로, 아니면 회원가입 모달
+    // 로그인 상태면 템플릿 선택으로, 아니면 회원가입 페이지로 이동
     if (user) {
       navigate('/template-selection');
     } else {
-      setAuthModalMode('signup');
-      setIsAuthModalOpen(true);
+      navigate('/signup');
     }
   };
 
   const handleLogin = () => {
     trackButtonClick('로그인', 'HomePage');
-    setAuthModalMode('login');
-    setIsAuthModalOpen(true);
+    navigate('/login');
   };
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Auth Modal */}
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        initialMode={authModalMode}
-      />
-
-      {/* Navigation */}
       <nav className="fixed top-0 w-full bg-white/80 backdrop-blur-md z-50 border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">

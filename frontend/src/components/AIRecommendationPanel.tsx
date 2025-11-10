@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { AIRecommendation, generateRealtimeRecommendations } from '../services/aiRecommendationService';
 import { LightBulbIcon, SparklesIcon, DocumentTextIcon, ChartBarIcon } from '@heroicons/react/24/outline';
 
@@ -9,6 +9,39 @@ interface AIRecommendationPanelProps {
   questionText?: string;
 }
 
+// 캐시 타입 정의
+interface CachedRecommendation {
+  recommendations: AIRecommendation[];
+  input: string;
+  timestamp: number;
+}
+
+// 로컬스토리지 키
+const CACHE_KEY = 'ai_recommendations_cache';
+const CACHE_EXPIRY = 24 * 60 * 60 * 1000; // 24시간
+
+// 초기 캐시 로드 함수 (컴포넌트 외부에서 정의)
+const loadInitialCache = (): Record<string, CachedRecommendation> => {
+  try {
+    const stored = localStorage.getItem(CACHE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      // 만료된 캐시 제거
+      const now = Date.now();
+      const filtered: Record<string, CachedRecommendation> = {};
+      Object.keys(parsed).forEach(key => {
+        if (now - parsed[key].timestamp < CACHE_EXPIRY) {
+          filtered[key] = parsed[key];
+        }
+      });
+      return filtered;
+    }
+  } catch (error) {
+    console.error('캐시 로드 실패:', error);
+  }
+  return {};
+};
+
 export const AIRecommendationPanel: React.FC<AIRecommendationPanelProps> = ({
   currentInput,
   position,
@@ -18,6 +51,14 @@ export const AIRecommendationPanel: React.FC<AIRecommendationPanelProps> = ({
   const [recommendations, setRecommendations] = useState<AIRecommendation[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // 메모리 캐시 (useRef로 관리하여 무한 루프 방지)
+  const recommendationCacheRef = useRef<Record<string, CachedRecommendation>>(loadInitialCache());
+
+  // 캐시 키 생성 (questionId + currentInput의 해시)
+  const getCacheKey = (qId: string, input: string): string => {
+    return `${qId}_${input.substring(0, 100)}`; // 입력의 첫 100자로 키 생성
+  };
+
   useEffect(() => {
     const fetchRecommendations = async () => {
       if (!currentInput || currentInput.length < 10 || !position.trim()) {
@@ -25,10 +66,40 @@ export const AIRecommendationPanel: React.FC<AIRecommendationPanelProps> = ({
         return;
       }
 
+      const cacheKey = getCacheKey(questionId, currentInput);
+
+      // 캐시 확인
+      const cached = recommendationCacheRef.current[cacheKey];
+      if (cached && cached.input === currentInput) {
+        console.log('✅ 캐시된 AI 추천 사용:', questionId);
+        setRecommendations(cached.recommendations);
+        setLoading(false);
+        return;
+      }
+
+      // 캐시가 없거나 입력이 변경되었으면 새로 생성
+      console.log('🔄 새로운 AI 추천 생성:', questionId);
       setLoading(true);
       try {
         const recs = await generateRealtimeRecommendations(currentInput, position, questionText);
         setRecommendations(recs);
+
+        // 캐시 저장 (메모리)
+        recommendationCacheRef.current = {
+          ...recommendationCacheRef.current,
+          [cacheKey]: {
+            recommendations: recs,
+            input: currentInput,
+            timestamp: Date.now(),
+          },
+        };
+
+        // 캐시 저장 (localStorage)
+        try {
+          localStorage.setItem(CACHE_KEY, JSON.stringify(recommendationCacheRef.current));
+        } catch (error) {
+          console.error('캐시 저장 실패:', error);
+        }
       } catch (error) {
         console.error('추천 생성 실패:', error);
         setRecommendations([]);

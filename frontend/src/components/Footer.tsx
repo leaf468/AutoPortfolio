@@ -1,13 +1,10 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import AuthModal from './AuthModal';
 
 const Footer: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('login');
 
   return (
     <>
@@ -47,8 +44,7 @@ const Footer: React.FC = () => {
                       if (user) {
                         navigate('/cover-letter');
                       } else {
-                        setAuthModalMode('signup');
-                        setIsAuthModalOpen(true);
+                        navigate('/signup');
                       }
                     }}
                     className="text-sm hover:text-white transition text-left"
@@ -62,8 +58,7 @@ const Footer: React.FC = () => {
                       if (user) {
                         navigate('/template-selection');
                       } else {
-                        setAuthModalMode('signup');
-                        setIsAuthModalOpen(true);
+                        navigate('/signup');
                       }
                     }}
                     className="text-sm hover:text-white transition text-left"
@@ -77,8 +72,7 @@ const Footer: React.FC = () => {
                       if (user) {
                         navigate('/mypage');
                       } else {
-                        setAuthModalMode('login');
-                        setIsAuthModalOpen(true);
+                        navigate('/login');
                       }
                     }}
                     className="text-sm hover:text-white transition text-left"
@@ -104,12 +98,6 @@ const Footer: React.FC = () => {
 
         </div>
       </footer>
-
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-        initialMode={authModalMode}
-      />
     </>
   );
 };

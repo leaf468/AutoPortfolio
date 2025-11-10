@@ -3,11 +3,13 @@ import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { ComprehensiveStats, getComprehensiveStats } from '../services/comprehensiveAnalysisService';
 import { ComprehensiveStatsDashboard } from '../components/ComprehensiveStatsDashboard';
+import { useAuth } from '../contexts/AuthContext';
 import Footer from '../components/Footer';
 
 export const PositionStatsDetailPage: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const position = location.state?.position as string | null;
 
   const [stats, setStats] = useState<ComprehensiveStats | null>(null);
@@ -73,7 +75,7 @@ export const PositionStatsDetailPage: React.FC = () => {
           </button>
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <Link to="/">
+              <Link to={user ? "/mypage" : "/"}>
                 <img
                   src="/Careeroad_logo.png"
                   alt="Careeroad"
@@ -97,7 +99,7 @@ export const PositionStatsDetailPage: React.FC = () => {
                 자기소개서 작성하기
               </Link>
               <Link
-                to="/"
+                to="/template-selection"
                 className="text-sm text-gray-700 hover:text-blue-600 transition font-medium whitespace-nowrap"
               >
                 포트폴리오 제작하기

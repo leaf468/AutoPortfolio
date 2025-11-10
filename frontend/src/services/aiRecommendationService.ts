@@ -366,10 +366,16 @@ export async function analyzeCoverLetterComplete(
     improvements.push('구체적인 수치나 지표를 추가하면 더욱 설득력이 높아집니다.');
   }
 
-  const avgActivityCount = stats.commonActivities.reduce((sum, a) => sum + a.averageCount, 0);
-  const userActivityMentions = allKeywords.length;
-  if (userActivityMentions < avgActivityCount * 0.7) {
-    improvements.push(`이 직무 합격자들은 평균 ${avgActivityCount.toFixed(1)}개의 활동을 언급합니다. 더 다양한 경험을 추가하세요.`);
+  // 활동 개수 비교 (각 활동 타입별 평균이 아닌, 상위 활동 타입 개수로 비교)
+  // 합격자들이 평균적으로 보유한 주요 활동 타입 개수 (상위 70% 이상인 것만)
+  const majorActivityTypes = stats.commonActivities.filter(a => a.percentage >= 70).length;
+  const userMajorActivityMentions = stats.commonActivities
+    .filter(a => a.percentage >= 70 && allText.includes(a.activityType.split(' ')[1]))
+    .length;
+
+  if (majorActivityTypes > 0 && userMajorActivityMentions < majorActivityTypes * 0.5) {
+    const missingCount = Math.ceil(majorActivityTypes * 0.5) - userMajorActivityMentions;
+    improvements.push(`이 직무의 주요 활동 ${majorActivityTypes}가지 중 ${missingCount}가지 이상을 추가로 작성하면 경쟁력이 높아집니다.`);
   }
 
   // 추천사항

@@ -369,7 +369,7 @@ export const CoverLetterPageV3: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <Link to="/">
+              <Link to={user ? "/mypage" : "/"}>
                 <img
                   src="/Careeroad_logo.png"
                   alt="Careeroad"
@@ -395,7 +395,7 @@ export const CoverLetterPageV3: React.FC = () => {
                     자기소개서 작성하기
                   </Link>
                   <Link
-                    to="/"
+                    to="/template-selection"
                     className="text-sm text-gray-700 hover:text-blue-600 transition font-medium whitespace-nowrap"
                   >
                     포트폴리오 제작하기

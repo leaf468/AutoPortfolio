@@ -1,14 +1,17 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useAuth } from '../contexts/AuthContext';
 
 const LandingFooter: React.FC = () => {
+  const { user } = useAuth();
+
   return (
     <footer className="bg-gray-900 text-gray-300 mt-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* 로고 및 회사 정보 */}
           <div className="col-span-1 md:col-span-2">
-            <Link to="/" className="flex items-center space-x-2 mb-4 hover:opacity-80 transition-opacity w-fit">
+            <Link to={user ? "/mypage" : "/"} className="flex items-center space-x-2 mb-4 hover:opacity-80 transition-opacity w-fit">
               <img src="/Careeroad_logo.png" alt="Careeroad" className="h-8" style={{ filter: 'brightness(0) invert(1)' }} />
               <span className="text-xl font-bold text-white">Careeroad</span>
             </Link>
