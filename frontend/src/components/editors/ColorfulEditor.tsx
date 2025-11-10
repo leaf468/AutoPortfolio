@@ -84,7 +84,8 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
             { category: '디자인', skills: [], icon: '✨' }
         ],
         projects: [],
-        experience: []
+        experience: [],
+        awards: []
     });
 
     const [currentHtml, setCurrentHtml] = useState<string>('');
@@ -103,7 +104,8 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
         about: 'About Me',
         experience: 'Experience',
         projects: 'Projects',
-        skills: 'Skills'
+        skills: 'Skills',
+        awards: '수상/자격증'
     });
 
     const hasInitialized = useRef(false);
@@ -414,6 +416,7 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
                     tech: project.tech?.length > 0 ? project.tech : ['React', 'Framer Motion', 'Styled Components'],
                     results: project.results || ['월 방문자 증가', '디자인 어워드 수상']
                 })) || [],
+                awards: portfolioData.awards || [],
                 sectionTitles: sectionTitles
             };
 
@@ -715,6 +718,38 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
                     ? { ...cat, skills: cat.skills.filter((_, j) => j !== skillIndex) }
                     : cat
             ) || []
+        }));
+    };
+
+    // 수상/자격증 관련 핸들러들
+    const handleAddAward = () => {
+        const newAward = {
+            title: '수상/자격증명',
+            organization: '발급 기관',
+            year: '2024',
+            description: '상세 내용을 입력하세요'
+        };
+        setPortfolioData(prev => ({
+            ...prev,
+            awards: [...(prev.awards || []), newAward]
+        }));
+    };
+
+    const handleUpdateAward = (index: number, field: string, value: string) => {
+        setPortfolioData(prev => {
+            const updatedAwards = [...(prev.awards || [])];
+            updatedAwards[index] = {
+                ...updatedAwards[index],
+                [field]: value
+            };
+            return { ...prev, awards: updatedAwards };
+        });
+    };
+
+    const handleDeleteAward = (index: number) => {
+        setPortfolioData(prev => ({
+            ...prev,
+            awards: (prev.awards || []).filter((_, i) => i !== index)
         }));
     };
 
@@ -1357,6 +1392,87 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
                                 {(!portfolioData.skillCategories || portfolioData.skillCategories.length === 0) && (
                                     <p className="text-gray-500 text-center py-8">
                                         기술 스택 카테고리를 추가해주세요
+                                    </p>
+                                )}
+                            </div>
+                        </BlurFade>
+
+                        {/* Awards 섹션 */}
+                        <BlurFade delay={0.5}>
+                            <div className="bg-white rounded-xl border border-purple-200 p-6 shadow-sm">
+                                <div className="flex items-center justify-between mb-4">
+                                    <input
+                                        type="text"
+                                        value={sectionTitles.awards}
+                                        onChange={(e) => setSectionTitles(prev => ({ ...prev, awards: e.target.value }))}
+                                        className="text-lg font-bold text-gray-900 bg-transparent border-b border-purple-300 focus:border-purple-500 outline-none"
+                                        placeholder="섹션 제목"
+                                    />
+                                    <button
+                                        onClick={handleAddAward}
+                                        className="px-3 py-1.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-sm rounded-lg hover:from-purple-700 hover:to-pink-700 transition-colors flex items-center"
+                                    >
+                                        <PlusIcon className="w-4 h-4 mr-1" />
+                                        수상/자격증 추가
+                                    </button>
+                                </div>
+
+                                <div className="space-y-3">
+                                    {(portfolioData.awards || []).map((award, index) => (
+                                        <div key={index} className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200">
+                                            <div className="flex items-start justify-between mb-3">
+                                                <input
+                                                    type="text"
+                                                    value={award.title}
+                                                    onChange={(e) => handleUpdateAward(index, 'title', e.target.value)}
+                                                    className="flex-1 font-semibold bg-transparent border-b border-purple-300 focus:border-purple-500 outline-none"
+                                                    placeholder="수상/자격증명"
+                                                />
+                                                <button
+                                                    onClick={() => handleDeleteAward(index)}
+                                                    className="ml-2 p-1 text-red-600 hover:bg-red-100 rounded transition-colors"
+                                                >
+                                                    <XMarkIcon className="w-4 h-4" />
+                                                </button>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-2 mb-2">
+                                                <div>
+                                                    <label className="text-xs text-gray-600">발급 기관</label>
+                                                    <input
+                                                        type="text"
+                                                        value={award.organization}
+                                                        onChange={(e) => handleUpdateAward(index, 'organization', e.target.value)}
+                                                        className="w-full p-1 text-sm border border-purple-300 rounded focus:border-purple-500 outline-none"
+                                                        placeholder="발급 기관"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="text-xs text-gray-600">취득 연도</label>
+                                                    <input
+                                                        type="text"
+                                                        value={award.year}
+                                                        onChange={(e) => handleUpdateAward(index, 'year', e.target.value)}
+                                                        className="w-full p-1 text-sm border border-purple-300 rounded focus:border-purple-500 outline-none"
+                                                        placeholder="2024"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <label className="text-xs text-gray-600">상세 내용</label>
+                                            <textarea
+                                                value={award.description || ''}
+                                                onChange={(e) => handleUpdateAward(index, 'description', e.target.value)}
+                                                className="w-full p-2 border border-purple-300 rounded min-h-[60px] text-sm focus:border-purple-500 outline-none"
+                                                placeholder="상세 내용을 입력하세요"
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {(!portfolioData.awards || portfolioData.awards.length === 0) && (
+                                    <p className="text-gray-500 text-center py-8">
+                                        수상/자격증을 추가해주세요
                                     </p>
                                 )}
                             </div>

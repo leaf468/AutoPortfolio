@@ -38,6 +38,7 @@ export interface PortfolioData {
 // 템플릿별 특화 데이터 타입
 export interface MinimalPortfolioData extends PortfolioData {
   education: EducationData[];
+  awards?: AwardData[];
 }
 
 export interface CleanPortfolioData extends Omit<PortfolioData, 'education'> {
@@ -46,12 +47,14 @@ export interface CleanPortfolioData extends Omit<PortfolioData, 'education'> {
   skillCategories?: SkillCategory[];
 }
 
-export interface ColorfulPortfolioData extends Omit<PortfolioData, 'education' | 'location' | 'awards'> {
+export interface ColorfulPortfolioData extends Omit<PortfolioData, 'education' | 'location'> {
   skillCategories?: SkillCategory[];
+  awards?: AwardData[];
 }
 
-export interface ElegantPortfolioData extends Omit<PortfolioData, 'education' | 'location' | 'awards'> {
+export interface ElegantPortfolioData extends Omit<PortfolioData, 'education' | 'location'> {
   skillCategories?: SkillCategory[];
+  awards?: AwardData[];
 }
 
 export interface ProjectData {
