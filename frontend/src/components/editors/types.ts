@@ -21,6 +21,7 @@ export interface SkillCategory {
 export interface PortfolioData {
   name: string;
   title: string;
+  description?: string;
   email: string;
   phone: string;
   github?: string;

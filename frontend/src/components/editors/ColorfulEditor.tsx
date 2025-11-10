@@ -73,6 +73,7 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
     const [portfolioData, setPortfolioData] = useState<ColorfulPortfolioData>({
         name: '',
         title: '',
+        description: '창의적이고 매력적인 디지털 경험을 만들어가는 개발자입니다',
         email: '',
         phone: '',
         github: '',
@@ -157,6 +158,12 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
             extractedData.title = titleElement.textContent?.trim() || '';
         }
 
+        // Description 추출 (hero 아래 p 태그)
+        const descriptionElement = doc.querySelector('.hero .hero-content > p:not(.subtitle)');
+        if (descriptionElement) {
+            extractedData.description = descriptionElement.textContent?.trim() || '';
+        }
+
         // About 섹션 추출
         const aboutCard = doc.querySelector('.section .card p');
         if (aboutCard) {
@@ -221,6 +228,7 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
                             actualData = {
                                 name: extracted.name || '',
                                 title: extracted.originalInput?.jobPosition || extracted.position || extracted.title || '개발자',
+                                description: extracted.description || '창의적이고 매력적인 디지털 경험을 만들어가는 개발자입니다',
                                 email: extracted.email || '',
                                 phone: extracted.phone || '',
                                 github: extracted.github || '',
@@ -378,9 +386,10 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
             const dataForTemplate = {
                 name: portfolioData.name || '포트폴리오 작성자',
                 title: portfolioData.title || '크리에이티브 개발자',
-                description: '창의적이고 매력적인 디지털 경험을 만들어가는 개발자입니다',
+                description: portfolioData.description || '창의적이고 매력적인 디지털 경험을 만들어가는 개발자입니다',
                 about: portfolioData.about || '창의적인 개발자로서 아름답고 기능적인 애플리케이션을 현대 기술로 구축하는데 열정적입니다.',
                 email: portfolioData.email || 'contact@example.com',
+                phone: portfolioData.phone || '',
                 github: portfolioData.github ? `https://${portfolioData.github}` : 'https://github.com/username',
                 linkedin: portfolioData.phone ? `tel:${portfolioData.phone}` : 'https://linkedin.com/in/username',
                 skills: portfolioData.skillCategories?.flatMap(cat => cat.skills) || portfolioData.skills || [],
@@ -865,6 +874,16 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
                                                 className="w-full p-2 border border-purple-300 rounded-lg focus:border-purple-500 outline-none"
                                             />
                                         </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">소개 문구</label>
+                                        <input
+                                            type="text"
+                                            value={portfolioData.description || ''}
+                                            onChange={(e) => setPortfolioData(prev => ({ ...prev, description: e.target.value }))}
+                                            className="w-full p-2 border border-purple-300 rounded-lg focus:border-purple-500 outline-none"
+                                            placeholder="창의적이고 매력적인 디지털 경험을 만들어가는 개발자입니다"
+                                        />
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>

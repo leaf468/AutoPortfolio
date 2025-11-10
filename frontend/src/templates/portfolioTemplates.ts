@@ -389,13 +389,22 @@ export const minimalTemplate: PortfolioTemplate = {
         }
         
         .contact-links {
-            display: flex;
-            justify-content: center;
-            gap: 1.5rem;
             margin-top: 1.5rem;
         }
-        
-        .contact-links a {
+
+        .contact-links > div {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .contact-links > div + div {
+            margin-top: 0.75rem;
+        }
+
+        .contact-links a,
+        .contact-links span {
             color: var(--accent-color);
             text-decoration: none;
             padding: 0.5rem 1rem;
@@ -403,7 +412,7 @@ export const minimalTemplate: PortfolioTemplate = {
             border-radius: 8px;
             transition: all 0.3s ease;
         }
-        
+
         .contact-links a:hover {
             background: var(--accent-color);
             color: white;
@@ -534,10 +543,15 @@ export const minimalTemplate: PortfolioTemplate = {
             <h1>${data.name || '안녕하세요, 박기훈입니다'}</h1>
             <p class="subtitle">${data.title || '백엔드와 데이터 처리에 강점을 가진 주니어 개발자'}</p>
             <div class="contact-links">
-                ${data.contact?.email ? `<a href="mailto:${data.contact.email}">${data.contact.email}</a>` : ''}
-                ${data.contact?.github ? `<a href="https://${data.contact.github}" target="_blank">GitHub</a>` : ''}
-                ${data.contact?.blog ? `<a href="https://${data.contact.blog}" target="_blank">Blog</a>` : ''}
-                ${data.contact?.linkedin ? `<a href="https://${data.contact.linkedin}" target="_blank">LinkedIn</a>` : ''}
+                <div>
+                    ${data.contact?.email ? `<a href="mailto:${data.contact.email}">${data.contact.email}</a>` : ''}
+                    ${data.contact?.phone ? `<span>${data.contact.phone}</span>` : ''}
+                </div>
+                <div>
+                    ${data.contact?.github ? `<a href="https://${data.contact.github}" target="_blank">${data.contact.github}</a>` : ''}
+                    ${data.contact?.blog ? `<a href="https://${data.contact.blog}" target="_blank">${data.contact.blog}</a>` : ''}
+                    ${data.contact?.linkedin ? `<a href="https://${data.contact.linkedin}" target="_blank">${data.contact.linkedin}</a>` : ''}
+                </div>
             </div>
         </header>
         
@@ -1492,6 +1506,11 @@ export const colorfulTemplate: PortfolioTemplate = {
             <h1>${data.name || 'Portfolio Owner'}</h1>
             <p class="subtitle">${data.title || 'Creative Developer'}</p>
             <p>${data.description || 'Building colorful and engaging digital experiences'}</p>
+            <div style="display: flex; gap: 1.5rem; margin-top: 1rem; justify-content: center; flex-wrap: wrap; font-size: 0.95rem;">
+                ${data.email ? `<span>📧 ${data.email}</span>` : ''}
+                ${data.phone ? `<span>📱 ${data.phone}</span>` : ''}
+                ${data.github ? `<span>🔗 ${data.github}</span>` : ''}
+            </div>
         </div>
     </header>
     
@@ -2069,10 +2088,10 @@ export const elegantTemplate: PortfolioTemplate = {
             <p class="hero-description">
                 ${data.description || 'Crafting elegant digital experiences with passion and precision'}
             </p>
-            <div class="social-links">
-                ${data.email ? `<a href="mailto:${data.email}" class="social-link">✉️</a>` : ''}
-                ${data.github ? `<a href="${data.github}" class="social-link">🐱</a>` : ''}
-                ${data.linkedin ? `<a href="${data.linkedin}" class="social-link">💼</a>` : ''}
+            <div style="display: flex; gap: 1.5rem; justify-content: center; align-items: center; flex-wrap: wrap; margin-top: 1rem; font-size: 0.95rem; color: var(--text-secondary); text-align: center;">
+                ${data.email ? `<span>📧 ${data.email}</span>` : ''}
+                ${data.phone ? `<span>📱 ${data.phone}</span>` : ''}
+                ${data.github ? `<span>🔗 ${data.github}</span>` : ''}
             </div>
         </header>
 

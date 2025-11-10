@@ -73,6 +73,7 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
     const [portfolioData, setPortfolioData] = useState<ElegantPortfolioData>({
         name: '',
         title: '',
+        description: '정밀함과 열정으로 우아한 디지털 경험을 만들어가는 개발자입니다',
         email: '',
         phone: '',
         github: '',
@@ -158,10 +159,16 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
             extractedData.title = titleElement.textContent?.trim() || '';
         }
 
-        // About 설명 추출
+        // Description 추출 (hero-description)
         const descriptionElement = doc.querySelector('.hero-description');
         if (descriptionElement) {
-            extractedData.about = descriptionElement.textContent?.trim() || '';
+            extractedData.description = descriptionElement.textContent?.trim() || '';
+        }
+
+        // About 섹션 추출
+        const aboutSection = doc.querySelector('.section p');
+        if (aboutSection) {
+            extractedData.about = aboutSection.textContent?.trim() || '';
         }
 
         // 연락처 추출
@@ -234,6 +241,7 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
                             actualData = {
                                 name: extracted.name || '',
                                 title: extracted.originalInput?.jobPosition || extracted.position || extracted.title || '개발자',
+                                description: extracted.description || '정밀함과 열정으로 우아한 디지털 경험을 만들어가는 개발자입니다',
                                 email: extracted.email || '',
                                 phone: extracted.phone || '',
                                 github: extracted.github || '',
@@ -397,9 +405,10 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
             const dataForTemplate = {
                 name: portfolioData.name || '포트폴리오 작성자',
                 title: portfolioData.title || '크리에이티브 개발자 & 디자이너',
-                description: '정밀함과 열정으로 우아한 디지털 경험을 만들어가는 개발자입니다',
+                description: portfolioData.description || '정밀함과 열정으로 우아한 디지털 경험을 만들어가는 개발자입니다',
                 about: portfolioData.about || '혁신적인 기술과 창의적인 솔루션으로 문제를 해결하는 풀스택 개발자입니다.',
                 email: portfolioData.email || 'contact@example.com',
+                phone: portfolioData.phone || '',
                 github: portfolioData.github ? `https://${portfolioData.github}` : 'https://github.com/username',
                 linkedin: portfolioData.phone ? `tel:${portfolioData.phone}` : 'https://linkedin.com/in/username',
                 skills: portfolioData.skillCategories?.flatMap(cat => cat.skills) || portfolioData.skills || [],
@@ -888,6 +897,16 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
                                                 className="w-full p-3 border border-purple-200 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-100 outline-none transition-colors"
                                             />
                                         </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">소개 문구</label>
+                                        <input
+                                            type="text"
+                                            value={portfolioData.description || ''}
+                                            onChange={(e) => setPortfolioData(prev => ({ ...prev, description: e.target.value }))}
+                                            className="w-full p-3 border border-purple-200 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-100 outline-none transition-colors"
+                                            placeholder="정밀함과 열정으로 우아한 디지털 경험을 만들어가는 개발자입니다"
+                                        />
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
