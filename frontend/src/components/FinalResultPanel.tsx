@@ -20,6 +20,7 @@ import { BoostResult } from "../services/interactiveBooster";
 import { FeedbackResult } from "../services/userFeedbackService";
 import { portfolioTemplates } from "../templates/portfolioTemplates";
 import { htmlToMarkdownConverter } from "../services/htmlToMarkdownConverter";
+import { pdfGenerator } from "../services/pdfGenerator";
 import { trackRating, trackPDFDownload, trackButtonClick } from "../utils/analytics";
 
 type TemplateType = "minimal" | "clean" | "colorful" | "elegant";
@@ -562,177 +563,10 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
             console.log("=== PDF 생성 (미리보기 HTML 사용) ===");
             console.log("HTML 길이:", htmlContent.length);
 
-            // CSS를 추가하여 페이지 나누기 적용
-            const printStyles = `
-                <style>
-                    @page {
-                        size: A4;
-                        margin: 20mm;
-                    }
+            // pdfGenerator 서비스를 사용하여 PDF 최적화 HTML 생성 (주황색 텍스트 제거 포함)
+            const optimizedHTML = pdfGenerator.generatePrintOptimizedHTML(htmlContent);
 
-                    body {
-                        -webkit-print-color-adjust: exact;
-                        print-color-adjust: exact;
-                        line-height: 1.5 !important;
-                    }
-
-                    /* 목차 숨기기 */
-                    nav,
-                    .nav,
-                    .navigation,
-                    .menu,
-                    .toc,
-                    [role="navigation"] {
-                        display: none !important;
-                    }
-
-                    /* 줄 간격 조정 */
-                    p {
-                        line-height: 1.5 !important;
-                        margin-bottom: 0.5em !important;
-                    }
-
-                    /* 섹션별 페이지 나누기 */
-                    .section {
-                        page-break-inside: avoid;
-                        margin-bottom: 1.5rem !important;
-                    }
-
-                    /* 프로젝트/경력 카드 깨짐 방지 */
-                    .project-card,
-                    .timeline-item,
-                    .card {
-                        page-break-inside: avoid !important;
-                        margin-bottom: 1rem !important;
-                    }
-
-                    /* 프로젝트 카드 2개마다 페이지 나누기 */
-                    .project-card:nth-child(2n) {
-                        page-break-after: always;
-                    }
-
-                    /* 경력 카드 2개마다 페이지 나누기 */
-                    .timeline-item:nth-child(2n) {
-                        page-break-after: always;
-                    }
-
-                    /* 스킬셋 간격 조정 */
-                    .skills-container,
-                    .skill-category {
-                        gap: 0.8rem !important;
-                        margin-bottom: 0.8rem !important;
-                    }
-
-                    .skill-category {
-                        padding: 1rem !important;
-                    }
-
-                    .skill-list li {
-                        padding: 0.3rem 0 !important;
-                    }
-
-                    /* 인쇄 시 그림자/애니메이션 제거 */
-                    @media print {
-                        * {
-                            box-shadow: none !important;
-                            animation: none !important;
-                            transition: none !important;
-                        }
-
-                        /* 줄바꿈 제거 (연속된 텍스트로) */
-                        br {
-                            display: none !important;
-                        }
-
-                        p {
-                            display: inline !important;
-                        }
-
-                        p + p {
-                            display: block !important;
-                            margin-top: 0.5em !important;
-                        }
-
-                        /* Clean 템플릿 레이아웃 수정: 사이드바와 메인을 세로로 배치 */
-                        .layout {
-                            display: block !important;
-                            flex-direction: column !important;
-                        }
-
-                        .sidebar {
-                            position: relative !important;
-                            width: 100% !important;
-                            height: auto !important;
-                            border-right: none !important;
-                            page-break-after: avoid !important;
-                            padding: 2rem !important;
-                            background: white !important;
-                            border: none !important;
-                            margin-bottom: 1.5rem !important;
-                        }
-
-                        .main-content {
-                            margin-left: 0 !important;
-                            padding: 0 !important;
-                        }
-
-                        /* 프로필 섹션과 개인소개를 같은 페이지에 */
-                        .profile-section {
-                            page-break-after: avoid !important;
-                            margin-bottom: 0 !important;
-                        }
-
-                        #about {
-                            page-break-before: avoid !important;
-                            padding: 1.5rem !important;
-                            border: 2px solid #ddd !important;
-                            border-radius: 8px !important;
-                            background: white !important;
-                        }
-
-                        /* 네비게이션 메뉴 숨기기 */
-                        nav,
-                        .nav-menu {
-                            display: none !important;
-                        }
-
-                        /* 프로젝트와 수상내역을 세로로 배치 */
-                        .grid {
-                            display: block !important;
-                            grid-template-columns: none !important;
-                        }
-
-                        .grid .card {
-                            margin-bottom: 1.5rem !important;
-                        }
-
-                        /* 스킬셋은 가로로 배치 (3개씩 한 줄) */
-                        #skills .grid,
-                        .skills-container {
-                            display: grid !important;
-                            grid-template-columns: repeat(3, 1fr) !important;
-                            gap: 1rem !important;
-                        }
-
-                        /* 수상내역도 세로로 배치 */
-                        #awards .grid {
-                            display: block !important;
-                            grid-template-columns: none !important;
-                        }
-                    }
-                </style>
-            `;
-
-            // HTML에 인쇄 스타일 삽입
-            let modifiedHTML = htmlContent;
-            if (htmlContent.includes('</head>')) {
-                modifiedHTML = htmlContent.replace('</head>', printStyles + '</head>');
-            } else {
-                // head 태그가 없으면 body 앞에 삽입
-                modifiedHTML = printStyles + htmlContent;
-            }
-
-            printWindow.document.write(modifiedHTML);
+            printWindow.document.write(optimizedHTML);
             printWindow.document.close();
 
             // 콘텐츠 로딩 대기 후 인쇄 다이얼로그 표시

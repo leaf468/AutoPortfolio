@@ -2,8 +2,8 @@
 const processTextForDisplay = (text: string | undefined | null): string => {
     if (!text) return '';
 
-    // 주황색 AI 추가 표시 제거 (실시간 미리보기용)
-    let processed = text.replace(/<span style="color:orange">(.*?)<\/span>/g, '$1');
+    // 주황색 AI 추가 표시 제거 (실시간 미리보기용) - 여러 줄 지원
+    let processed = text.replace(/<span style="color:\s*orange[^"]*"[^>]*>([\s\S]*?)<\/span>/gi, '$1');
 
     // Convert line breaks to <br> tags for HTML display
     // This preserves newlines when users press Enter in textarea
@@ -17,8 +17,8 @@ const processTextWithMarkdown = (text: string | undefined | null): string => {
     console.log('🔍 [processTextWithMarkdown] 원본 텍스트:', text);
     console.log('🔍 [processTextWithMarkdown] \\n 포함 여부:', text.includes('\n'));
 
-    // 주황색 AI 추가 표시 제거 (실시간 미리보기용)
-    let processed = text.replace(/<span style="color:orange">(.*?)<\/span>/g, '$1');
+    // 주황색 AI 추가 표시 제거 (실시간 미리보기용) - 여러 줄 지원
+    let processed = text.replace(/<span style="color:\s*orange[^"]*"[^>]*>([\s\S]*?)<\/span>/gi, '$1');
 
     // Remove unwanted HTML tags (h1-h6, p, div, etc.) but preserve content
     // This fixes the issue where AI generates HTML tags in text content
@@ -1607,35 +1607,6 @@ export const colorfulTemplate: PortfolioTemplate = {
                     `).join('')}
                 </div>
             `}
-        </section>
-        
-        <section class="section">
-            <div class="section-header">
-                <div class="section-emoji" style="background: linear-gradient(135deg, var(--accent-1), var(--accent-4));">
-                    📬
-                </div>
-                <h2 class="section-title">Contact</h2>
-            </div>
-            <div class="contact-grid">
-                ${data.email ? `
-                    <a href="mailto:${data.email}" class="contact-item">
-                        <span>📧</span>
-                        <span>Email</span>
-                    </a>
-                ` : ''}
-                ${data.github ? `
-                    <a href="${data.github}" class="contact-item">
-                        <span>🐙</span>
-                        <span>GitHub</span>
-                    </a>
-                ` : ''}
-                ${data.linkedin ? `
-                    <a href="${data.linkedin}" class="contact-item">
-                        <span>💼</span>
-                        <span>LinkedIn</span>
-                    </a>
-                ` : ''}
-            </div>
         </section>
     </div>
 </body>
