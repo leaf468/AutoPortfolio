@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import {
     CheckCircleIcon,
     DocumentArrowDownIcon,
@@ -38,6 +39,7 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
     selectedTemplate = "minimal",
     onReset,
 }) => {
+    const navigate = useNavigate();
     const [showPreview, setShowPreview] = useState(false);
     const [userRating, setUserRating] = useState<number>(0);
     const [hoverRating, setHoverRating] = useState<number>(0);
@@ -877,6 +879,37 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                         AI가 생성한 포트폴리오가 완성되었습니다. 미리보기를
                         확인하고 다운로드하세요.
                     </p>
+                </motion.div>
+
+                {/* 저장 완료 안내 배너 */}
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.2 }}
+                    className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-6 mb-8 shadow-sm"
+                >
+                    <div className="flex items-start justify-between">
+                        <div className="flex items-start flex-1">
+                            <div className="flex-shrink-0">
+                                <CheckCircleIcon className="w-6 h-6 text-green-600 mt-1" />
+                            </div>
+                            <div className="ml-4 flex-1">
+                                <h3 className="text-lg font-semibold text-green-900 mb-2">
+                                    마이페이지에 저장되었습니다
+                                </h3>
+                                <p className="text-sm text-green-800 mb-3">
+                                    작성하신 포트폴리오가 자동으로 마이페이지에 저장되었습니다.
+                                    언제든지 마이페이지에서 확인하고 수정할 수 있습니다.
+                                </p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => navigate('/mypage')}
+                            className="ml-4 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors shadow-sm whitespace-nowrap"
+                        >
+                            마이페이지로 이동
+                        </button>
+                    </div>
                 </motion.div>
 
                 {/* 메인 콘텐츠 그리드 */}

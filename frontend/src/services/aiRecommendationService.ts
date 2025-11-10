@@ -336,7 +336,6 @@ export async function analyzeCoverLetterComplete(
   answers: { question: string; answer: string }[],
   position: string
 ): Promise<{
-  overallScore: number;
   strengths: string[];
   improvements: string[];
   recommendations: string[];
@@ -346,56 +345,178 @@ export async function analyzeCoverLetterComplete(
   const allKeywords = extractUserKeywords(allText);
 
   const strengths: string[] = [];
-  const improvements: string[] = [];
+  const improvementCandidates: { priority: number; text: string }[] = [];
   const recommendations: string[] = [];
 
-  // 강점 분석
-  if (allKeywords.filter((k) => ['리더', '팀장', '주도'].includes(k)).length > 0) {
+  // 1. 강점 분석
+  const leadershipKeywords = allKeywords.filter((k) => ['리더', '팀장', '주도'].includes(k)).length;
+  if (leadershipKeywords > 0) {
     strengths.push('리더십 경험이 잘 드러나 있습니다.');
   }
-  if (allKeywords.filter((k) => ['협업', '팀원', '소통'].includes(k)).length > 0) {
+
+  const teamworkKeywords = allKeywords.filter((k) => ['협업', '팀원', '소통'].includes(k)).length;
+  if (teamworkKeywords > 0) {
     strengths.push('팀 협업 능력이 강조되어 있습니다.');
   }
-  if (allKeywords.filter((k) => ['성과', '개선', '최적화'].includes(k)).length > 0) {
+
+  const achievementKeywords = allKeywords.filter((k) => ['성과', '개선', '최적화', '달성', '수상'].includes(k)).length;
+  if (achievementKeywords > 0) {
     strengths.push('구체적인 성과와 개선 사항이 포함되어 있습니다.');
   }
 
-  // 개선점 분석
-  const hasNumbers = /\d+%|\d+배|\d+개|\d+명|\d+원/.test(allText);
-  if (!hasNumbers) {
-    improvements.push('구체적인 수치나 지표를 추가하면 더욱 설득력이 높아집니다.');
+  const problemSolvingKeywords = allKeywords.filter((k) => ['문제', '해결', '극복', '도전'].includes(k)).length;
+  if (problemSolvingKeywords >= 2) {
+    strengths.push('문제 해결 능력이 드러나 있습니다.');
   }
 
-  // 활동 개수 비교 (각 활동 타입별 평균이 아닌, 상위 활동 타입 개수로 비교)
-  // 합격자들이 평균적으로 보유한 주요 활동 타입 개수 (상위 70% 이상인 것만)
-  const majorActivityTypes = stats.commonActivities.filter(a => a.percentage >= 70).length;
-  const userMajorActivityMentions = stats.commonActivities
-    .filter(a => a.percentage >= 70 && allText.includes(a.activityType.split(' ')[1]))
-    .length;
+  // 2. 개선점 분석 (우선순위 기반)
 
-  if (majorActivityTypes > 0 && userMajorActivityMentions < majorActivityTypes * 0.5) {
-    const missingCount = Math.ceil(majorActivityTypes * 0.5) - userMajorActivityMentions;
-    improvements.push(`이 직무의 주요 활동 ${majorActivityTypes}가지 중 ${missingCount}가지 이상을 추가로 작성하면 경쟁력이 높아집니다.`);
+  // 2-1. 자소서 길이 체크 (우선순위: 높음)
+  const totalLength = allText.length;
+  const avgAnswerLength = totalLength / answers.length;
+
+  if (totalLength < 500) {
+    improvementCandidates.push({
+      priority: 90,
+      text: '자소서 전체 분량이 다소 짧습니다. 구체적인 경험과 사례를 추가하여 내용을 보강하세요.'
+    });
+  } else if (avgAnswerLength < 150) {
+    improvementCandidates.push({
+      priority: 85,
+      text: '각 질문에 대한 답변이 다소 짧습니다. 더 구체적인 설명과 상황을 추가해보세요.'
+    });
   }
 
-  // 추천사항
-  const topActivities = stats.commonActivities.slice(0, 3);
+  // 2-2. 수치/성과 지표 체크 (우선순위: 높음)
+  const numberMatches = allText.match(/\d+%|\d+배|\d+개|\d+명|\d+원|\d+건|\d+시간|\d+년|\d+개월/g);
+  const numberCount = numberMatches ? numberMatches.length : 0;
+
+  if (numberCount === 0) {
+    improvementCandidates.push({
+      priority: 95,
+      text: '구체적인 수치나 지표를 추가하면 더욱 설득력이 높아집니다. (예: "20% 효율 향상", "50명 규모 프로젝트")'
+    });
+  } else if (numberCount < 3 && totalLength > 800) {
+    improvementCandidates.push({
+      priority: 70,
+      text: '성과를 수치로 표현한 부분이 부족합니다. 더 많은 정량적 지표를 추가해보세요.'
+    });
+  }
+
+  // 2-3. 활동 다양성 체크 (우선순위: 중간)
+  // 합격자들의 주요 활동 (30% 이상) 중 사용자가 언급한 활동 개수 체크
+  const significantActivities = stats.commonActivities.filter(a => a.percentage >= 30);
+
+  // 유연한 활동 매칭 (마지막 단어로 매칭 - "백엔드 개발" → "개발"로 매칭)
+  const userMentionedActivities = significantActivities.filter(activity => {
+    // "백엔드 개발"에서 "개발"만 추출하여 매칭
+    const lastWord = activity.activityType.split(' ').pop() || activity.activityType;
+    return allText.includes(lastWord);
+  });
+
+  const mentionedCount = userMentionedActivities.length;
+  const significantCount = significantActivities.length;
+
+  if (significantCount > 0) {
+    const coverageRatio = mentionedCount / significantCount;
+
+    if (coverageRatio < 0.3) {
+      // 주요 활동의 30% 미만만 언급
+      const missingActivities = significantActivities
+        .filter(a => !userMentionedActivities.includes(a))
+        .slice(0, 3)
+        .map(a => `"${a.activityType}"(${a.percentage.toFixed(0)}%)`);
+
+      improvementCandidates.push({
+        priority: 80,
+        text: `이 직무 합격자들은 평균 ${significantCount}가지 주요 활동을 언급합니다. ${missingActivities.join(', ')} 등의 경험 추가를 고려해보세요.`
+      });
+    } else if (coverageRatio < 0.5) {
+      improvementCandidates.push({
+        priority: 65,
+        text: `합격자들이 자주 언급하는 활동 중 일부가 누락되어 있습니다. 더 다양한 경험을 추가하세요.`
+      });
+    }
+  }
+
+  // 2-4. 구체성 체크 (우선순위: 중간)
+  const vagueExpressions = [
+    '노력했습니다', '열심히', '최선을', '다양한', '여러', '많은', '기여했습니다', '참여했습니다'
+  ];
+  const vagueCount = vagueExpressions.filter(expr => allText.includes(expr)).length;
+
+  if (vagueCount >= 5) {
+    improvementCandidates.push({
+      priority: 75,
+      text: '추상적이고 모호한 표현이 많습니다. "어떻게", "무엇을", "얼마나" 등을 구체적으로 서술하세요.'
+    });
+  } else if (vagueCount >= 3) {
+    improvementCandidates.push({
+      priority: 60,
+      text: '일부 내용을 더 구체적으로 작성하면 좋습니다. 상황, 행동, 결과를 명확히 표현하세요.'
+    });
+  }
+
+  // 2-5. STAR 구조 체크 (우선순위: 낮음)
+  const hasContext = /상황|배경|계기|문제/.test(allText);
+  const hasAction = /진행|수행|개발|설계|분석|기획|실행/.test(allText);
+  const hasResult = /결과|성과|개선|향상|달성|완성/.test(allText);
+
+  const starScore = [hasContext, hasAction, hasResult].filter(Boolean).length;
+
+  if (starScore < 2) {
+    improvementCandidates.push({
+      priority: 55,
+      text: 'STAR 기법(상황-과제-행동-결과)을 활용하여 경험을 더 체계적으로 서술해보세요.'
+    });
+  }
+
+  // 2-6. 직무 관련 키워드 체크 (우선순위: 중간)
+  const topKeywords = stats.commonActivities
+    .slice(0, 10)
+    .flatMap(a => a.commonKeywords)
+    .filter((k, i, arr) => arr.indexOf(k) === i)
+    .slice(0, 10);
+
+  const userHasKeywords = topKeywords.filter(k => allText.includes(k)).length;
+  const keywordCoverage = topKeywords.length > 0 ? userHasKeywords / topKeywords.length : 1;
+
+  if (keywordCoverage < 0.3) {
+    improvementCandidates.push({
+      priority: 70,
+      text: `직무 관련 핵심 키워드가 부족합니다. "${topKeywords.slice(0, 5).join('", "')}" 등을 활용한 경험을 추가해보세요.`
+    });
+  }
+
+  // 3. 개선점 최종 선택 (우선순위 높은 순으로 최소 1개, 최대 5개)
+  const improvements = improvementCandidates
+    .sort((a, b) => b.priority - a.priority)
+    .slice(0, 5)
+    .map(item => item.text);
+
+  // 개선점이 없으면 기본 개선점 추가 (항상 개선 여지는 있음)
+  if (improvements.length === 0) {
+    improvements.push('전반적으로 잘 작성되었으나, 각 경험에 대한 정량적 성과를 더 추가하면 경쟁력이 높아집니다.');
+  }
+
+  // 4. 추천사항 (상위 5개 활동 중 누락된 것)
+  const topActivities = stats.commonActivities.slice(0, 5);
   topActivities.forEach((activity) => {
-    if (!allText.includes(activity.activityType)) {
+    // 유연한 매칭: "백엔드 개발" → "개발"로 매칭
+    const lastWord = activity.activityType.split(' ').pop() || activity.activityType;
+    const isAlreadyMentioned = allText.includes(lastWord);
+
+    if (!isAlreadyMentioned && activity.percentage >= 20) {
       recommendations.push(`"${activity.activityType}" 경험 추가를 고려해보세요. (합격자의 ${activity.percentage.toFixed(0)}%가 보유)`);
     }
   });
 
-  // 점수 계산 (100점 만점)
-  let score = 50; // 기본 점수
-  score += Math.min(strengths.length * 10, 30); // 강점당 +10점 (최대 30)
-  score -= Math.min(improvements.length * 5, 20); // 개선점당 -5점 (최대 -20)
-  score = Math.max(0, Math.min(100, score));
+  // 추천사항 제한 (최대 5개)
+  const finalRecommendations = recommendations.slice(0, 5);
 
   return {
-    overallScore: score,
     strengths,
     improvements,
-    recommendations,
+    recommendations: finalRecommendations,
   };
 }

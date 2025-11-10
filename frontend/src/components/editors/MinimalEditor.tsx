@@ -261,7 +261,7 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                                 phone: extracted.phone || '',
                                 github: extracted.github || '',
                                 location: extracted.location || '',
-                                about: extracted.summary || '',
+                                about: extracted.about || extracted.summary || '',
                                 skills: skillsFlat,
                                 skillCategories: [],
                                 projects: Array.isArray(extracted.projects) ? extracted.projects.map((p: any) => ({

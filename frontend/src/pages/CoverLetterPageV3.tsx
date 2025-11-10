@@ -148,7 +148,6 @@ export const CoverLetterPageV3: React.FC = () => {
   const [isLoadingQuestionAnalysis, setIsLoadingQuestionAnalysis] = useState(false);
   const [analyzingQuestionId, setAnalyzingQuestionId] = useState<string | null>(null);
   const [overallAnalysis, setOverallAnalysis] = useState<{
-    overallScore: number;
     strengths: string[];
     improvements: string[];
     recommendations: string[];
@@ -746,17 +745,6 @@ export const CoverLetterPageV3: React.FC = () => {
         {overallAnalysis && (
           <div id="overall-analysis" className="bg-white rounded-lg shadow-lg p-6 mb-8">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">종합 분석 결과</h2>
-
-            {/* 점수 */}
-            <div className="mb-6 text-center">
-              <div className="inline-block">
-                <div className="text-5xl font-bold text-blue-600 mb-2">
-                  {overallAnalysis.overallScore}
-                  <span className="text-2xl text-gray-500">/100</span>
-                </div>
-                <p className="text-sm text-gray-600">종합 점수</p>
-              </div>
-            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* 강점 */}

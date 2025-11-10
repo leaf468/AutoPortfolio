@@ -237,7 +237,7 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
                                 email: extracted.email || '',
                                 phone: extracted.phone || '',
                                 github: extracted.github || '',
-                                about: extracted.summary || '',
+                                about: extracted.about || extracted.summary || '',
                                 skills: skillsFlat,
                                 skillCategories: [],
                                 projects: Array.isArray(extracted.projects) ? extracted.projects.map((p: any) => ({

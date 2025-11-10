@@ -250,9 +250,9 @@ const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
                 <button
                   onClick={loadCoverLetters}
                   disabled={loadingCoverLetters}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-lg transition-colors disabled:opacity-50"
+                  className="flex items-center gap-2 px-5 py-3 text-sm font-semibold text-purple-600 bg-white border-2 border-purple-300 hover:border-purple-400 hover:bg-purple-50 rounded-lg transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <DocumentArrowDownIcon className="w-4 h-4" />
+                  <DocumentArrowDownIcon className="w-5 h-5" />
                   {loadingCoverLetters ? '불러오는 중...' : '작성한 자소서에서 불러오기'}
                 </button>
               )}
