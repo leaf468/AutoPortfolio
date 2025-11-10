@@ -1608,6 +1608,31 @@ export const colorfulTemplate: PortfolioTemplate = {
                 </div>
             `}
         </section>
+
+        ${data.awards && data.awards.length > 0 ? `
+        <section class="section">
+            <div class="section-header">
+                <div class="section-emoji" style="background: linear-gradient(135deg, var(--accent-3), var(--accent-1));">
+                    🏆
+                </div>
+                <h2 class="section-title">${data.sectionTitles?.awards || '수상/자격증'}</h2>
+            </div>
+            <div class="cards-grid">
+                ${data.awards.map((award: any, index: number) => `
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-icon" style="background: var(--accent-${(index % 4) + 1});">
+                                🏅
+                            </div>
+                            <h3>${award.title}</h3>
+                        </div>
+                        <p class="card-meta">${award.organization} • ${award.year}</p>
+                        ${award.description ? `<p>${processTextWithMarkdown(award.description)}</p>` : ''}
+                    </div>
+                `).join('')}
+            </div>
+        </section>
+        ` : ''}
     </div>
 </body>
 </html>
@@ -2131,6 +2156,23 @@ export const elegantTemplate: PortfolioTemplate = {
                                 `<li>${typeof skill === 'string' ? skill : skill.name || skill}</li>`
                             ).join('')}
                         </ul>
+                    </div>
+                `).join('')}
+            </div>
+        </section>
+        ` : ''}
+
+        ${data.awards && data.awards.length > 0 ? `
+        <section class="section">
+            <h2 class="section-title">${data.sectionTitles?.awards || '수상/자격증'}</h2>
+            <div class="timeline">
+                ${data.awards.map((award: any) => `
+                    <div class="timeline-item">
+                        <div class="timeline-content">
+                            <h3>🏆 ${award.title}</h3>
+                            <p class="meta">${award.organization} • ${award.year}</p>
+                            ${award.description ? `<p>${processTextWithMarkdown(award.description)}</p>` : ''}
+                        </div>
                     </div>
                 `).join('')}
             </div>
