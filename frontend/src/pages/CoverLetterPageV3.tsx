@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { UserSpec } from '../services/coverLetterAnalysisService';
 import { ComprehensiveStats, getComprehensiveStats } from '../services/comprehensiveAnalysisService';
@@ -8,6 +8,8 @@ import { CoverLetterQuestion, CoverLetterQuestionInput } from '../components/Cov
 import { QuestionAIRecommendationCard } from '../components/QuestionAIRecommendationCard';
 import { ComprehensiveStatsDashboard } from '../components/ComprehensiveStatsDashboard';
 import { analyzeCoverLetterComplete } from '../services/aiRecommendationService';
+import { generateCompleteFeedbackReport } from '../services/detailedFeedbackService';
+import { generateFeedbackPDF } from '../services/pdfGenerationService';
 import { CoverLetterChatbot } from '../components/CoverLetterChatbot';
 import {
   RecommendedCompany,
@@ -153,6 +155,22 @@ export const CoverLetterPageV3: React.FC = () => {
     recommendations: string[];
   } | null>(null);
 
+  // 첨삭 PDF 생성 상태
+  const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
+
+  // 질문 분석 자동 갱신을 위한 디바운스 타이머
+  const questionAnalysisTimerRef = useRef<{ [key: string]: NodeJS.Timeout }>({});
+
+  // 컴포넌트 언마운트 시 모든 타이머 정리
+  useEffect(() => {
+    const timers = questionAnalysisTimerRef.current;
+    return () => {
+      Object.values(timers).forEach(timer => {
+        clearTimeout(timer);
+      });
+    };
+  }, []);
+
   // 카테고리 + 직무가 입력되면 추천 회사 로드
   useEffect(() => {
     const loadRecommendations = async () => {
@@ -223,10 +241,61 @@ export const CoverLetterPageV3: React.FC = () => {
     );
   };
 
-  const handleQuestionChange = (questionId: string, question: string) => {
+  const handleQuestionChange = async (questionId: string, question: string) => {
+    console.log('🔄 질문 수정 감지:', { questionId, question, position: userSpec.position });
+
     setQuestions((prev) =>
       prev.map((q) => (q.id === questionId ? { ...q, question } : q))
     );
+
+    // 질문이 수정되면 해당 질문의 분석 결과 자동 갱신
+    if (userSpec.position.trim() && question.trim().length > 5) {
+      // 기존 분석 결과가 있는 경우에만 자동 갱신
+      const hasExistingAnalysis = questionAnalyses.some(a => a.questionId === questionId);
+
+      console.log('📊 분석 상태 확인:', {
+        hasPosition: !!userSpec.position.trim(),
+        questionLength: question.trim().length,
+        hasExistingAnalysis,
+        currentAnalyses: questionAnalyses.length
+      });
+
+      if (hasExistingAnalysis) {
+        console.log('✅ 자동 갱신 시작 - 1초 후 분석 예정');
+
+        // 이전 타이머가 있으면 취소
+        if (questionAnalysisTimerRef.current[questionId]) {
+          clearTimeout(questionAnalysisTimerRef.current[questionId]);
+          console.log('⏱️ 이전 타이머 취소');
+        }
+
+        // 새 타이머 설정 (1초 디바운스)
+        questionAnalysisTimerRef.current[questionId] = setTimeout(async () => {
+          try {
+            console.log('🚀 질문 분석 API 호출 시작');
+            const { analyzeQuestion } = await import('../services/questionAnalysisService');
+            const analysis = await analyzeQuestion(question, questionId, userSpec.position);
+
+            console.log('✅ 질문 분석 완료:', analysis);
+
+            setQuestionAnalyses(prev => {
+              const filtered = prev.filter(a => a.questionId !== questionId);
+              return [...filtered, analysis];
+            });
+
+            // 타이머 정리
+            delete questionAnalysisTimerRef.current[questionId];
+          } catch (error) {
+            console.error('❌ 질문 분석 자동 갱신 실패:', error);
+            delete questionAnalysisTimerRef.current[questionId];
+          }
+        }, 1000);
+      } else {
+        console.log('ℹ️ 기존 분석 결과 없음 - 자동 갱신 건너뜀');
+      }
+    } else {
+      console.log('⚠️ 자동 갱신 조건 미충족');
+    }
   };
 
   const handleMaxLengthChange = (questionId: string, maxLength: number | undefined) => {
@@ -350,6 +419,37 @@ export const CoverLetterPageV3: React.FC = () => {
     } catch (error) {
       console.error('종합 분석 실패:', error);
       alert('분석 중 오류가 발생했습니다.');
+    }
+  };
+
+  // 상세 첨삭 PDF 생성
+  const handleGenerateDetailedFeedback = async () => {
+    const answeredQuestions = questions.filter((q) => q.answer.trim());
+    if (answeredQuestions.length === 0) {
+      alert('최소 하나 이상의 질문에 답변해주세요.');
+      return;
+    }
+
+    if (!userSpec.position.trim()) {
+      alert('지원 직무를 입력해주세요.');
+      return;
+    }
+
+    setIsGeneratingFeedback(true);
+
+    try {
+      // 첨삭 리포트 생성 (각 질문당 최소 1페이지)
+      const report = await generateCompleteFeedbackReport(answeredQuestions, userSpec.position);
+
+      // PDF 생성 및 다운로드
+      await generateFeedbackPDF(report);
+
+      alert(`자기소개서 첨삭 PDF가 생성되었습니다!\n\n평균 점수: ${report.averageScore}점\n총 ${report.totalQuestions}개 질문에 대한 상세 분석이 포함되어 있습니다.`);
+    } catch (error) {
+      console.error('첨삭 생성 실패:', error);
+      alert('첨삭 생성 중 오류가 발생했습니다. OpenAI API 키를 확인하거나 잠시 후 다시 시도해주세요.');
+    } finally {
+      setIsGeneratingFeedback(false);
     }
   };
 
@@ -678,14 +778,30 @@ export const CoverLetterPageV3: React.FC = () => {
             </button>
           )}
 
-          {/* 답변 종합 분석 버튼 */}
-          <div className="mt-6 flex justify-center">
+          {/* 답변 종합 분석 및 첨삭 버튼 */}
+          <div className="mt-6 flex justify-center gap-4">
             <button
               onClick={handleAnalyzeComplete}
               disabled={!userSpec.position.trim()}
               className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all font-medium shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               답변 종합 분석
+            </button>
+            <button
+              onClick={handleGenerateDetailedFeedback}
+              disabled={!userSpec.position.trim() || isGeneratingFeedback}
+              className="px-8 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-lg hover:from-emerald-700 hover:to-teal-700 transition-all font-medium shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {isGeneratingFeedback ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  첨삭 생성 중...
+                </>
+              ) : (
+                <>
+                  📄 자소서 첨삭 받기 (PDF)
+                </>
+              )}
             </button>
           </div>
         </div>

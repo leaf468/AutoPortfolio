@@ -20,6 +20,8 @@
     "autoprefixer": "^10.4.16",
     "axios": "^1.11.0",
     "framer-motion": "^12.23.12",
+    "jspdf": "^3.0.3",
+    "jspdf-autotable": "^5.0.2",
     "mustache": "^4.2.0",
     "openai": "^5.15.0",
     "postcss": "^8.4.32",
