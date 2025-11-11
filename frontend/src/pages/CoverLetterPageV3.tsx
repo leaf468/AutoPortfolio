@@ -5,7 +5,7 @@ import { ComprehensiveStats, getComprehensiveStats } from '../services/comprehen
 import { CompanyCategoryOnlySelector } from '../components/CompanyCategoryOnlySelector';
 import { CompanyCategory } from '../services/companyCategories';
 import { CoverLetterQuestion, CoverLetterQuestionInput } from '../components/CoverLetterQuestionInput';
-import { AIRecommendationPanel } from '../components/AIRecommendationPanel';
+import { QuestionAIRecommendationCard } from '../components/QuestionAIRecommendationCard';
 import { ComprehensiveStatsDashboard } from '../components/ComprehensiveStatsDashboard';
 import { analyzeCoverLetterComplete } from '../services/aiRecommendationService';
 import { CoverLetterChatbot } from '../components/CoverLetterChatbot';
@@ -629,115 +629,64 @@ export const CoverLetterPageV3: React.FC = () => {
           </div>
         </div>
 
-        {/* 메인 콘텐츠: 질문 답변 (좌) + AI 추천 (우) */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          {/* 좌측: 질문 답변 (2/3) */}
-          <div className="lg:col-span-2">
-            <CoverLetterQuestionInput
-              questions={questions}
-              onAnswerChange={handleAnswerChange}
-              onQuestionChange={handleQuestionChange}
-              onMaxLengthChange={handleMaxLengthChange}
-              onQuestionAdd={handleQuestionAdd}
-              onQuestionRemove={handleQuestionRemove}
-              onFocus={handleQuestionFocus}
-              onAnalyzeQuestion={handleAnalyzeSingleQuestion}
-              analyzingQuestionId={analyzingQuestionId}
-            />
+        {/* 메인 콘텐츠: 질문 답변 + AI 추천 */}
+        <div className="mb-8 space-y-6">
+          {questions.map((question, index) => {
+            const questionAnalysis = questionAnalyses.find(qa => qa.questionId === question.id);
 
-            {/* 답변 종합 분석 버튼 */}
-            <div className="mt-6 flex justify-center">
-              <button
-                onClick={handleAnalyzeComplete}
-                disabled={!userSpec.position.trim()}
-                className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all font-medium shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                답변 종합 분석
-              </button>
-            </div>
-          </div>
+            return (
+              <div key={question.id} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* 좌측: 질문 답변 (2/3) */}
+                <div className="lg:col-span-2">
+                  <CoverLetterQuestionInput
+                    questions={[question]}
+                    onAnswerChange={handleAnswerChange}
+                    onQuestionChange={handleQuestionChange}
+                    onMaxLengthChange={handleMaxLengthChange}
+                    onQuestionRemove={questions.length > 1 ? handleQuestionRemove : undefined}
+                    onFocus={handleQuestionFocus}
+                    onAnalyzeQuestion={handleAnalyzeSingleQuestion}
+                    analyzingQuestionId={analyzingQuestionId}
+                  />
+                </div>
 
-          {/* 우측: AI 추천 패널 + 질문 분석 결과 (1/3) */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-lg sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto">
-              <AIRecommendationPanel
-                currentInput={currentInput}
-                position={userSpec.position}
-                questionId={focusedQuestionId}
-                questionText={currentQuestion}
-              />
-
-              {/* 질문별 분석 결과 */}
-              {questionAnalyses.length > 0 && (
-                <div className="p-6 border-t border-gray-200">
-                  <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
-                    <span className="text-purple-600">💡</span>
-                    질문 분석 결과
-                  </h3>
-                  <div className="space-y-4">
-                    {questionAnalyses.map((analysis) => {
-                      const questionNum = questions.findIndex(q => q.id === analysis.questionId) + 1;
-                      return (
-                        <div key={analysis.questionId} id={`analysis-${analysis.questionId}`} className="border border-purple-200 rounded-lg p-4 bg-purple-50">
-                          <h4 className="font-semibold text-gray-900 mb-2 text-sm">
-                            질문 {questionNum}: {analysis.question}
-                          </h4>
-
-                          {/* 관련 키워드 */}
-                          {analysis.relevantKeywords.length > 0 && (
-                            <div className="mb-3">
-                              <p className="text-xs font-medium text-gray-600 mb-1">🔑 관련 키워드</p>
-                              <div className="flex flex-wrap gap-1">
-                                {analysis.relevantKeywords.map((keyword, idx) => (
-                                  <span key={idx} className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded text-xs">
-                                    {keyword}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* 추천 주제 */}
-                          {analysis.suggestedTopics.length > 0 && (
-                            <div className="mb-3">
-                              <p className="text-xs font-medium text-gray-600 mb-1">📝 추천 주제</p>
-                              <ul className="text-xs text-gray-700 space-y-1">
-                                {analysis.suggestedTopics.slice(0, 3).map((topic, idx) => (
-                                  <li key={idx}>• {topic}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-
-                          {/* 관련 통계 */}
-                          {analysis.relatedStats.length > 0 && (
-                            <div className="mb-3">
-                              <p className="text-xs font-medium text-gray-600 mb-1">📊 합격자 통계</p>
-                              <div className="space-y-2">
-                                {analysis.relatedStats.slice(0, 2).map((stat, idx) => (
-                                  <div key={idx} className="bg-white rounded p-2">
-                                    <div className="flex items-center justify-between mb-1">
-                                      <span className="text-xs font-medium text-gray-900">{stat.activityType}</span>
-                                      <span className="text-xs font-bold text-blue-600">{stat.percentage.toFixed(0)}%</span>
-                                    </div>
-                                    <p className="text-xs text-gray-600">{stat.insight}</p>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* 일반 조언 */}
-                          <div className="bg-blue-50 border border-blue-200 rounded p-3">
-                            <p className="text-xs text-blue-800">{analysis.generalAdvice}</p>
-                          </div>
-                        </div>
-                      );
-                    })}
+                {/* 우측: 해당 질문의 AI 추천 (1/3) - Sticky */}
+                <div className="lg:col-span-1 self-start">
+                  <div className="sticky top-24">
+                    <div className="max-h-[calc(100vh-7rem)] overflow-y-auto">
+                      <QuestionAIRecommendationCard
+                        question={question}
+                        questionIndex={index}
+                        questionAnalysis={questionAnalysis}
+                        position={userSpec.position}
+                      />
+                    </div>
                   </div>
                 </div>
-              )}
-            </div>
+              </div>
+            );
+          })}
+
+          {/* 질문 추가 버튼 */}
+          {handleQuestionAdd && (
+            <button
+              onClick={handleQuestionAdd}
+              className="w-full py-4 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-blue-500 hover:text-blue-600 hover:bg-blue-50 transition-colors flex items-center justify-center gap-2"
+            >
+              <span className="text-xl">+</span>
+              질문 추가하기
+            </button>
+          )}
+
+          {/* 답변 종합 분석 버튼 */}
+          <div className="mt-6 flex justify-center">
+            <button
+              onClick={handleAnalyzeComplete}
+              disabled={!userSpec.position.trim()}
+              className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all font-medium shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              답변 종합 분석
+            </button>
           </div>
         </div>
 

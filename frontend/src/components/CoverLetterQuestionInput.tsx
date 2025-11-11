@@ -169,7 +169,17 @@ export const CoverLetterQuestionInput: React.FC<CoverLetterQuestionInputProps> =
             onFocus={() => onFocus?.(question.id)}
             placeholder={question.placeholder}
             maxLength={question.maxLength}
-            className="w-full min-h-[200px] p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y"
+            className={`w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-y ${
+              question.maxLength
+                ? question.maxLength >= 1500
+                  ? 'min-h-[500px]'
+                  : question.maxLength >= 1000
+                    ? 'min-h-[400px]'
+                    : question.maxLength >= 800
+                      ? 'min-h-[350px]'
+                      : 'min-h-[300px]'
+                : 'min-h-[400px]'
+            }`}
           />
 
           {question.maxLength && (
