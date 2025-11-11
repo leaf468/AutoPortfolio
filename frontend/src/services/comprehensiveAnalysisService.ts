@@ -29,7 +29,7 @@ export interface ComprehensiveStats {
   commonActivities: ActivityPattern[];
 
   // 자격증
-  topCertificates: { name: string; percentage: number }[];
+  topCertificates: { name: string; percentage: number; count: number }[];
 
   // 유의미한 인사이트
   insights: string[];
@@ -765,7 +765,7 @@ function generateActivityInsight(type: string, percentage: number, keywords: str
   }
 }
 
-function extractTopCertificates(coverLetters: IntegratedCoverLetter[]): { name: string; percentage: number }[] {
+function extractTopCertificates(coverLetters: IntegratedCoverLetter[]): { name: string; percentage: number; count: number }[] {
   const certMap = new Map<string, number>();
   let noCertCount = 0; // 자격증 없는 합격자 수
 
@@ -857,9 +857,10 @@ function extractTopCertificates(coverLetters: IntegratedCoverLetter[]): { name: 
   // 상위 10개만 반환
   return certResults
     .slice(0, 10)
-    .map(({ name, percentage }) => ({
+    .map(({ name, percentage, count }) => ({
       name,
-      percentage: Math.min(percentage, 100)
+      percentage: Math.min(percentage, 100),
+      count
     }));
 }
 

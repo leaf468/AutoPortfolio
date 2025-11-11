@@ -241,87 +241,101 @@ export const ComprehensiveStatsDashboard: React.FC<ComprehensiveStatsDashboardPr
             <h3 className="text-lg font-semibold">주요 자격증 분포</h3>
           </div>
 
-          <div className="bg-white border border-gray-200 rounded-lg p-6">
-            {/* 원형 그래프 */}
-            <ResponsiveContainer width="100%" height={400}>
-              <PieChart>
-                <Pie
-                  data={(() => {
-                    // 상위 10개 자격증만 선택
-                    const topCerts = stats.topCertificates.slice(0, 10);
-                    // 전체 합계 계산
-                    const totalPercentage = topCerts.reduce((sum, cert) => sum + cert.percentage, 0);
-                    // 비율 정규화 (합이 100%가 되도록)
-                    return topCerts.map(cert => ({
-                      name: cert.name,
-                      value: totalPercentage > 0 ? (cert.percentage / totalPercentage) * 100 : 0,
-                      originalPercentage: cert.percentage
-                    }));
-                  })()}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, value }: any) => {
-                    // 5% 이상인 경우만 라벨 표시
-                    if (value >= 5) {
-                      return `${name} (${value.toFixed(1)}%)`;
-                    }
-                    return '';
-                  }}
-                  outerRadius={120}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {stats.topCertificates.slice(0, 10).map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
-                      const data = payload[0].payload;
-                      return (
-                        <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-200">
-                          <p className="font-semibold text-gray-900">{data.name}</p>
-                          <p className="text-sm text-gray-600">
-                            그래프 비율: {data.value.toFixed(1)}%
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            합격자 보유율: {data.originalPercentage.toFixed(1)}%
-                          </p>
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+          <div className="bg-gradient-to-br from-white to-gray-50 border border-gray-200 rounded-xl p-8 shadow-sm">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+              {/* 원형 그래프 */}
+              <div className="flex justify-center">
+                <ResponsiveContainer width="100%" height={350}>
+                  <PieChart>
+                    <Pie
+                      data={(() => {
+                        const topCerts = stats.topCertificates.slice(0, 10);
+                        const totalPercentage = topCerts.reduce((sum, cert) => sum + cert.percentage, 0);
+                        return topCerts.map(cert => ({
+                          name: cert.name,
+                          value: totalPercentage > 0 ? (cert.percentage / totalPercentage) * 100 : 0,
+                          originalPercentage: cert.percentage
+                        }));
+                      })()}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={false}
+                      outerRadius={130}
+                      innerRadius={70}
+                      fill="#8884d8"
+                      dataKey="value"
+                      paddingAngle={2}
+                    >
+                      {stats.topCertificates.slice(0, 10).map((entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={COLORS[index % COLORS.length]}
+                          strokeWidth={2}
+                          stroke="#fff"
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const data = payload[0].payload;
+                          return (
+                            <div className="bg-white p-4 rounded-xl shadow-xl border-2 border-gray-100">
+                              <p className="font-bold text-gray-900 mb-2">{data.name}</p>
+                              <div className="space-y-1">
+                                <p className="text-sm text-gray-600">
+                                  그래프 비율: <span className="font-semibold text-gray-900">{data.value.toFixed(1)}%</span>
+                                </p>
+                                <p className="text-sm text-gray-600">
+                                  합격자 보유율: <span className="font-semibold text-blue-600">{data.originalPercentage.toFixed(1)}%</span>
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
 
-            {/* 범례 */}
-            <div className="mt-6 grid grid-cols-2 gap-3">
-              {stats.topCertificates.slice(0, 10).map((cert, index) => (
-                <div key={index} className="flex items-center gap-2">
+              {/* 범례 및 통계 */}
+              <div className="space-y-3">
+                {stats.topCertificates.slice(0, 10).map((cert, index) => (
                   <div
-                    className="w-4 h-4 rounded"
-                    style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                  ></div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm text-gray-900 truncate" title={cert.name}>
-                      {cert.name}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      합격자의 {cert.percentage.toFixed(1)}%
-                    </p>
+                    key={index}
+                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-white transition-colors group"
+                  >
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div
+                        className="w-6 h-6 rounded-md flex-shrink-0 shadow-sm group-hover:shadow-md transition-shadow"
+                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                      ></div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate" title={cert.name}>
+                          {cert.name}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {cert.count}명 보유
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex-shrink-0">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-blue-50 text-blue-700">
+                        {cert.percentage.toFixed(1)}%
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
 
-            <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-              <p className="text-xs text-blue-800">
-                💡 원형 그래프는 상위 10개 자격증의 <strong>상대적 비율</strong>을 나타냅니다.
-                범례의 퍼센티지는 해당 자격증을 보유한 <strong>합격자 비율</strong>입니다.
+            <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-100">
+              <p className="text-sm text-gray-700 leading-relaxed">
+                <span className="font-semibold text-blue-700">💡 Tip:</span> 도넛 차트는 상위 10개 자격증의 상대적 비율을 나타내며,
+                오른쪽 수치는 실제 합격자 중 해당 자격증 보유 비율입니다.
               </p>
             </div>
           </div>
