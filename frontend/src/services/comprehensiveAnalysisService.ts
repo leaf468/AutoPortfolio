@@ -31,8 +31,20 @@ export interface ComprehensiveStats {
   // 자격증
   topCertificates: { name: string; percentage: number; count: number }[];
 
+  // 활동 참여도
+  activityEngagement: {
+    avgActivityCount: number;
+    activityDistribution: { range: string; percentage: number }[];
+  };
+
+  // 핵심 역량 키워드
+  topSkills: { skill: string; count: number; percentage: number }[];
+
   // 유의미한 인사이트
   insights: string[];
+
+  // 추천 개선 사항
+  recommendations: string[];
 }
 
 export interface ActivityPattern {
@@ -125,7 +137,10 @@ export async function getComprehensiveStats(position: string): Promise<Comprehen
       toeicDistribution: calculateToeicDistribution(relevantCoverLetters),
       commonActivities: analyzeActivityPatterns(allActivities, relevantCoverLetters.length),
       topCertificates: extractTopCertificates(relevantCoverLetters),
+      activityEngagement: calculateActivityEngagement(allActivities, relevantCoverLetters),
+      topSkills: extractTopSkills(allActivities, relevantCoverLetters.length),
       insights: generateInsights(relevantCoverLetters, allActivities),
+      recommendations: generateRecommendations(relevantCoverLetters, allActivities, position),
     };
 
     return stats;
@@ -147,7 +162,13 @@ function getEmptyStats(position: string): ComprehensiveStats {
     toeicDistribution: [],
     commonActivities: [],
     topCertificates: [],
+    activityEngagement: {
+      avgActivityCount: 0,
+      activityDistribution: [],
+    },
+    topSkills: [],
     insights: [],
+    recommendations: [],
   };
 }
 
@@ -879,6 +900,168 @@ function isValidActivity(content: string): boolean {
   // extractCoreActivity로 검증
   const coreActivity = extractCoreActivity(content);
   return coreActivity.length > 0;
+}
+
+// 활동 참여도 분석
+function calculateActivityEngagement(
+  activities: Activity[],
+  coverLetters: IntegratedCoverLetter[]
+): { avgActivityCount: number; activityDistribution: { range: string; percentage: number }[] } {
+  const activityCountPerPerson = new Map<number, number>();
+
+  activities.forEach(activity => {
+    const count = activityCountPerPerson.get(activity.cover_letter_id) || 0;
+    activityCountPerPerson.set(activity.cover_letter_id, count + 1);
+  });
+
+  const counts = Array.from(activityCountPerPerson.values());
+  const avgActivityCount = counts.length > 0 ? counts.reduce((a, b) => a + b, 0) / coverLetters.length : 0;
+
+  const distribution = [
+    { range: '10개 이상', count: counts.filter(c => c >= 10).length },
+    { range: '7-9개', count: counts.filter(c => c >= 7 && c < 10).length },
+    { range: '4-6개', count: counts.filter(c => c >= 4 && c < 7).length },
+    { range: '1-3개', count: counts.filter(c => c >= 1 && c < 4).length },
+    { range: '0개', count: coverLetters.length - counts.length },
+  ].map(item => ({
+    range: item.range,
+    percentage: (item.count / coverLetters.length) * 100,
+  }));
+
+  return {
+    avgActivityCount,
+    activityDistribution: distribution,
+  };
+}
+
+// 핵심 역량/기술 스택 추출
+function extractTopSkills(
+  activities: Activity[],
+  totalApplicants: number
+): { skill: string; count: number; percentage: number }[] {
+  const skillKeywords = [
+    // 프로그래밍 언어
+    'Python', 'Java', 'JavaScript', 'TypeScript', 'C++', 'C#', 'Go', 'Kotlin', 'Swift', 'Ruby', 'PHP', 'Rust',
+    'React', 'Vue', 'Angular', 'Next.js', 'Node.js', 'Express', 'Spring', 'Django', 'Flask', 'FastAPI',
+
+    // 데이터/AI
+    'SQL', 'MySQL', 'PostgreSQL', 'MongoDB', 'Redis',
+    'TensorFlow', 'PyTorch', 'Scikit-learn', 'Pandas', 'NumPy',
+    'Tableau', 'Power BI', 'Excel',
+
+    // 클라우드/인프라
+    'AWS', 'Azure', 'GCP', 'Docker', 'Kubernetes', 'Jenkins', 'Git', 'GitHub',
+
+    // 디자인/기획
+    'Figma', 'Sketch', 'Adobe XD', 'Photoshop', 'Illustrator',
+    'Jira', 'Notion', 'Confluence',
+
+    // 역량 키워드
+    '리더십', '팀워크', '협업', '소통', '문제해결', '기획력', '분석력', '창의성',
+    '프로젝트 관리', '데이터 분석', '시장 조사', '고객 응대',
+  ];
+
+  const skillMap = new Map<string, Set<number>>();
+
+  activities.forEach(activity => {
+    const content = activity.content.toLowerCase();
+    skillKeywords.forEach(keyword => {
+      if (content.includes(keyword.toLowerCase())) {
+        if (!skillMap.has(keyword)) {
+          skillMap.set(keyword, new Set());
+        }
+        skillMap.get(keyword)!.add(activity.cover_letter_id);
+      }
+    });
+  });
+
+  return Array.from(skillMap.entries())
+    .map(([skill, personSet]) => ({
+      skill,
+      count: personSet.size,
+      percentage: (personSet.size / totalApplicants) * 100,
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 15);
+}
+
+// 추천 개선 사항 생성
+function generateRecommendations(
+  coverLetters: IntegratedCoverLetter[],
+  activities: Activity[],
+  position: string
+): string[] {
+  const recommendations: string[] = [];
+  const total = coverLetters.length;
+
+  // 학점 기준 추천
+  const avgGpa = calculateAvgGpa(coverLetters);
+  if (avgGpa >= 4.0) {
+    recommendations.push('평균 학점이 4.0 이상으로 매우 높습니다. 학점을 유지하면서 실무 경험을 쌓는 것이 좋습니다.');
+  } else if (avgGpa >= 3.5) {
+    recommendations.push('평균 학점이 3.5 이상으로 준수합니다. 프로젝트나 인턴 경험으로 실무 역량을 보완하세요.');
+  } else {
+    recommendations.push('학점이 낮은 경우 프로젝트, 공모전, 자격증 등으로 실무 역량을 적극적으로 어필하세요.');
+  }
+
+  // 어학 점수 추천
+  const avgToeic = calculateAvgToeic(coverLetters);
+  if (avgToeic >= 900) {
+    recommendations.push('토익 점수가 우수합니다. 실무 영어 능력을 강조할 수 있는 경험을 추가하세요.');
+  } else if (avgToeic >= 800) {
+    recommendations.push('토익 800점 이상이면 충분합니다. 점수보다는 실무 프로젝트에 집중하세요.');
+  } else if (avgToeic > 0) {
+    recommendations.push('토익 점수를 800점 이상으로 향상시키면 경쟁력이 높아집니다.');
+  }
+
+  // 활동 개수 추천
+  const validActivities = activities.filter(a => isValidActivity(a.content));
+  const avgActivityCount = validActivities.length / total;
+
+  if (avgActivityCount < 3) {
+    recommendations.push('합격자들은 평균 3개 이상의 활동을 작성합니다. 다양한 경험을 추가로 작성해보세요.');
+  } else if (avgActivityCount >= 5) {
+    recommendations.push('활동 개수가 충분합니다. 각 활동의 구체적인 성과와 배운 점을 강조하세요.');
+  }
+
+  // 프로젝트 경험 추천
+  const projectCount = validActivities.filter(a =>
+    a.content.includes('프로젝트') || a.content.includes('개발')
+  ).length;
+
+  if (projectCount < total * 0.5) {
+    recommendations.push(`${position} 직무는 프로젝트 경험이 중요합니다. 실무형 프로젝트를 1~2개 추가하세요.`);
+  }
+
+  // 팀 협업 경험 추천
+  const teamCount = validActivities.filter(a =>
+    a.content.includes('팀') || a.content.includes('협업')
+  ).length;
+
+  if (teamCount < total * 0.4) {
+    recommendations.push('팀 프로젝트 경험을 강조하세요. 협업 능력은 채용에서 중요한 평가 요소입니다.');
+  }
+
+  // 자격증 추천
+  const certs = extractTopCertificates(coverLetters);
+  const totalCertHolders = certs.reduce((sum, cert) => sum + cert.count, 0);
+
+  if (totalCertHolders < total * 0.3) {
+    recommendations.push('관련 자격증(정보처리기사, AWS 등)을 취득하면 기술 역량을 객관적으로 증명할 수 있습니다.');
+  }
+
+  // 직무별 맞춤 추천
+  if (position.includes('개발') || position.includes('엔지니어')) {
+    recommendations.push('GitHub에 프로젝트 코드를 업로드하고 기술 블로그를 운영하면 개발 역량을 효과적으로 어필할 수 있습니다.');
+  } else if (position.includes('데이터') || position.includes('분석')) {
+    recommendations.push('Kaggle 대회 참여, 데이터 분석 프로젝트, SQL/Python 활용 경험을 구체적으로 작성하세요.');
+  } else if (position.includes('기획') || position.includes('PM')) {
+    recommendations.push('서비스 기획 문서 작성, 사용자 리서치, A/B 테스트 경험 등을 구체적으로 서술하세요.');
+  } else if (position.includes('마케팅')) {
+    recommendations.push('SNS 마케팅, 광고 캠페인 운영, 데이터 기반 성과 분석 경험을 수치와 함께 작성하세요.');
+  }
+
+  return recommendations.slice(0, 6); // 최대 6개
 }
 
 function generateInsights(coverLetters: IntegratedCoverLetter[], activities: {id: number, cover_letter_id: number, activity_type: string, content: string, created_at: string}[]): string[] {

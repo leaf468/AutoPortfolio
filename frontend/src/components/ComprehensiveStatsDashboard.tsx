@@ -18,6 +18,9 @@ import {
   TrophyIcon,
   UserGroupIcon,
   LightBulbIcon,
+  SparklesIcon,
+  ChartBarIcon,
+  CheckCircleIcon,
 } from '@heroicons/react/24/outline';
 
 interface ComprehensiveStatsDashboardProps {
@@ -233,6 +236,77 @@ export const ComprehensiveStatsDashboard: React.FC<ComprehensiveStatsDashboardPr
         </div>
       )}
 
+      {/* 활동 참여도 */}
+      {stats.activityEngagement && stats.activityEngagement.avgActivityCount > 0 && (
+        <div>
+          <div className="flex items-center mb-4">
+            <ChartBarIcon className="w-6 h-6 text-indigo-600 mr-2" />
+            <h3 className="text-lg font-semibold">활동 참여도</h3>
+          </div>
+
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* 평균 활동 개수 */}
+              <div>
+                <p className="text-sm text-gray-600 mb-2">평균 활동 개수</p>
+                <p className="text-3xl font-bold text-indigo-600">
+                  {stats.activityEngagement.avgActivityCount.toFixed(1)}<span className="text-lg text-gray-500">개</span>
+                </p>
+                <p className="text-xs text-gray-500 mt-2">
+                  합격자들은 평균적으로 {stats.activityEngagement.avgActivityCount.toFixed(0)}개의 활동 경험을 작성합니다
+                </p>
+              </div>
+
+              {/* 활동 개수 분포 */}
+              <div>
+                <p className="text-sm text-gray-600 mb-3">활동 개수 분포</p>
+                <ResponsiveContainer width="100%" height={150}>
+                  <BarChart data={stats.activityEngagement.activityDistribution}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="range" tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 12 }} domain={[0, 100]} />
+                    <Tooltip />
+                    <Bar dataKey="percentage" fill="#6366F1" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 핵심 역량 키워드 */}
+      {stats.topSkills && stats.topSkills.length > 0 && (
+        <div>
+          <div className="flex items-center mb-4">
+            <SparklesIcon className="w-6 h-6 text-pink-600 mr-2" />
+            <h3 className="text-lg font-semibold">핵심 역량 & 기술 스택</h3>
+          </div>
+
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
+            <p className="text-sm text-gray-600 mb-4">합격자들이 자주 언급하는 역량과 기술</p>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+              {stats.topSkills.map((skill, index) => (
+                <div
+                  key={index}
+                  className="bg-gradient-to-br from-pink-50 to-purple-50 rounded-lg p-3 border border-pink-100 hover:shadow-md transition-shadow"
+                >
+                  <p className="font-semibold text-gray-900 text-sm truncate" title={skill.skill}>
+                    {skill.skill}
+                  </p>
+                  <div className="flex items-center justify-between mt-1">
+                    <span className="text-xs text-gray-500">{skill.count}명</span>
+                    <span className="text-xs font-semibold text-pink-600">
+                      {skill.percentage.toFixed(0)}%
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 자격증 통계 */}
       {stats.topCertificates.length > 0 && (
         <div>
@@ -337,6 +411,39 @@ export const ComprehensiveStatsDashboard: React.FC<ComprehensiveStatsDashboardPr
                 <span className="font-semibold text-blue-700">💡 Tip:</span> 도넛 차트는 상위 10개 자격증의 상대적 비율을 나타내며,
                 오른쪽 수치는 실제 합격자 중 해당 자격증 보유 비율입니다.
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 추천 개선 사항 */}
+      {stats.recommendations && stats.recommendations.length > 0 && (
+        <div>
+          <div className="flex items-center mb-4">
+            <CheckCircleIcon className="w-6 h-6 text-emerald-600 mr-2" />
+            <h3 className="text-lg font-semibold">합격을 위한 추천 사항</h3>
+          </div>
+
+          <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-lg border border-emerald-200 p-6">
+            <p className="text-sm text-emerald-800 mb-4 font-medium">
+              💡 합격자 데이터를 기반으로 한 맞춤형 개선 가이드입니다
+            </p>
+            <div className="space-y-3">
+              {stats.recommendations.map((recommendation, index) => (
+                <div
+                  key={index}
+                  className="bg-white rounded-lg p-4 shadow-sm border border-emerald-100 hover:border-emerald-300 transition-colors"
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="flex-shrink-0 mt-0.5">
+                      <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center text-sm font-bold">
+                        {index + 1}
+                      </div>
+                    </div>
+                    <p className="text-gray-700 leading-relaxed">{recommendation}</p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
