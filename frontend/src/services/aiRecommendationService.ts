@@ -348,31 +348,81 @@ export async function analyzeCoverLetterComplete(
   const improvementCandidates: { priority: number; text: string }[] = [];
   const recommendations: string[] = [];
 
-  // 1. 강점 분석
+  // 1. 강점 분석 (더 다양하고 구체적으로)
   const leadershipKeywords = allKeywords.filter((k) => ['리더', '팀장', '주도'].includes(k)).length;
-  if (leadershipKeywords > 0) {
+  if (leadershipKeywords >= 2) {
+    strengths.push('리더십 경험이 풍부하게 드러나 있습니다.');
+  } else if (leadershipKeywords > 0) {
     strengths.push('리더십 경험이 잘 드러나 있습니다.');
   }
 
-  const teamworkKeywords = allKeywords.filter((k) => ['협업', '팀원', '소통'].includes(k)).length;
-  if (teamworkKeywords > 0) {
+  const teamworkKeywords = allKeywords.filter((k) => ['협업', '팀원', '소통', '조율'].includes(k)).length;
+  if (teamworkKeywords >= 3) {
+    strengths.push('팀 협업 능력이 매우 강조되어 있습니다.');
+  } else if (teamworkKeywords > 0) {
     strengths.push('팀 협업 능력이 강조되어 있습니다.');
   }
 
   const achievementKeywords = allKeywords.filter((k) => ['성과', '개선', '최적화', '달성', '수상'].includes(k)).length;
-  if (achievementKeywords > 0) {
+  if (achievementKeywords >= 3) {
+    strengths.push('구체적인 성과와 개선 사항이 다수 포함되어 있습니다.');
+  } else if (achievementKeywords > 0) {
     strengths.push('구체적인 성과와 개선 사항이 포함되어 있습니다.');
   }
 
   const problemSolvingKeywords = allKeywords.filter((k) => ['문제', '해결', '극복', '도전'].includes(k)).length;
-  if (problemSolvingKeywords >= 2) {
+  if (problemSolvingKeywords >= 3) {
+    strengths.push('문제 해결 능력이 여러 사례를 통해 잘 드러나 있습니다.');
+  } else if (problemSolvingKeywords >= 2) {
     strengths.push('문제 해결 능력이 드러나 있습니다.');
+  }
+
+  // 프로젝트 경험
+  const projectKeywords = allKeywords.filter((k) => ['프로젝트', '개발', '설계', '구현'].includes(k)).length;
+  if (projectKeywords >= 3) {
+    strengths.push('다양한 프로젝트 경험이 구체적으로 서술되어 있습니다.');
+  } else if (projectKeywords > 0) {
+    strengths.push('프로젝트 경험이 포함되어 있습니다.');
+  }
+
+  // 데이터 기반 분석
+  const dataKeywords = allKeywords.filter((k) => ['데이터', '분석'].includes(k)).length;
+  if (dataKeywords >= 2) {
+    strengths.push('데이터 기반 분석 능력이 드러나 있습니다.');
+  }
+
+  // 실무 경험
+  const practicalKeywords = allKeywords.filter((k) => ['인턴', '경험', '실무', '역량'].includes(k)).length;
+  if (practicalKeywords >= 2) {
+    strengths.push('실무 경험이 풍부하게 드러나 있습니다.');
+  }
+
+  // 수치적 성과
+  const numberMatches = allText.match(/\d+%|\d+배|\d+개|\d+명|\d+원|\d+건|\d+시간|\d+년|\d+개월/g);
+  const numberCount = numberMatches ? numberMatches.length : 0;
+  if (numberCount >= 5) {
+    strengths.push('정량적 성과가 구체적으로 표현되어 있습니다.');
+  } else if (numberCount >= 3) {
+    strengths.push('정량적 성과가 포함되어 있습니다.');
+  }
+
+  // 전체 분량
+  const totalLength = allText.length;
+  if (totalLength >= 1500) {
+    strengths.push('자기소개서 전체 분량이 충분하여 경험을 상세히 서술했습니다.');
+  } else if (totalLength >= 1000) {
+    strengths.push('자기소개서 분량이 적절합니다.');
+  }
+
+  // 전공/기술 역량
+  const skillKeywords = allKeywords.filter((k) => ['역량', '스킬', '전문성'].includes(k)).length;
+  if (skillKeywords >= 2) {
+    strengths.push('전문 역량이 잘 드러나 있습니다.');
   }
 
   // 2. 개선점 분석 (우선순위 기반)
 
   // 2-1. 자소서 길이 체크 (우선순위: 높음)
-  const totalLength = allText.length;
   const avgAnswerLength = totalLength / answers.length;
 
   if (totalLength < 500) {
@@ -388,8 +438,7 @@ export async function analyzeCoverLetterComplete(
   }
 
   // 2-2. 수치/성과 지표 체크 (우선순위: 높음)
-  const numberMatches = allText.match(/\d+%|\d+배|\d+개|\d+명|\d+원|\d+건|\d+시간|\d+년|\d+개월/g);
-  const numberCount = numberMatches ? numberMatches.length : 0;
+  // numberCount는 위에서 이미 계산됨
 
   if (numberCount === 0) {
     improvementCandidates.push({
@@ -499,20 +548,93 @@ export async function analyzeCoverLetterComplete(
     improvements.push('전반적으로 잘 작성되었으나, 각 경험에 대한 정량적 성과를 더 추가하면 경쟁력이 높아집니다.');
   }
 
-  // 4. 추천사항 (상위 5개 활동 중 누락된 것)
-  const topActivities = stats.commonActivities.slice(0, 5);
+  // 4. 추천사항 (더 다양하고 실용적으로)
+
+  // 4-1. 상위 활동 중 누락된 것
+  const topActivities = stats.commonActivities.slice(0, 8);
   topActivities.forEach((activity) => {
     // 유연한 매칭: "백엔드 개발" → "개발"로 매칭
     const lastWord = activity.activityType.split(' ').pop() || activity.activityType;
     const isAlreadyMentioned = allText.includes(lastWord);
 
-    if (!isAlreadyMentioned && activity.percentage >= 20) {
-      recommendations.push(`"${activity.activityType}" 경험 추가를 고려해보세요. (합격자의 ${activity.percentage.toFixed(0)}%가 보유)`);
+    if (!isAlreadyMentioned && activity.percentage >= 15) {
+      recommendations.push(`"${activity.activityType}" 경험 추가를 고려해보세요 (합격자의 ${activity.percentage.toFixed(0)}%가 보유)`);
     }
   });
 
-  // 추천사항 제한 (최대 5개)
-  const finalRecommendations = recommendations.slice(0, 5);
+  // 4-2. 핵심 역량 키워드 추가 추천
+  if (stats.topSkills && stats.topSkills.length > 0) {
+    const topSkills = stats.topSkills.slice(0, 10);
+    const missingSkills = topSkills.filter(skill =>
+      !allText.toLowerCase().includes(skill.skill.toLowerCase()) &&
+      skill.percentage >= 30
+    );
+
+    if (missingSkills.length > 0) {
+      const topMissingSkills = missingSkills.slice(0, 3).map(s => s.skill).join(', ');
+      recommendations.push(`합격자들이 자주 언급하는 기술/역량을 추가해보세요: ${topMissingSkills}`);
+    }
+  }
+
+  // 4-3. 학점/토익 기준 추천
+  if (stats.avgGpa >= 4.0 && !allText.includes('학점')) {
+    recommendations.push(`이 직무 합격자 평균 학점이 ${stats.avgGpa.toFixed(2)}점입니다. 학점이 높다면 언급하는 것이 좋습니다`);
+  }
+
+  if (stats.avgToeic >= 850 && !allText.includes('토익') && !allText.includes('영어')) {
+    recommendations.push(`합격자 평균 토익 점수가 ${Math.round(stats.avgToeic)}점입니다. 어학 능력을 어필해보세요`);
+  }
+
+  // 4-4. 활동 개수 추천
+  if (stats.activityEngagement && stats.activityEngagement.avgActivityCount > 0) {
+    const userActivityCount = answers.length; // 간단한 근사치
+    const avgActivityCount = stats.activityEngagement.avgActivityCount;
+
+    if (userActivityCount < avgActivityCount * 0.7) {
+      recommendations.push(`합격자들은 평균 ${avgActivityCount.toFixed(0)}개의 활동을 작성합니다. 경험을 더 추가해보세요`);
+    }
+  }
+
+  // 4-5. 자격증 추천
+  if (stats.topCertificates && stats.topCertificates.length > 0 && !allText.includes('자격증')) {
+    const topCert = stats.topCertificates[0];
+    if (topCert.percentage >= 30) {
+      recommendations.push(`합격자의 ${topCert.percentage.toFixed(0)}%가 "${topCert.name}" 자격증을 보유하고 있습니다`);
+    }
+  }
+
+  // 4-6. 직무별 맞춤 추천
+  if (position.includes('개발') && !allText.includes('GitHub') && !allText.includes('깃허브')) {
+    recommendations.push('개발 직무는 GitHub 프로젝트 링크나 기술 블로그를 함께 제시하면 좋습니다');
+  }
+
+  if (position.includes('데이터') && numberCount < 5) {
+    recommendations.push('데이터 직무는 구체적인 수치와 통계를 많이 활용하는 것이 좋습니다');
+  }
+
+  if (position.includes('기획') && !allText.includes('사용자') && !allText.includes('고객')) {
+    recommendations.push('기획 직무는 사용자/고객 관점의 경험을 강조하면 효과적입니다');
+  }
+
+  if (position.includes('마케팅') && !allText.includes('성과') && numberCount < 3) {
+    recommendations.push('마케팅 직무는 캠페인 성과를 정량적 지표로 표현하는 것이 중요합니다');
+  }
+
+  // 추천사항 제한 (최소 3개, 최대 8개)
+  let finalRecommendations = recommendations.slice(0, 8);
+
+  // 추천이 너무 적으면 기본 추천 추가
+  if (finalRecommendations.length < 3) {
+    if (!allText.includes('성과') || numberCount < 3) {
+      finalRecommendations.push('각 경험마다 구체적인 성과를 수치로 표현해보세요');
+    }
+    if (!allText.includes('배운') && !allText.includes('깨달')) {
+      finalRecommendations.push('경험을 통해 배운 점이나 성장한 부분을 추가하면 좋습니다');
+    }
+    if (allText.length < 1000) {
+      finalRecommendations.push('전체 자기소개서 분량을 더 늘려 경험을 상세히 서술해보세요');
+    }
+  }
 
   return {
     strengths,

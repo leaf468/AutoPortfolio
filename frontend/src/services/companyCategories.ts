@@ -90,7 +90,8 @@ export const COMPANY_CATEGORIES: CompanyCategoryInfo[] = [
 /**
  * 회사명으로부터 카테고리 추론
  */
-export function inferCompanyCategory(companyName: string): CompanyCategory {
+export function inferCompanyCategory(companyName: string | null | undefined): CompanyCategory {
+  if (!companyName) return CompanyCategory.기타;
   const lowerName = companyName.toLowerCase();
 
   for (const categoryInfo of COMPANY_CATEGORIES) {

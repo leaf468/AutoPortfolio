@@ -174,10 +174,10 @@ ${currentContent}
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full p-4 shadow-lg hover:shadow-xl transition-all hover:scale-110 flex items-center gap-2 group"
+        className="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full px-5 py-4 shadow-lg hover:shadow-xl transition-all hover:scale-105 flex items-center gap-3"
       >
         <ChatBubbleLeftRightIcon className="w-6 h-6" />
-        <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 whitespace-nowrap">
+        <span className="font-medium whitespace-nowrap">
           자소서 도우미와 대화하기
         </span>
       </button>
