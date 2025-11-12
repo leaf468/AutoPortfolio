@@ -12,10 +12,14 @@ import SimilarApplicantsSection from '../components/SimilarApplicantsSection';
 import StatisticsDashboard from '../components/StatisticsDashboard';
 import ComparisonResult from '../components/ComparisonResult';
 import CompanyCategorySelector from '../components/CompanyCategorySelector';
+import { CustomAlert } from '../components/CustomAlert';
+import { useAlert } from '../hooks/useAlert';
 
 interface CoverLetterPageV2Props {}
 
 export const CoverLetterPageV2: React.FC<CoverLetterPageV2Props> = () => {
+  const { alertState, hideAlert, warning, error: showError } = useAlert();
+
   const [userSpec, setUserSpec] = useState<UserSpec>({
     targetCompany: '',
     referenceCategory: undefined,
@@ -77,7 +81,7 @@ export const CoverLetterPageV2: React.FC<CoverLetterPageV2Props> = () => {
   // 분석 실행
   const handleAnalyze = async () => {
     if (!userSpec.targetCompany || !userSpec.position) {
-      alert('지원 회사와 직무를 입력해주세요.');
+      warning('지원 회사와 직무를 입력해주세요.');
       return;
     }
 
@@ -124,7 +128,7 @@ export const CoverLetterPageV2: React.FC<CoverLetterPageV2Props> = () => {
       }
     } catch (error) {
       console.error('분석 중 오류:', error);
-      alert('분석 중 오류가 발생했습니다.');
+      showError('분석 중 오류가 발생했습니다.');
     } finally {
       setIsAnalyzing(false);
     }
@@ -401,6 +405,16 @@ export const CoverLetterPageV2: React.FC<CoverLetterPageV2Props> = () => {
           </div>
         </div>
       </div>
+
+      {/* Custom Alert */}
+      <CustomAlert
+        isOpen={alertState.isOpen}
+        onClose={hideAlert}
+        title={alertState.title}
+        message={alertState.message}
+        type={alertState.type}
+        confirmText={alertState.confirmText}
+      />
     </div>
   );
 };

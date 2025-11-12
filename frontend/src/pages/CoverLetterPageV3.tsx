@@ -23,6 +23,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import Footer from '../components/Footer';
 import LandingFooter from '../components/LandingFooter';
+import { CustomAlert } from '../components/CustomAlert';
+import { useAlert } from '../hooks/useAlert';
 
 const DEFAULT_QUESTIONS: Omit<CoverLetterQuestion, 'answer'>[] = [
   {
@@ -53,6 +55,7 @@ const DEFAULT_QUESTIONS: Omit<CoverLetterQuestion, 'answer'>[] = [
 
 export const CoverLetterPageV3: React.FC = () => {
   const { user } = useAuth();
+  const { alertState, hideAlert, success, error: showError, warning, info } = useAlert();
   const location = useLocation();
   const editState = location.state as { editMode?: boolean; documentId?: number; savedData?: any } | null;
 
@@ -211,7 +214,7 @@ export const CoverLetterPageV3: React.FC = () => {
       setIsLoadingPositionStats(true);
       try {
         const [stats, posStats] = await Promise.all([
-          getComprehensiveStats(userSpec.position),
+          getComprehensiveStats(userSpec.position, true), // 익명화 스킵 - 속도 향상
           getPositionStats(userSpec.position),
         ]);
         setComprehensiveStats(stats);
@@ -317,7 +320,7 @@ export const CoverLetterPageV3: React.FC = () => {
 
   const handleQuestionRemove = (questionId: string) => {
     if (questions.length <= 1) {
-      alert('최소 1개의 질문은 필요합니다.');
+      warning('최소 1개의 질문은 필요합니다.');
       return;
     }
     setQuestions((prev) => prev.filter((q) => q.id !== questionId));
@@ -363,7 +366,7 @@ export const CoverLetterPageV3: React.FC = () => {
 
   const handleAnalyzeSingleQuestion = async (questionId: string) => {
     if (!userSpec.position.trim()) {
-      alert('직무를 입력해주세요.');
+      warning('직무를 입력해주세요.');
       return;
     }
 
@@ -386,9 +389,9 @@ export const CoverLetterPageV3: React.FC = () => {
         const element = document.getElementById(`analysis-${questionId}`);
         element?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }, 100);
-    } catch (error) {
-      console.error('질문 분석 실패:', error);
-      alert('질문 분석 중 오류가 발생했습니다.');
+    } catch (err) {
+      console.error('질문 분석 실패:', err);
+      showError('질문 분석 중 오류가 발생했습니다.');
     } finally {
       setAnalyzingQuestionId(null);
     }
@@ -396,13 +399,13 @@ export const CoverLetterPageV3: React.FC = () => {
 
   const handleAnalyzeComplete = async () => {
     if (!userSpec.position.trim()) {
-      alert('직무를 입력해주세요.');
+      warning('직무를 입력해주세요.');
       return;
     }
 
     const answeredQuestions = questions.filter((q) => q.answer.trim().length > 0);
     if (answeredQuestions.length === 0) {
-      alert('최소 하나 이상의 질문에 답변해주세요.');
+      warning('최소 하나 이상의 질문에 답변해주세요.');
       return;
     }
 
@@ -416,9 +419,9 @@ export const CoverLetterPageV3: React.FC = () => {
       setTimeout(() => {
         document.getElementById('overall-analysis')?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
-    } catch (error) {
-      console.error('종합 분석 실패:', error);
-      alert('분석 중 오류가 발생했습니다.');
+    } catch (err) {
+      console.error('종합 분석 실패:', err);
+      showError('분석 중 오류가 발생했습니다.');
     }
   };
 
@@ -426,12 +429,12 @@ export const CoverLetterPageV3: React.FC = () => {
   const handleGenerateDetailedFeedback = async () => {
     const answeredQuestions = questions.filter((q) => q.answer.trim());
     if (answeredQuestions.length === 0) {
-      alert('최소 하나 이상의 질문에 답변해주세요.');
+      warning('최소 하나 이상의 질문에 답변해주세요.');
       return;
     }
 
     if (!userSpec.position.trim()) {
-      alert('지원 직무를 입력해주세요.');
+      warning('지원 직무를 입력해주세요.');
       return;
     }
 
@@ -444,10 +447,10 @@ export const CoverLetterPageV3: React.FC = () => {
       // PDF 생성 및 다운로드
       await generateFeedbackPDF(report);
 
-      alert(`자기소개서 첨삭 PDF가 생성되었습니다!\n\n평균 점수: ${report.averageScore}점\n총 ${report.totalQuestions}개 질문에 대한 상세 분석이 포함되어 있습니다.`);
-    } catch (error) {
-      console.error('첨삭 생성 실패:', error);
-      alert('첨삭 생성 중 오류가 발생했습니다. OpenAI API 키를 확인하거나 잠시 후 다시 시도해주세요.');
+      success(`자기소개서 첨삭 PDF가 생성되었습니다!\n\n평균 점수: ${report.averageScore}점\n총 ${report.totalQuestions}개 질문에 대한 상세 분석이 포함되어 있습니다.`);
+    } catch (err) {
+      console.error('첨삭 생성 실패:', err);
+      showError('첨삭 생성 중 오류가 발생했습니다. OpenAI API 키를 확인하거나 잠시 후 다시 시도해주세요.');
     } finally {
       setIsGeneratingFeedback(false);
     }
@@ -520,7 +523,7 @@ export const CoverLetterPageV3: React.FC = () => {
                 <button
                   onClick={async () => {
                     if (!user) {
-                      alert('로그인이 필요합니다.');
+                      warning('로그인이 필요합니다.');
                       return;
                     }
                     try {
@@ -537,7 +540,7 @@ export const CoverLetterPageV3: React.FC = () => {
                           })
                           .eq('document_id', documentId);
                         if (error) throw error;
-                        alert('자소서가 수정되었습니다!');
+                        success('자소서가 수정되었습니다!');
                       } else {
                         // 신규 작성 모드: 삽입
                         const { data, error } = await supabase
@@ -554,11 +557,11 @@ export const CoverLetterPageV3: React.FC = () => {
                           .single();
                         if (error) throw error;
                         setDocumentId(data.document_id);
-                        alert('자소서가 저장되었습니다!');
+                        success('자소서가 저장되었습니다!');
                       }
-                    } catch (error) {
-                      console.error('저장 오류:', error);
-                      alert('저장 중 오류가 발생했습니다.');
+                    } catch (err) {
+                      console.error('저장 오류:', err);
+                      showError('저장 중 오류가 발생했습니다.');
                     }
                   }}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium whitespace-nowrap"
@@ -740,6 +743,7 @@ export const CoverLetterPageV3: React.FC = () => {
                 <div className="lg:col-span-2">
                   <CoverLetterQuestionInput
                     questions={[question]}
+                    questionIndex={index}
                     onAnswerChange={handleAnswerChange}
                     onQuestionChange={handleQuestionChange}
                     onMaxLengthChange={handleMaxLengthChange}
@@ -861,6 +865,16 @@ export const CoverLetterPageV3: React.FC = () => {
         />
       </div>
       {isGuestMode ? <LandingFooter /> : <Footer />}
+
+      {/* 커스텀 Alert */}
+      <CustomAlert
+        isOpen={alertState.isOpen}
+        onClose={hideAlert}
+        title={alertState.title}
+        message={alertState.message}
+        type={alertState.type}
+        confirmText={alertState.confirmText}
+      />
     </div>
   );
 };

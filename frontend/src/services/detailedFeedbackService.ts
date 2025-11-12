@@ -69,8 +69,8 @@ export async function generateDetailedFeedback(
   allQuestions: CoverLetterQuestion[]
 ): Promise<DetailedQuestionFeedback> {
   try {
-    // 합격자 통계 가져오기
-    const stats = await getComprehensiveStats(position);
+    // 합격자 통계 가져오기 (익명화 스킵 - 속도 향상)
+    const stats = await getComprehensiveStats(position, true);
 
     const prompt = `당신은 대기업 인사담당자이자 자기소개서 전문 첨삭가입니다.
 

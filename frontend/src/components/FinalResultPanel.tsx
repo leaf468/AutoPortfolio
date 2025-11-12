@@ -22,6 +22,8 @@ import { portfolioTemplates } from "../templates/portfolioTemplates";
 import { htmlToMarkdownConverter } from "../services/htmlToMarkdownConverter";
 import { pdfGenerator } from "../services/pdfGenerator";
 import { trackRating, trackPDFDownload, trackButtonClick } from "../utils/analytics";
+import { CustomAlert } from "./CustomAlert";
+import { useAlert } from "../hooks/useAlert";
 
 type TemplateType = "minimal" | "clean" | "colorful" | "elegant";
 
@@ -41,6 +43,7 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
     onReset,
 }) => {
     const navigate = useNavigate();
+    const { alertState, hideAlert, success, error: showError, warning } = useAlert();
     const [showPreview, setShowPreview] = useState(false);
     const [userRating, setUserRating] = useState<number>(0);
     const [hoverRating, setHoverRating] = useState<number>(0);
@@ -552,7 +555,7 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
 
         const printWindow = window.open("", "_blank");
         if (!printWindow) {
-            alert("팝업이 차단되었습니다. 팝업을 허용해주세요.");
+            warning("팝업이 차단되었습니다. 팝업을 허용해주세요.");
             return;
         }
 
@@ -577,7 +580,7 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
             };
         } catch (error) {
             console.error("PDF 생성 중 오류:", error);
-            alert("PDF 생성 중 오류가 발생했습니다.");
+            showError("PDF 생성 중 오류가 발생했습니다.");
         }
     };
 
@@ -592,7 +595,7 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
             htmlToMarkdownConverter.downloadMarkdown(markdown, `${finalResult.id}_portfolio.md`);
         } catch (error) {
             console.error("Markdown 다운로드 실패:", error);
-            alert("Markdown 다운로드에 실패했습니다.");
+            showError("Markdown 다운로드에 실패했습니다.");
         }
     };
 
@@ -601,17 +604,17 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
         try {
             const htmlContent = generateTemplatedHTML();
             const markdown = htmlToMarkdownConverter.convertToMarkdown(htmlContent);
-            const success = await htmlToMarkdownConverter.copyToClipboard(markdown);
+            const copySuccess = await htmlToMarkdownConverter.copyToClipboard(markdown);
 
-            if (success) {
+            if (copySuccess) {
                 setCopySuccess('Markdown이 클립보드에 복사되었습니다!');
                 setTimeout(() => setCopySuccess(''), 3000);
             } else {
-                alert("클립보드 복사에 실패했습니다.");
+                showError("클립보드 복사에 실패했습니다.");
             }
         } catch (error) {
             console.error("Markdown 복사 실패:", error);
-            alert("Markdown 복사에 실패했습니다.");
+            showError("Markdown 복사에 실패했습니다.");
         }
     };
 
@@ -633,7 +636,7 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
             URL.revokeObjectURL(url);
         } catch (error) {
             console.error("HTML 다운로드 실패:", error);
-            alert("HTML 다운로드에 실패했습니다.");
+            showError("HTML 다운로드에 실패했습니다.");
         }
     };
 
@@ -686,10 +689,10 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
         } else {
             try {
                 await navigator.clipboard.writeText(window.location.href);
-                alert("포트폴리오 링크가 클립보드에 복사되었습니다!");
+                success("포트폴리오 링크가 클립보드에 복사되었습니다!");
             } catch (error) {
                 console.error("클립보드 복사 실패:", error);
-                alert("클립보드 복사에 실패했습니다.");
+                showError("클립보드 복사에 실패했습니다.");
             }
         }
     };
@@ -1131,6 +1134,16 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                         </motion.div>
                     )}
                 </AnimatePresence>
+
+                {/* Custom Alert */}
+                <CustomAlert
+                    isOpen={alertState.isOpen}
+                    onClose={hideAlert}
+                    title={alertState.title}
+                    message={alertState.message}
+                    type={alertState.type}
+                    confirmText={alertState.confirmText}
+                />
             </div>
         </div>
     );

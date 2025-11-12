@@ -195,14 +195,14 @@ export const ComprehensiveStatsDashboard: React.FC<ComprehensiveStatsDashboardPr
                 </div>
                 <p className="text-sm text-gray-600 mb-2">{activity.insight}</p>
 
-                {/* 구체적인 활동 예시 */}
-                {activity.examples.length > 0 && (
+                {/* 구체적인 활동 예시 (익명화된 데이터) */}
+                {activity.anonymizedExamples && activity.anonymizedExamples.length > 0 && (
                   <div className="mt-2 mb-3">
                     <p className="text-xs text-gray-500 mb-1">구체적인 활동 예시:</p>
                     <div className="space-y-1">
-                      {activity.examples.map((example, idx) => (
+                      {activity.anonymizedExamples.map((example, idx) => (
                         <p key={idx} className="text-xs text-gray-600 pl-2 border-l-2 border-gray-200">
-                          • {example.length > 60 ? example.slice(0, 60) + '...' : example}
+                          • {example.length > 80 ? example.slice(0, 80) + '...' : example}
                         </p>
                       ))}
                     </div>

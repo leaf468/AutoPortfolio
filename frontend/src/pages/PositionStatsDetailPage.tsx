@@ -119,7 +119,13 @@ export const PositionStatsDetailPage: React.FC = () => {
         {isLoading ? (
           <div className="text-center py-12">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            <p className="text-gray-600 mt-4">데이터 분석 중...</p>
+            <p className="text-gray-600 mt-4 font-semibold">데이터 분석 중...</p>
+            <p className="text-gray-500 text-sm mt-2">
+              해당 직무의 합격자 데이터를 분석하고 있습니다.
+            </p>
+            <p className="text-gray-400 text-xs mt-1">
+              이 작업은 약 10-20초 정도 소요될 수 있습니다.
+            </p>
           </div>
         ) : stats ? (
           <ComprehensiveStatsDashboard stats={stats} />

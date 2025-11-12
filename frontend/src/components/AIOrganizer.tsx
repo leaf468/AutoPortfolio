@@ -10,6 +10,8 @@ import { aiOrganizer, OrganizedContent } from '../services/aiOrganizer';
 import { trackButtonClick } from '../utils/analytics';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabaseClient';
+import { CustomAlert } from './CustomAlert';
+import { useAlert } from '../hooks/useAlert';
 
 interface AIOrganizerProps {
   onComplete: (organizedContent: OrganizedContent) => void;
@@ -17,6 +19,7 @@ interface AIOrganizerProps {
 
 const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
   const { user } = useAuth();
+  const { alertState, hideAlert, success, error: showError, warning } = useAlert();
   const [input, setInput] = useState('');
   const [inputType, setInputType] = useState<'freetext' | 'resume' | 'markdown'>('freetext');
   const [jobPosting, setJobPosting] = useState('');
@@ -56,7 +59,7 @@ const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
   // 자소서 목록 불러오기
   const loadCoverLetters = async () => {
     if (!user) {
-      alert('로그인이 필요합니다.');
+      warning('로그인이 필요합니다.');
       return;
     }
 
@@ -73,7 +76,7 @@ const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
       setShowCoverLetterModal(true);
     } catch (error) {
       console.error('자소서 로드 오류:', error);
-      alert('자소서를 불러오는 중 오류가 발생했습니다.');
+      showError('자소서를 불러오는 중 오류가 발생했습니다.');
     } finally {
       setLoadingCoverLetters(false);
     }
@@ -106,13 +109,13 @@ const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
         }
 
         setShowCoverLetterModal(false);
-        alert('자소서 내용과 기본 정보를 불러왔습니다!');
+        success('자소서 내용과 기본 정보를 불러왔습니다!');
       } else {
-        alert('자소서에 작성된 답변이 없습니다.');
+        warning('자소서에 작성된 답변이 없습니다.');
       }
     } catch (error) {
       console.error('자소서 파싱 오류:', error);
-      alert('자소서 내용을 불러오는 중 오류가 발생했습니다.');
+      showError('자소서 내용을 불러오는 중 오류가 발생했습니다.');
     }
   };
 
@@ -408,6 +411,16 @@ const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
             </div>
           )}
         </AnimatePresence>
+
+        {/* Custom Alert */}
+        <CustomAlert
+          isOpen={alertState.isOpen}
+          onClose={hideAlert}
+          title={alertState.title}
+          message={alertState.message}
+          type={alertState.type}
+          confirmText={alertState.confirmText}
+        />
     </div>
   );
 };

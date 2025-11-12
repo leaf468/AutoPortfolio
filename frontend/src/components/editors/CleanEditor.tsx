@@ -19,6 +19,8 @@ import { useScrollPreservation } from '../../hooks/useScrollPreservation';
 import NaturalLanguageModal from '../NaturalLanguageModal';
 import { userFeedbackService } from '../../services/userFeedbackService';
 import { portfolioTranslator } from '../../services/portfolioTranslator';
+import { CustomAlert } from '../CustomAlert';
+import { useAlert } from '../../hooks/useAlert';
 
 // 스킬 입력 컴포넌트
 const SkillInput: React.FC<{
@@ -71,6 +73,7 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
     onTemplateChange,
     isSaving
 }) => {
+    const { alertState, hideAlert, error: showError } = useAlert();
     const [portfolioData, setPortfolioData] = useState<CleanPortfolioData>({
         name: '',
         title: '',
@@ -606,7 +609,7 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
             }
         } catch (error) {
             console.error('자기소개 개선 실패:', error);
-            alert('AI 개선에 실패했습니다. 다시 시도해주세요.');
+            showError('AI 개선에 실패했습니다. 다시 시도해주세요.');
         } finally {
             setIsEnhancing(false);
             setEnhancingSection(null);
@@ -644,7 +647,7 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
             }));
         } catch (error) {
             console.error('경력 개선 실패:', error);
-            alert('AI 개선에 실패했습니다. 다시 시도해주세요.');
+            showError('AI 개선에 실패했습니다. 다시 시도해주세요.');
         } finally {
             setIsEnhancing(false);
             setEnhancingSection(null);
@@ -711,7 +714,7 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
             }
         } catch (error) {
             console.error('프로젝트 개선 실패:', error);
-            alert('AI 개선에 실패했습니다. 다시 시도해주세요.');
+            showError('AI 개선에 실패했습니다. 다시 시도해주세요.');
         } finally {
             setIsEnhancing(false);
             setEnhancingSection(null);
@@ -853,7 +856,7 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
             console.log('✅ 언어 전환 완료');
         } catch (error) {
             console.error('❌ 언어 전환 실패:', error);
-            alert('언어 전환 중 오류가 발생했습니다. 다시 시도해주세요.');
+            showError('언어 전환 중 오류가 발생했습니다. 다시 시도해주세요.');
         } finally {
             setIsTranslating(false);
         }
@@ -1799,6 +1802,16 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                     </div>
                 </div>
             )}
+
+            {/* Custom Alert */}
+            <CustomAlert
+                isOpen={alertState.isOpen}
+                onClose={hideAlert}
+                title={alertState.title}
+                message={alertState.message}
+                type={alertState.type}
+                confirmText={alertState.confirmText}
+            />
         </div>
     );
 };

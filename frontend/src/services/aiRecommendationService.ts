@@ -30,8 +30,8 @@ export async function generateRealtimeRecommendations(
 
   const recommendations: AIRecommendation[] = [];
 
-  // 1. 종합 통계 가져오기
-  const stats = await getComprehensiveStats(position);
+  // 1. 종합 통계 가져오기 (익명화 스킵 - 속도 향상)
+  const stats = await getComprehensiveStats(position, true);
 
   // 2. 사용자 입력에서 키워드 추출
   const userKeywords = extractUserKeywords(userInput);
@@ -324,7 +324,7 @@ export async function analyzeCoverLetterComplete(
   improvements: string[];
   recommendations: string[];
 }> {
-  const stats = await getComprehensiveStats(position);
+  const stats = await getComprehensiveStats(position, true); // 익명화 스킵
   const allText = answers.map((a) => a.answer).join(' ');
   const allKeywords = extractUserKeywords(allText);
 

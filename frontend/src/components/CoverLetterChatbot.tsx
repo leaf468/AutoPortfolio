@@ -67,9 +67,9 @@ export const CoverLetterChatbot: React.FC<CoverLetterChatbotProps> = ({
     setIsLoading(true);
 
     try {
-      // DB에서 통계 데이터 가져오기
+      // DB에서 통계 데이터 가져오기 (익명화 스킵 - 속도 향상)
       const stats = position.trim()
-        ? await getComprehensiveStats(position)
+        ? await getComprehensiveStats(position, true)
         : null;
 
       // 현재 작성 중인 자소서 내용

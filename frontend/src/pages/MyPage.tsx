@@ -13,12 +13,15 @@ import {
   TrashIcon,
   UserCircleIcon
 } from '@heroicons/react/24/outline';
+import { CustomAlert } from '../components/CustomAlert';
+import { useAlert } from '../hooks/useAlert';
 
 const MyPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, loading, setUser } = useAuth();
   const { setEditMode } = usePortfolio();
+  const { alertState, hideAlert, success, error: showError, warning } = useAlert();
   const [activeTab, setActiveTab] = useState<'documents' | 'portfolios' | 'profile'>('documents');
 
   // 프로필 상태
@@ -213,12 +216,12 @@ const MyPage: React.FC = () => {
 
       if (profileError) throw profileError;
 
-      alert('프로필이 저장되었습니다.');
+      success('프로필이 저장되었습니다.');
       setIsEditing(false);
       loadProfile(); // 프로필 다시 로드
-    } catch (error) {
-      console.error('Profile save error:', error);
-      alert('프로필 저장 중 오류가 발생했습니다.');
+    } catch (err) {
+      console.error('Profile save error:', err);
+      showError('프로필 저장 중 오류가 발생했습니다.');
     } finally {
       setIsSaving(false);
     }
@@ -253,13 +256,13 @@ const MyPage: React.FC = () => {
         throw authError || dbError;
       }
 
-      alert('회원 탈퇴가 완료되었습니다.');
+      success('회원 탈퇴가 완료되었습니다.');
       await logout();
       setUser(null); // AuthContext의 user 상태를 null로 설정
       navigate('/');
     } catch (error) {
       console.error('Account deletion error:', error);
-      alert('회원 탈퇴 중 오류가 발생했습니다.');
+      showError('회원 탈퇴 중 오류가 발생했습니다.');
     }
   };
 
@@ -529,7 +532,7 @@ const MyPage: React.FC = () => {
                                 }
                               });
                             } else {
-                              alert('템플릿 정보를 찾을 수 없습니다.');
+                              showError('템플릿 정보를 찾을 수 없습니다.');
                             }
                           }}
                           className="flex-1 px-4 py-2.5 bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-lg hover:from-purple-700 hover:to-purple-800 transition-all duration-200 font-medium text-sm shadow-sm hover:shadow-md flex items-center justify-center"
@@ -960,6 +963,16 @@ const MyPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Custom Alert */}
+      <CustomAlert
+        isOpen={alertState.isOpen}
+        onClose={hideAlert}
+        title={alertState.title}
+        message={alertState.message}
+        type={alertState.type}
+        confirmText={alertState.confirmText}
+      />
 
       <Footer />
     </div>

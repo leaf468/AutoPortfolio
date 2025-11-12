@@ -19,6 +19,7 @@ interface CoverLetterQuestionInputProps {
   onFocus?: (questionId: string) => void;
   onAnalyzeQuestion?: (questionId: string) => void;
   analyzingQuestionId?: string | null;
+  questionIndex?: number; // 외부에서 전달받는 인덱스 (단일 질문 렌더링 시)
 }
 
 export const CoverLetterQuestionInput: React.FC<CoverLetterQuestionInputProps> = ({
@@ -31,6 +32,7 @@ export const CoverLetterQuestionInput: React.FC<CoverLetterQuestionInputProps> =
   onFocus,
   onAnalyzeQuestion,
   analyzingQuestionId,
+  questionIndex,
 }) => {
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState('');
@@ -68,7 +70,7 @@ export const CoverLetterQuestionInput: React.FC<CoverLetterQuestionInputProps> =
           <div className="flex items-start justify-between mb-3">
             <div className="flex items-start flex-1">
               <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 text-blue-600 font-semibold text-sm mr-3 flex-shrink-0">
-                {index + 1}
+                {questionIndex !== undefined ? questionIndex + 1 : index + 1}
               </span>
 
               {editingQuestionId === question.id ? (

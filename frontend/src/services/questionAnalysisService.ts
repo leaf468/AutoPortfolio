@@ -21,8 +21,8 @@ export async function analyzeQuestion(
   questionId: string,
   position: string
 ): Promise<QuestionAnalysis> {
-  // 1. 종합 통계 가져오기
-  const stats = await getComprehensiveStats(position);
+  // 1. 종합 통계 가져오기 (익명화 스킵 - 속도 향상)
+  const stats = await getComprehensiveStats(position, true);
 
   // 2. 질문에서 키워드 추출
   const keywords = extractKeywordsFromQuestion(question);

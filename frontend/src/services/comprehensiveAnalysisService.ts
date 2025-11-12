@@ -1,6 +1,14 @@
 import { supabase } from '../lib/supabaseClient';
 import { calculatePositionSimilarity } from './flexibleAnalysisService';
 import { IntegratedCoverLetter, parseGpa, parseToeic, getAllActivities } from './integratedCoverLetterTypes';
+import OpenAI from 'openai';
+
+const openai = new OpenAI({
+  apiKey: process.env.REACT_APP_OPENAI_API_KEY || "",
+  dangerouslyAllowBrowser: true,
+});
+
+const OPENAI_MODEL = process.env.REACT_APP_OPENAI_MODEL || "gpt-4o-mini";
 
 // Activity 타입 정의 (integrated_cover_letters용)
 interface Activity {
@@ -52,14 +60,119 @@ export interface ActivityPattern {
   percentage: number;
   averageCount: number;
   commonKeywords: string[];
-  examples: string[];
+  examples: string[]; // 실제 DB 데이터 (내부 처리용, 사용자에게 노출하지 않음)
+  anonymizedExamples?: string[]; // OpenAI로 익명화된 예시 (사용자에게 표시)
   insight: string;
 }
 
 /**
- * 전체 데이터에서 특정 직무의 종합 통계 분석
+ * OpenAI를 사용하여 활동 예시를 익명화 (배치 처리로 효율적인 API 호출)
  */
-export async function getComprehensiveStats(position: string): Promise<ComprehensiveStats> {
+async function anonymizeActivityExamples(
+  activityPatterns: ActivityPattern[],
+  position: string
+): Promise<ActivityPattern[]> {
+  try {
+    // API 키 확인
+    const apiKey = process.env.REACT_APP_OPENAI_API_KEY;
+    if (!apiKey || apiKey.length < 20) {
+      console.warn('OpenAI API 키가 설정되지 않았습니다. 익명화를 건너뜁니다.');
+      // 익명화 없이 원본 반환 (하지만 UI에서는 anonymizedExamples만 표시하므로 안전)
+      return activityPatterns;
+    }
+
+    // 상위 10개 활동만 익명화 (API 비용 절감)
+    const topActivities = activityPatterns.slice(0, 10);
+
+    // 배치 프롬프트 생성
+    const batchPrompt = `당신은 자기소개서 데이터 분석 전문가입니다.
+
+# 역할
+실제 합격자 데이터를 기반으로 익명화된 활동 예시를 생성하세요.
+
+# 입력 데이터
+직무: ${position}
+
+다음은 ${position} 직무 합격자들의 실제 활동 패턴 데이터입니다:
+
+${topActivities.map((activity, idx) => `
+## ${idx + 1}. ${activity.activityType} (${activity.percentage.toFixed(0)}%)
+실제 예시들:
+${activity.examples.slice(0, 5).map((ex, i) => `${i + 1}. ${ex}`).join('\n')}
+`).join('\n')}
+
+# 요구사항
+각 활동 타입마다 3-5개의 익명화된 예시를 생성하세요.
+- 실제 데이터의 **패턴과 특징**은 유지하되, **개인정보나 구체적인 내용**은 일반화/익명화
+- 예시는 현실적이고 구체적이어야 함 (단, 실제 데이터를 그대로 복사하지 말 것)
+- 직무에 맞는 전문적인 표현 사용
+
+응답 형식 (JSON만 반환):
+{
+  "anonymized": [
+    {
+      "activityType": "활동명",
+      "examples": ["익명화된 예시 1", "익명화된 예시 2", "익명화된 예시 3"]
+    }
+  ]
+}`;
+
+    const response = await openai.chat.completions.create({
+      model: OPENAI_MODEL,
+      messages: [{
+        role: 'system',
+        content: '당신은 데이터 익명화 전문가입니다. JSON 형식으로만 응답하세요.'
+      }, {
+        role: 'user',
+        content: batchPrompt
+      }],
+      temperature: 0.8, // 다양성을 위해 높임
+      max_tokens: 3000,
+      response_format: { type: "json_object" }
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) {
+      console.warn('OpenAI 응답이 비어있습니다.');
+      return activityPatterns;
+    }
+
+    console.log('✅ 익명화 완료:', content.slice(0, 200));
+
+    const parsed = JSON.parse(content);
+
+    if (!parsed.anonymized || !Array.isArray(parsed.anonymized)) {
+      console.warn('OpenAI 응답 형식이 올바르지 않습니다:', parsed);
+      return activityPatterns;
+    }
+
+    // 익명화된 예시를 각 활동 패턴에 매핑
+    const anonymizedMap = new Map<string, string[]>(
+      parsed.anonymized.map((item: any) => [item.activityType, item.examples || []])
+    );
+
+    return activityPatterns.map(pattern => ({
+      ...pattern,
+      anonymizedExamples: anonymizedMap.get(pattern.activityType) || []
+    }));
+  } catch (error: any) {
+    console.error('활동 예시 익명화 실패:', error);
+
+    if (error?.status === 401) {
+      console.error('❌ OpenAI API 키가 유효하지 않습니다.');
+    }
+
+    // 실패 시 원본 반환 (하지만 UI에서는 anonymizedExamples만 표시)
+    return activityPatterns;
+  }
+}
+
+/**
+ * 전체 데이터에서 특정 직무의 종합 통계 분석
+ * @param position - 직무명
+ * @param skipAnonymization - true면 익명화 처리를 건너뜀 (AI 추천 등에서 사용)
+ */
+export async function getComprehensiveStats(position: string, skipAnonymization: boolean = false): Promise<ComprehensiveStats> {
   try {
     // integrated_cover_letters에서 전체 데이터 가져오기
     const { data: allCoverLetters, error } = await supabase
@@ -126,6 +239,14 @@ export async function getComprehensiveStats(position: string): Promise<Comprehen
       활동_샘플: allActivities.slice(0, 3).map(a => a.content.slice(0, 50))
     });
 
+    // 활동 패턴 분석
+    const activityPatterns = analyzeActivityPatterns(allActivities, relevantCoverLetters.length);
+
+    // OpenAI를 통해 활동 예시 익명화 (skipAnonymization이 false일 때만)
+    const finalActivityPatterns = skipAnonymization
+      ? activityPatterns
+      : await anonymizeActivityExamples(activityPatterns, position);
+
     const stats: ComprehensiveStats = {
       position,
       totalApplicants: relevantCoverLetters.length,
@@ -135,7 +256,7 @@ export async function getComprehensiveStats(position: string): Promise<Comprehen
       topMajors: extractTopMajors(relevantCoverLetters),
       avgToeic: calculateAvgToeic(relevantCoverLetters),
       toeicDistribution: calculateToeicDistribution(relevantCoverLetters),
-      commonActivities: analyzeActivityPatterns(allActivities, relevantCoverLetters.length),
+      commonActivities: finalActivityPatterns,
       topCertificates: extractTopCertificates(relevantCoverLetters),
       activityEngagement: calculateActivityEngagement(allActivities, relevantCoverLetters),
       topSkills: extractTopSkills(allActivities, relevantCoverLetters.length),

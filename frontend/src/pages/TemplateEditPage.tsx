@@ -10,6 +10,8 @@ import ColorfulEditor from '../components/editors/ColorfulEditor';
 import ElegantEditor from '../components/editors/ElegantEditor';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabaseClient';
+import { CustomAlert } from '../components/CustomAlert';
+import { useAlert } from '../hooks/useAlert';
 
 type TemplateType = 'minimal' | 'clean' | 'colorful' | 'elegant';
 
@@ -19,6 +21,7 @@ export default function TemplateEditPage() {
   const { template } = useParams<{ template: TemplateType }>();
   const { state, setFinalResult, setCurrentStep, setTemplate } = usePortfolio();
   const { user } = useAuth();
+  const { alertState, hideAlert, success, error: showError, warning } = useAlert();
   const [isValidated, setIsValidated] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const initializationRef = useRef(false);
@@ -192,12 +195,12 @@ export default function TemplateEditPage() {
   // 저장하기 - DB 저장 후 마이페이지로 이동 (완성 페이지 건너뜀)
   const handleSaveOnly = async () => {
     if (!user) {
-      alert('로그인이 필요합니다.');
+      warning('로그인이 필요합니다.');
       return;
     }
 
     if (!currentDocument) {
-      alert('저장할 내용이 없습니다.');
+      warning('저장할 내용이 없습니다.');
       return;
     }
 
@@ -281,7 +284,7 @@ export default function TemplateEditPage() {
           console.log('✅ Portfolio inserted successfully');
         }
 
-        alert('포트폴리오가 저장되었습니다!');
+        success('포트폴리오가 저장되었습니다!');
       } else {
         // 신규 작성 모드: 삽입
         console.log('✨ Creating new portfolio');
@@ -298,13 +301,13 @@ export default function TemplateEditPage() {
           throw error;
         }
         console.log('✅ Portfolio saved successfully');
-        alert('포트폴리오가 저장되었습니다!');
+        success('포트폴리오가 저장되었습니다!');
       }
       // 저장 후 마이페이지로 이동하면서 강제 새로고침
       navigate('/mypage', { replace: true, state: { refresh: Date.now() } });
     } catch (error) {
       console.error('저장 오류:', error);
-      alert('저장 중 오류가 발생했습니다.');
+      showError('저장 중 오류가 발생했습니다.');
     } finally {
       setIsSaving(false);
     }
@@ -313,7 +316,7 @@ export default function TemplateEditPage() {
   // 완성하기 - DB 저장 후 완성 페이지로 이동
   const handleComplete = async (document: PortfolioDocument) => {
     if (!user) {
-      alert('로그인이 필요합니다.');
+      warning('로그인이 필요합니다.');
       return;
     }
 
@@ -380,7 +383,7 @@ export default function TemplateEditPage() {
       navigate('/complete');
     } catch (error) {
       console.error('저장 오류:', error);
-      alert('저장 중 오류가 발생했습니다.');
+      showError('저장 중 오류가 발생했습니다.');
     } finally {
       setIsSaving(false);
     }
@@ -454,6 +457,16 @@ export default function TemplateEditPage() {
   return (
     <MainLayout>
       {getEditorComponent()}
+
+      {/* Custom Alert */}
+      <CustomAlert
+        isOpen={alertState.isOpen}
+        onClose={hideAlert}
+        title={alertState.title}
+        message={alertState.message}
+        type={alertState.type}
+        confirmText={alertState.confirmText}
+      />
     </MainLayout>
   );
 }
