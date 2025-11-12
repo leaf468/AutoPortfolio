@@ -42,7 +42,8 @@ export async function generateRealtimeRecommendations(
       userInput,
       position,
       questionText,
-      stats
+      stats,
+      userKeywords
     );
     recommendations.push(...llmRecommendations);
   } catch (error) {
@@ -57,10 +58,6 @@ export async function generateRealtimeRecommendations(
   const keywordRecommendations = generateKeywordRecommendations(userKeywords, stats);
   recommendations.push(...keywordRecommendations);
 
-  // 6. 예시 기반 추천
-  const exampleRecommendations = await generateExampleRecommendations(userKeywords, position);
-  recommendations.push(...exampleRecommendations);
-
   // 관련도 순으로 정렬하고 상위 6개만 반환
   return recommendations
     .sort((a, b) => b.relevance - a.relevance)
@@ -68,13 +65,14 @@ export async function generateRealtimeRecommendations(
 }
 
 /**
- * LLM 기반 컨텍스트 분석 및 추천 생성
+ * LLM 기반 컨텍스트 분석 및 추천 생성 (유사 활동 예시 포함)
  */
 async function generateLLMRecommendations(
   userInput: string,
   position: string,
   questionText: string | undefined,
-  stats: ComprehensiveStats
+  stats: ComprehensiveStats,
+  userKeywords: string[]
 ): Promise<AIRecommendation[]> {
   try {
     // API 키 확인
@@ -92,6 +90,35 @@ async function generateLLMRecommendations(
       관련키워드: a.commonKeywords.slice(0, 3)
     }));
 
+    // DB에서 유사한 활동 예시 찾기 (실제 데이터는 노출하지 않고 AI에게 참고용으로만 제공)
+    let similarActivitiesInfo = '';
+    if (userKeywords.length > 0) {
+      try {
+        const { data: activities } = await supabase
+          .from('activities')
+          .select('content, activity_type')
+          .limit(50);
+
+        if (activities) {
+          // 사용자 키워드와 매칭되는 예시 찾기
+          const matchingExamples = activities
+            .filter((activity) =>
+              userKeywords.some((keyword) => activity.content.includes(keyword))
+            )
+            .slice(0, 3);
+
+          if (matchingExamples.length > 0) {
+            similarActivitiesInfo = `\n\n# 참고: 유사한 활동 예시 패턴 (${position} 직무 합격자)\n`;
+            matchingExamples.forEach((example, idx) => {
+              similarActivitiesInfo += `${idx + 1}. [${example.activity_type}] ${example.content.slice(0, 100)}...\n`;
+            });
+          }
+        }
+      } catch (error) {
+        console.error('유사 활동 조회 실패:', error);
+      }
+    }
+
     const prompt = `당신은 자기소개서 작성을 돕는 AI 어시스턴트입니다.
 
 # 상황
@@ -100,14 +127,15 @@ ${questionText ? `- 질문: ${questionText}` : ''}
 - 사용자가 작성 중인 답변: "${userInput}"
 
 # 실제 합격자 데이터 (${position} 직무)
-${JSON.stringify(topActivities, null, 2)}
+${JSON.stringify(topActivities, null, 2)}${similarActivitiesInfo}
 
 # 당신의 역할
-사용자가 작성 중인 답변을 분석하고, 다음 3가지 추천을 제공하세요:
+사용자가 작성 중인 답변을 분석하고, 다음 3-4가지 추천을 제공하세요:
 
 1. **구체성 개선**: 현재 답변에서 더 구체적으로 표현할 수 있는 부분
 2. **데이터 기반 제안**: 위 합격자 데이터를 참고하여, 답변에 추가하면 좋을 내용
 3. **스토리텔링**: STAR 방법론(Situation-Task-Action-Result)을 활용한 개선 방향
+4. **유사 활동 기반 제안**: (위 합격자 데이터가 있는 경우) 해당 예시의 패턴을 참고하여, 사용자가 작성할 수 있는 새로운 내용 제안 (실제 데이터를 그대로 복사하지 말고, 영감을 받아 패턴과 내용을 많이 참고해서 새롭게 작성)
 
 각 추천은 짧고 실용적이어야 합니다 (1-2문장).
 
@@ -132,7 +160,7 @@ ${JSON.stringify(topActivities, null, 2)}
         content: prompt
       }],
       temperature: 0.7,
-      max_tokens: 800,
+      max_tokens: 1000,
       response_format: { type: "json_object" }
     });
 
@@ -284,50 +312,6 @@ function generateKeywordRecommendations(
   return recommendations;
 }
 
-/**
- * 실제 예시 기반 추천 생성
- */
-async function generateExampleRecommendations(
-  userKeywords: string[],
-  position: string
-): Promise<AIRecommendation[]> {
-  const recommendations: AIRecommendation[] = [];
-
-  if (userKeywords.length === 0) {
-    return recommendations;
-  }
-
-  try {
-    // DB에서 유사한 활동 예시 찾기
-    const { data: activities } = await supabase
-      .from('activities')
-      .select('content, activity_type')
-      .limit(100);
-
-    if (!activities) return recommendations;
-
-    // 사용자 키워드와 매칭되는 예시 찾기
-    const matchingExamples = activities
-      .filter((activity) =>
-        userKeywords.some((keyword) => activity.content.includes(keyword))
-      )
-      .slice(0, 3);
-
-    matchingExamples.forEach((example) => {
-      const matchingKeywords = userKeywords.filter((k) => example.content.includes(k));
-      recommendations.push({
-        type: 'example',
-        title: `${example.activity_type} 예시`,
-        content: example.content.slice(0, 150) + (example.content.length > 150 ? '...' : ''),
-        relevance: matchingKeywords.length * 20,
-      });
-    });
-  } catch (error) {
-    console.error('예시 추천 생성 실패:', error);
-  }
-
-  return recommendations;
-}
 
 /**
  * 전체 자소서 내용 종합 분석 및 피드백
