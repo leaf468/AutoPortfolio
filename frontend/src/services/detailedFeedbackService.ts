@@ -305,7 +305,7 @@ ${userCertificates && userCertificates.length > 0 ? `- 자격증: ${userCertific
     "recommendations": ["→ 성과를 수치로 변환 (예: '개선' → '30% 단축')", "→ ${position} 필수 스킬 추가 언급", "→ 독특한 해결 방식 추가"]
   },
 
-  "revisedVersion": "위의 모든 피드백을 완벽히 반영한 합격 수준 개선안${question.maxLength ? ` (정확히 ${question.maxLength}자 이내)` : ''}",
+  "revisedVersion": "위의 모든 피드백을 완벽히 반영한 합격 수준 개선안${question.maxLength ? ` (반드시 ${Math.floor(question.maxLength * 0.9)}-${question.maxLength}자, 즉 90-100% 분량 채워서 작성)` : ''}",
   "keyImprovements": [
     "1. [개선 항목]: [Before 원문 일부] → [After 수정 내용]",
     "2. [개선 항목]: [Before 원문 일부] → [After 수정 내용]",
@@ -322,7 +322,10 @@ ${userCertificates && userCertificates.length > 0 ? `- 자격증: ${userCertific
    - "STAR 구조: '프로젝트에 참여했습니다' → 'Task: 레거시 시스템 성능 개선 목표 → Action: 캐싱 전략 도입 → Result: 처리 속도 3배 향상'"
 
 **수정안(revisedVersion) 작성 철칙**:
-1. **글자수 엄수**: ${question.maxLength ? `정확히 ${question.maxLength}자 이내로 작성` : '적절한 길이로 작성'} (공백 포함, 띄어쓰기 주의)
+1. **글자수 엄수 (최우선)**: ${question.maxLength ? `최소 ${Math.floor(question.maxLength * 0.9)}자 이상, 최대 ${question.maxLength}자 이내 (90-100% 분량 필수)` : '적절한 길이로 작성'}
+   - 공백 포함하여 정확히 계산
+   - 분량이 부족하면 구체적 사례, 수치, 설명을 추가하여 분량 채우기
+   - 절대로 짧게 작성하지 말 것
 2. **피드백 완벽 반영**: 위에서 지적한 모든 약점을 개선하고 모든 개선 제안을 수용
    - 구조 분석의 suggestions 3가지 모두 반영
    - 내용 분석의 weaknesses 3가지 모두 개선
@@ -334,6 +337,11 @@ ${userCertificates && userCertificates.length > 0 ? `- 자격증: ${userCertific
 6. **차별화된 경험/관점 강조**: 타 지원자와 구별되는 독특한 요소 부각
 7. **문장 간결성**: 평균 30-40자 이내 문장, 능동태 사용
 8. **전문 용어 5개 이상**: 업계/직무 관련 전문 용어 적절히 배치
+9. **분량 부족 시 보완 방법**:
+   - 구체적 배경 설명 추가 (Situation 부분 확장)
+   - 행동 과정 상세 묘사 (Action 부분 확장)
+   - 성과의 영향력과 후속 결과 추가 (Result 부분 확장)
+   - 느낀 점과 배운 점 구체적으로 서술
 
 **일반 평가 철칙**:
 1. **점수 다양화 필수**: 답변 수준에 따라 45-85점 범위로 폭넓게 분포
@@ -363,11 +371,17 @@ ${userCertificates && userCertificates.length > 0 ? `- 자격증: ${userCertific
 4. 개선점 중심 (칭찬은 적절히)
 5. **점수 다양화**: 답변 수준에 따라 45-85점 범위로 폭넓게 분포
    - 우수: 70-85점 / 평균 이상: 60-69점 / 평균: 50-59점 / 미흡: 40-49점 / 부족: 30-45점
+6. **수정안 분량 엄수**: 최소 90% 이상 분량 채우기 (절대 짧게 작성 금지)
 
 구체적 피드백 예시:
 - "논리적 흐름이 부족합니다" (X)
 - "2문단에서 '결과적으로'로 시작했으나 앞 문단과 인과관계 불명확. '프로젝트 목표 달성을 위해'로 변경 필요" (O)
-- 답변 원문의 문장을 인용하여 구체적으로 지적할 것`
+- 답변 원문의 문장을 인용하여 구체적으로 지적할 것
+
+**수정안 작성 시 절대 규칙**:
+- maxLength가 있는 경우, 반드시 90% 이상 분량을 채울 것
+- 분량이 부족하면 구체적 사례, 배경 설명, 성과의 영향력 등을 추가하여 충분히 작성
+- 짧은 답변은 절대 불가 - 합격 수준의 자소서는 충분한 분량과 구체성 필요`
         },
         {
           role: 'user',

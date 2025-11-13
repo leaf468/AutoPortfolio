@@ -774,11 +774,19 @@ export async function generateFeedbackPDF(
     });
 
     currentY += 4;
-    currentY = addKoreanText(doc, feedback.revisedVersion, PAGE_MARGIN.left + 5, currentY, {
-      fontSize: 12,
-      maxWidth: CONTENT_WIDTH - 10,
-      color: COLORS.text,
-    });
+    // 수정한 답변도 줄 단위로 렌더링하여 페이지 넘김 방지
+    const revisedLines = feedback.revisedVersion.split('\n');
+    for (const line of revisedLines) {
+      if (currentY > 260) {
+        doc.addPage();
+        currentY = PAGE_MARGIN.top;
+      }
+      currentY = addKoreanText(doc, line || ' ', PAGE_MARGIN.left + 5, currentY, {
+        fontSize: 12,
+        maxWidth: CONTENT_WIDTH - 10,
+        color: COLORS.text,
+      });
+    }
 
     // ─────────────────────────────────────
     // 주요 개선 사항
@@ -1005,7 +1013,7 @@ export async function generateFeedbackPDF(
 
   let fileName = '';
   if (userName && targetCompany) {
-    fileName = `${sanitize(userName)}_${sanitize(targetCompany)}_${sanitize(report.position)}_자기소개서첨삭.pdf`;
+    fileName = `${sanitize(userName)}님_${sanitize(targetCompany)}_${sanitize(report.position)}_자기소개서첨삭.pdf`;
   } else if (targetCompany) {
     fileName = `${sanitize(targetCompany)}_${sanitize(report.position)}_자기소개서첨삭.pdf`;
   } else {

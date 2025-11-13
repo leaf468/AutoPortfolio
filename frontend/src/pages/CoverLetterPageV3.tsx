@@ -162,6 +162,21 @@ export const CoverLetterPageV3: React.FC = () => {
   // 첨삭 PDF 생성 상태
   const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
 
+  // 페이지 로드 시 완료된 첨삭이 있는지 확인
+  useEffect(() => {
+    const completedFeedback = localStorage.getItem('feedbackCompleted');
+    if (completedFeedback) {
+      const { averageScore, totalQuestions, timestamp } = JSON.parse(completedFeedback);
+      // 5분 이내 완성된 첨삭만 알림 표시 (오래된 알림 방지)
+      const fiveMinutes = 5 * 60 * 1000;
+      if (Date.now() - timestamp < fiveMinutes) {
+        success(`✅ 첨삭이 완성되었습니다!\n\n다운로드가 완료되었습니다.\n평균 점수: ${averageScore}점\n총 ${totalQuestions}개 질문에 대한 상세 분석이 포함되어 있습니다.\n\n다운로드 폴더에서 확인하실 수 있습니다.`);
+      }
+      // 알림 표시 후 삭제
+      localStorage.removeItem('feedbackCompleted');
+    }
+  }, []);
+
   // 질문 분석 자동 갱신을 위한 디바운스 타이머
   const questionAnalysisTimerRef = useRef<{ [key: string]: NodeJS.Timeout }>({});
 
@@ -463,7 +478,14 @@ export const CoverLetterPageV3: React.FC = () => {
           userSpec.targetCompany
         );
 
-        // 다운로드 완료 알림
+        // 완료 정보를 localStorage에 저장 (페이지 이동 시에도 알림 표시)
+        localStorage.setItem('feedbackCompleted', JSON.stringify({
+          averageScore: report.averageScore,
+          totalQuestions: report.totalQuestions,
+          timestamp: Date.now()
+        }));
+
+        // 현재 페이지에 있으면 바로 알림 표시
         success(`✅ 첨삭이 완성되었습니다!\n\n다운로드가 완료되었습니다.\n평균 점수: ${report.averageScore}점\n총 ${report.totalQuestions}개 질문에 대한 상세 분석이 포함되어 있습니다.\n\n다운로드 폴더에서 확인하실 수 있습니다.`);
       } catch (err) {
         console.error('첨삭 생성 실패:', err);
