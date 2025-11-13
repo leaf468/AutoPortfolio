@@ -13,6 +13,7 @@ import {
     DocumentTextIcon,
     ClipboardDocumentIcon,
     CodeBracketIcon,
+    PresentationChartBarIcon,
 } from "@heroicons/react/24/outline";
 import { StarIcon as StarIconSolid } from "@heroicons/react/24/solid";
 import { GenerationResult } from "../services/oneClickGenerator";
@@ -22,6 +23,8 @@ import { portfolioTemplates } from "../templates/portfolioTemplates";
 import { htmlToMarkdownConverter } from "../services/htmlToMarkdownConverter";
 import { pdfGenerator } from "../services/pdfGenerator";
 import { trackRating, trackPDFDownload, trackButtonClick } from "../utils/analytics";
+import { exportPortfolioPptx } from "../services/portfolioPptxService";
+import { extractPPTXDataFromHTML } from "../services/aiPptxMappingService";
 
 type TemplateType = "minimal" | "clean" | "colorful" | "elegant";
 
@@ -377,8 +380,8 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
             extractedData.name = nameElement.textContent?.trim() || '';
         }
 
-        // 직책 추출 (.subtitle 클래스)
-        const titleElement = doc.querySelector('.subtitle');
+        // 직책 추출 (.subtitle, .hero p, h2 등)
+        const titleElement = doc.querySelector('.subtitle, .hero p, header p, h2.subtitle');
         if (titleElement) {
             extractedData.title = titleElement.textContent?.trim() || '';
         }
@@ -497,6 +500,12 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
 
                         if (category && skills.length > 0) {
                             extractedData.skillCategories.push({ category, skills });
+                            // skills 배열에도 추가 (중복 제거)
+                            skills.forEach(skill => {
+                                if (!extractedData.skills.includes(skill)) {
+                                    extractedData.skills.push(skill);
+                                }
+                            });
                         }
                     });
                 } else {
@@ -634,6 +643,79 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
         } catch (error) {
             console.error("HTML 다운로드 실패:", error);
             alert("HTML 다운로드에 실패했습니다.");
+        }
+    };
+
+    // PPTX 다운로드 - OpenAI로 HTML 분석
+    const handleDownloadPptx = async () => {
+        // GA 이벤트 추적
+        trackButtonClick('PPTX 다운로드', 'FinalResultPanel');
+
+        try {
+            console.log('🚀 PPTX 생성 시작...');
+
+            // 1. HTML 생성
+            const htmlContent = generateTemplatedHTML();
+            console.log('✅ HTML 생성 완료');
+
+            // 1.5. 기존 방식으로 데이터 추출 (OpenAI에게 참고 데이터로 전달)
+            const basicExtractedData = extractPortfolioDataFromHTML(htmlContent);
+            console.log('📋 기존 추출 데이터:', basicExtractedData);
+
+            // 2. OpenAI로 HTML 분석 및 PPTX 데이터 추출 (기존 데이터 포함)
+            console.log('🤖 OpenAI로 HTML 분석 중 (기존 데이터 포함)...');
+            const mappedData = await extractPPTXDataFromHTML(htmlContent, basicExtractedData);
+            console.log('✅ 데이터 추출 완료:', mappedData);
+
+            // 3. PPTXMappedData를 PortfolioData 형식으로 변환
+            const pptxData = {
+                name: mappedData.name,
+                title: mappedData.title,
+                contact: {
+                    email: mappedData.email,
+                    phone: mappedData.phone,
+                    github: mappedData.githubUrl,
+                    linkedin: mappedData.linkedinUrl,
+                    website: mappedData.websiteUrl
+                },
+                about: mappedData.aboutSummary,
+                skills: mappedData.skills,
+                skillCategories: [],
+                projects: mappedData.projects.map(p => ({
+                    title: p.title,
+                    description: p.problem,
+                    period: p.period,
+                    role: p.role,
+                    achievements: p.impact,
+                    technologies: p.technologies,
+                    // 추가 상세 정보
+                    contributions: p.contributions,
+                    kpiMetrics: p.kpiMetrics,
+                    solution: p.solution,
+                    teamSize: p.teamSize,
+                    contribution: p.contribution
+                })),
+                experience: mappedData.experiences.map(e => ({
+                    company: e.company,
+                    position: e.position,
+                    period: e.period,
+                    description: e.briefDesc,
+                    roles: [e.role1, e.role2].filter(r => r),
+                    achievements: e.achievement,
+                    technologies: e.technologies ? e.technologies.split(', ') : []
+                })),
+                education: [],
+                awards: []
+            };
+
+            console.log('📊 PPTX 데이터:', pptxData);
+
+            // 4. PPTX 생성 및 다운로드
+            await exportPortfolioPptx(pptxData);
+            console.log('✅ PPTX 다운로드 완료');
+        } catch (error) {
+            console.error("❌ PPTX 다운로드 실패:", error);
+            alert(`PPTX 다운로드에 실패했습니다: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
         }
     };
 
@@ -1010,6 +1092,13 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                                     >
                                         <CodeBracketIcon className="w-5 h-5 mr-2" />
                                         HTML 다운로드
+                                    </button>
+                                    <button
+                                        onClick={handleDownloadPptx}
+                                        className="flex items-center justify-center p-4 border border-gray-300 text-gray-700 rounded-lg hover:border-gray-400 hover:bg-gray-50 transition-all"
+                                    >
+                                        <PresentationChartBarIcon className="w-5 h-5 mr-2" />
+                                        PPTX 다운로드
                                     </button>
                                     <button
                                         onClick={handleShare}
