@@ -192,7 +192,11 @@ const PAGE_BREAK_THRESHOLD = 270; // 페이지 하단 여백 확보 (250mm → 2
 /**
  * 첨삭 리포트를 PDF로 생성
  */
-export async function generateFeedbackPDF(report: CompleteFeedbackReport): Promise<void> {
+export async function generateFeedbackPDF(
+  report: CompleteFeedbackReport,
+  userName?: string,
+  targetCompany?: string
+): Promise<void> {
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -990,6 +994,16 @@ export async function generateFeedbackPDF(report: CompleteFeedbackReport): Promi
   });
 
   // PDF 저장
-  const fileName = `자기소개서_첨삭_${report.position}_${new Date().getTime()}.pdf`;
+  const sanitize = (str: string) => str.replace(/[<>:"/\\|?*]/g, '').trim();
+
+  let fileName = '';
+  if (userName && targetCompany) {
+    fileName = `${sanitize(userName)}_${sanitize(targetCompany)}_${sanitize(report.position)}_자기소개서첨삭.pdf`;
+  } else if (targetCompany) {
+    fileName = `${sanitize(targetCompany)}_${sanitize(report.position)}_자기소개서첨삭.pdf`;
+  } else {
+    fileName = `${sanitize(report.position)}_자기소개서첨삭_${new Date().getTime()}.pdf`;
+  }
+
   doc.save(fileName);
 }

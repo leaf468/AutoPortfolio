@@ -438,22 +438,37 @@ export const CoverLetterPageV3: React.FC = () => {
       return;
     }
 
+    // 백그라운드 처리 안내
+    info('첨삭 생성을 시작합니다.\n\n평균 2-3분 정도 소요될 수 있습니다.\n다른 페이지로 이동하셔도 괜찮습니다.\n완료되면 자동으로 다운로드되며, 알림으로 안내해드리겠습니다.');
+
     setIsGeneratingFeedback(true);
 
-    try {
-      // 첨삭 리포트 생성 (각 질문당 최소 1페이지)
-      const report = await generateCompleteFeedbackReport(answeredQuestions, userSpec.position);
+    // 백그라운드에서 실행 (비동기)
+    (async () => {
+      try {
+        // 첨삭 리포트 생성 (각 질문당 최소 1페이지)
+        const report = await generateCompleteFeedbackReport(
+          answeredQuestions,
+          userSpec.position,
+          userSpec.gpa,
+          userSpec.certificates
+        );
 
-      // PDF 생성 및 다운로드
-      await generateFeedbackPDF(report);
+        // PDF 생성 및 다운로드
+        await generateFeedbackPDF(
+          report,
+          user?.name,
+          userSpec.targetCompany
+        );
 
-      success(`자기소개서 첨삭 PDF가 생성되었습니다!\n\n평균 점수: ${report.averageScore}점\n총 ${report.totalQuestions}개 질문에 대한 상세 분석이 포함되어 있습니다.`);
-    } catch (err) {
-      console.error('첨삭 생성 실패:', err);
-      showError('첨삭 생성 중 오류가 발생했습니다. OpenAI API 키를 확인하거나 잠시 후 다시 시도해주세요.');
-    } finally {
-      setIsGeneratingFeedback(false);
-    }
+        success(`자기소개서 첨삭 PDF가 생성되었습니다!\n\n평균 점수: ${report.averageScore}점\n총 ${report.totalQuestions}개 질문에 대한 상세 분석이 포함되어 있습니다.\n\n다운로드 폴더에서 확인하실 수 있습니다.`);
+      } catch (err) {
+        console.error('첨삭 생성 실패:', err);
+        showError('첨삭 생성 중 오류가 발생했습니다. OpenAI API 키를 확인하거나 잠시 후 다시 시도해주세요.');
+      } finally {
+        setIsGeneratingFeedback(false);
+      }
+    })();
   };
 
   const currentInput = focusedQuestionId

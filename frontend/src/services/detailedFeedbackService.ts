@@ -90,7 +90,9 @@ export async function generateDetailedFeedback(
   question: CoverLetterQuestion,
   questionNumber: number,
   position: string,
-  allQuestions: CoverLetterQuestion[]
+  allQuestions: CoverLetterQuestion[],
+  userGpa?: string,
+  userCertificates?: string[]
 ): Promise<DetailedQuestionFeedback> {
   try {
     // 합격자 통계 가져오기 (익명화 스킵 - 속도 향상)
@@ -117,6 +119,10 @@ ${question.answer}
 # 합격자 벤치마크 (${stats.totalApplicants}명, 최근 3년)
 - 평균: 학점 ${stats.avgGpa.toFixed(2)}/4.5, 토익 ${Math.round(stats.avgToeic)}점
 - 핵심 패턴: ${stats.commonActivities.slice(0, 2).map(a => a.activityType).join(', ')}
+
+# 지원자 스펙 (비교용)
+${userGpa ? `- 학점: ${userGpa}/4.5` : '- 학점: 미입력'}
+${userCertificates && userCertificates.length > 0 ? `- 자격증: ${userCertificates.join(', ')}` : '- 자격증: 없음'}
 
 # 엄격한 평가 기준 (100점 만점, 55-70점 중심, 80점 이상 극소수)
 
@@ -277,7 +283,7 @@ ${question.answer}
     "recommendations": ["→ 성과를 수치로 변환 (예: '개선' → '30% 단축')", "→ ${position} 필수 스킬 추가 언급", "→ 독특한 해결 방식 추가"]
   },
 
-  "revisedVersion": "합격 수준 개선안 (지원동기면 회사 비전 연결, 경험이면 STAR+수치, 강점이면 차별화 강조, 포부면 구체적 목표 제시)",
+  "revisedVersion": "합격 수준 개선안 (${question.maxLength ? `${question.maxLength}자 이내로` : ''} 지원동기면 회사 비전 연결, 경험이면 STAR+수치, 강점이면 차별화 강조, 포부면 구체적 목표 제시)",
   "keyImprovements": ["1. 수치 추가: '개선' → '응답속도 2초→300ms, 전환율 30% 향상'", "2. 직무 연관성: '개발 경험' → 'Java/Spring Boot 기반 MSA 설계'", "3. 차별화: '팀 협업' → '5명 팀 리딩, 코드 리뷰 문화 정착'"]
 }
 
@@ -377,13 +383,15 @@ ${question.answer}
  */
 export async function generateCompleteFeedbackReport(
   questions: CoverLetterQuestion[],
-  position: string
+  position: string,
+  userGpa?: string,
+  userCertificates?: string[]
 ): Promise<CompleteFeedbackReport> {
   const questionFeedbacks: DetailedQuestionFeedback[] = [];
 
   // 각 질문에 대한 상세 첨삭 생성
   for (let i = 0; i < questions.length; i++) {
-    const feedback = await generateDetailedFeedback(questions[i], i + 1, position, questions);
+    const feedback = await generateDetailedFeedback(questions[i], i + 1, position, questions, userGpa, userCertificates);
     questionFeedbacks.push(feedback);
   }
 
