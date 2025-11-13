@@ -18,6 +18,8 @@ import { BaseEditorProps, ColorfulPortfolioData, ProjectData, ExperienceData, Sk
 import { useScrollPreservation } from '../../hooks/useScrollPreservation';
 import NaturalLanguageModal from '../NaturalLanguageModal';
 import { userFeedbackService } from '../../services/userFeedbackService';
+import { useAlert } from '../../hooks/useAlert';
+import { CustomAlert } from '../CustomAlert';
 
 // 스킬 입력 컴포넌트
 const SkillInput: React.FC<{
@@ -97,6 +99,7 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
     const [dataLoaded, setDataLoaded] = useState(false);
     const [showTemplateSelector, setShowTemplateSelector] = useState(false);
     const [showNaturalLanguage, setShowNaturalLanguage] = useState(false);
+    const { alertState, hideAlert, error } = useAlert();
 
     // Colorful 템플릿 전용 섹션 제목
     const [sectionTitles, setSectionTitles] = useState({
@@ -524,9 +527,9 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
                 setUserEnhancedFields(prev => ({ ...prev, about: true }));
                 setInitialEnhancedFields(prev => ({ ...prev, about: false }));
             }
-        } catch (error) {
-            console.error('자기소개 개선 실패:', error);
-            alert('AI 개선에 실패했습니다. 다시 시도해주세요.');
+        } catch (err) {
+            console.error('자기소개 개선 실패:', err);
+            error('AI 개선에 실패했습니다. 다시 시도해주세요.');
         } finally {
             setIsEnhancing(false);
             setEnhancingSection(null);
@@ -562,9 +565,9 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
                 ...prev,
                 [`experience_${index}_description`]: false
             }));
-        } catch (error) {
-            console.error('경력 개선 실패:', error);
-            alert('AI 개선에 실패했습니다. 다시 시도해주세요.');
+        } catch (err) {
+            console.error('경력 개선 실패:', err);
+            error('AI 개선에 실패했습니다. 다시 시도해주세요.');
         } finally {
             setIsEnhancing(false);
             setEnhancingSection(null);
@@ -629,9 +632,9 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
                 setUserEnhancedFields(prev => ({ ...prev, [`project_${index}_description`]: true }));
                 setInitialEnhancedFields(prev => ({ ...prev, [`project_${index}_description`]: false }));
             }
-        } catch (error) {
-            console.error('프로젝트 개선 실패:', error);
-            alert('AI 개선에 실패했습니다. 다시 시도해주세요.');
+        } catch (err) {
+            console.error('프로젝트 개선 실패:', err);
+            error('AI 개선에 실패했습니다. 다시 시도해주세요.');
         } finally {
             setIsEnhancing(false);
             setEnhancingSection(null);
@@ -1588,6 +1591,16 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
                 onClose={() => setShowNaturalLanguage(false)}
                 onApplyChange={handleNaturalLanguageChange}
                 currentContent={JSON.stringify(portfolioData)}
+            />
+
+            {/* 알림 팝업 */}
+            <CustomAlert
+                isOpen={alertState.isOpen}
+                onClose={hideAlert}
+                title={alertState.title}
+                message={alertState.message}
+                type={alertState.type}
+                confirmText={alertState.confirmText}
             />
         </div>
     );
