@@ -19,6 +19,8 @@ import { useScrollPreservation } from '../../hooks/useScrollPreservation';
 import NaturalLanguageModal from '../NaturalLanguageModal';
 import { userFeedbackService } from '../../services/userFeedbackService';
 import { portfolioTranslator } from '../../services/portfolioTranslator';
+import { CustomAlert } from '../CustomAlert';
+import { useAlert } from '../../hooks/useAlert';
 
 // 스킬 입력 컴포넌트
 const SkillInput: React.FC<{
@@ -64,10 +66,14 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
     document,
     selectedTemplate,
     onSave,
+    onSaveOnly,
+    onDocumentChange,
     onBack,
     onSkipToNaturalEdit,
-    onTemplateChange
+    onTemplateChange,
+    isSaving
 }) => {
+    const { alertState, hideAlert, error: showError } = useAlert();
     const [portfolioData, setPortfolioData] = useState<CleanPortfolioData>({
         name: '',
         title: '',
@@ -211,14 +217,15 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
 
             try {
                 const firstBlock = document.sections?.[0]?.blocks?.[0];
-                if (firstBlock && firstBlock.text) {
-                    const html = firstBlock.text;
+                if (firstBlock) {
+                    const html = firstBlock.text || '';
                     console.log('🔍 CleanEditor Initial HTML Loading:');
                     console.log('  - HTML preview (first 200 chars):', html.substring(0, 200));
                     console.log('  - HTML contains "colorful":', html.includes('colorful'));
                     console.log('  - HTML contains "minimal":', html.includes('minimal'));
                     console.log('  - HTML contains "clean":', html.includes('clean'));
                     console.log('  - HTML contains "elegant":', html.includes('elegant'));
+                    console.log('  - Has extractedData:', !!firstBlock.extractedData);
 
                     setCurrentHtml(html);
 
@@ -226,11 +233,58 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
 
                     if (firstBlock.extractedData) {
                         const extracted = firstBlock.extractedData as any;
-                        actualData = {
-                            ...extracted,
-                            location: extracted.location || 'Seoul, Korea',
-                            awards: extracted.awards || []
-                        };
+                        console.log('📦 CleanEditor extractedData:', extracted);
+                        console.log('📦 extractedData keys:', Object.keys(extracted));
+
+                        // DB에서 온 데이터가 summary, skills, projects 형태인지 확인
+                        if (extracted.summary || extracted.projects) {
+                            console.log('🔄 Converting AI analysis data to CleanPortfolioData format');
+
+                            // experiences를 experience로 변환
+                            const experienceData = Array.isArray(extracted.experiences)
+                                ? extracted.experiences.map((exp: any) => ({
+                                    company: exp.company || '',
+                                    position: exp.position || '',
+                                    period: exp.duration || exp.period || '',
+                                    description: exp.achievements?.join(' • ') || exp.description || '',
+                                    achievements: exp.achievements || []
+                                }))
+                                : Array.isArray(extracted.experience) ? extracted.experience : [];
+
+                            // skills 배열 처리
+                            const skillsFlat = Array.isArray(extracted.skills)
+                                ? extracted.skills.flatMap((s: any) =>
+                                    Array.isArray(s.skills) ? s.skills : (typeof s === 'string' ? [s] : [])
+                                  )
+                                : [];
+
+                            actualData = {
+                                name: extracted.name || '',
+                                title: extracted.originalInput?.jobPosition || extracted.position || extracted.title || '개발자',
+                                email: extracted.email || '',
+                                phone: extracted.phone || '',
+                                github: extracted.github || '',
+                                location: extracted.location || 'Seoul, Korea',
+                                about: extracted.about || extracted.summary || '',
+                                skills: skillsFlat,
+                                skillCategories: [],
+                                projects: Array.isArray(extracted.projects) ? extracted.projects.map((p: any) => ({
+                                    name: p.name || p.title || '',
+                                    period: p.period || p.duration || '',
+                                    description: p.summary || p.description || '',
+                                    techStack: p.technologies || p.techStack || p.skills || [],
+                                    achievements: p.achievements || p.results || []
+                                })) : [],
+                                experience: experienceData,
+                                awards: extracted.achievements || extracted.awards || []
+                            };
+                        } else {
+                            actualData = {
+                                ...extracted,
+                                location: extracted.location || 'Seoul, Korea',
+                                awards: extracted.awards || []
+                            };
+                        }
                     } else {
                         actualData = extractPortfolioData(html);
                     }
@@ -289,8 +343,28 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                         }
                     }
 
-                    // 데이터가 부족한 경우 AI로 개선
-                    const needsEnhancement = !actualData.about || actualData.about.length < 50;
+                    // DB에서 불러온 데이터인지 확인 (summary 또는 이미 충분한 데이터가 있는 경우)
+                    const extracted = firstBlock.extractedData as any;
+                    const isFromDB = extracted && (
+                        extracted.summary ||  // AI 분석 결과
+                        extracted.about ||    // 이미 저장된 about 필드
+                        (extracted.projects && extracted.projects.length > 0) ||  // 프로젝트 데이터 존재
+                        (extracted.experience && extracted.experience.length > 0) ||  // 경력 데이터 존재
+                        (extracted.experiences && extracted.experiences.length > 0)  // 경력 데이터 존재 (복수형)
+                    );
+                    const needsEnhancement = !isFromDB && (!actualData.about || actualData.about.length < 50);
+
+                    console.log('🔍 Enhancement check:', {
+                        isFromDB,
+                        hasExtractedData: !!extracted,
+                        hasSummary: !!(extracted?.summary),
+                        hasAbout: !!actualData.about,
+                        hasProjects: !!(extracted?.projects?.length),
+                        hasExperience: !!(extracted?.experience?.length || extracted?.experiences?.length),
+                        aboutLength: actualData.about?.length,
+                        needsEnhancement
+                    });
+
                     if (needsEnhancement) {
                         setIsEnhancing(true);
                         try {
@@ -334,6 +408,27 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
             initializeData();
         }
     }, []); // Empty dependency array - run only once
+
+    // portfolioData 변경 시 상위 컴포넌트에 알림
+    useEffect(() => {
+        if (dataLoaded && onDocumentChange) {
+            const updatedDocument = {
+                ...document,
+                metadata: {
+                    extractedData: portfolioData,
+                    lastUpdated: new Date().toISOString()
+                },
+                sections: document.sections?.map(section => ({
+                    ...section,
+                    blocks: section.blocks?.map(block => ({
+                        ...block,
+                        extractedData: portfolioData
+                    }))
+                }))
+            };
+            onDocumentChange(updatedDocument);
+        }
+    }, [portfolioData, dataLoaded]);
 
     // 빈 섹션 감지 및 AI 더미 데이터 생성
     useEffect(() => {
@@ -514,7 +609,7 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
             }
         } catch (error) {
             console.error('자기소개 개선 실패:', error);
-            alert('AI 개선에 실패했습니다. 다시 시도해주세요.');
+            showError('AI 개선에 실패했습니다. 다시 시도해주세요.');
         } finally {
             setIsEnhancing(false);
             setEnhancingSection(null);
@@ -552,7 +647,7 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
             }));
         } catch (error) {
             console.error('경력 개선 실패:', error);
-            alert('AI 개선에 실패했습니다. 다시 시도해주세요.');
+            showError('AI 개선에 실패했습니다. 다시 시도해주세요.');
         } finally {
             setIsEnhancing(false);
             setEnhancingSection(null);
@@ -619,7 +714,7 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
             }
         } catch (error) {
             console.error('프로젝트 개선 실패:', error);
-            alert('AI 개선에 실패했습니다. 다시 시도해주세요.');
+            showError('AI 개선에 실패했습니다. 다시 시도해주세요.');
         } finally {
             setIsEnhancing(false);
             setEnhancingSection(null);
@@ -761,7 +856,7 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
             console.log('✅ 언어 전환 완료');
         } catch (error) {
             console.error('❌ 언어 전환 실패:', error);
-            alert('언어 전환 중 오류가 발생했습니다. 다시 시도해주세요.');
+            showError('언어 전환 중 오류가 발생했습니다. 다시 시도해주세요.');
         } finally {
             setIsTranslating(false);
         }
@@ -886,12 +981,25 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                                     English
                                 </button>
                             </div>
+                            {onSaveOnly && (
+                                <button
+                                    onClick={onSaveOnly}
+                                    disabled={isSaving}
+                                    className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-all duration-200 font-medium text-sm shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                                >
+                                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                                    </svg>
+                                    {isSaving ? '저장 중...' : '저장하기'}
+                                </button>
+                            )}
                             <button
                                 onClick={handleSave}
-                                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+                                disabled={isSaving}
+                                className="px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 font-medium text-sm shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                             >
                                 <CheckCircleIcon className="w-4 h-4 mr-2" />
-                                저장
+                                {isSaving ? '완성 중...' : '완성하기'}
                             </button>
                         </div>
                     </div>
@@ -1694,6 +1802,16 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                     </div>
                 </div>
             )}
+
+            {/* Custom Alert */}
+            <CustomAlert
+                isOpen={alertState.isOpen}
+                onClose={hideAlert}
+                title={alertState.title}
+                message={alertState.message}
+                type={alertState.type}
+                confirmText={alertState.confirmText}
+            />
         </div>
     );
 };

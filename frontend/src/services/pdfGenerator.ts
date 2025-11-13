@@ -15,6 +15,9 @@ export class PDFGenerator {
      * Generate print-optimized HTML with enhanced CSS for high-quality PDF output
      */
     generatePrintOptimizedHTML(htmlContent: string): string {
+        // AI 생성 주황색 텍스트를 HTML에서 제거
+        let processedContent = htmlContent.replace(/<span style="color:\s*orange[^"]*"[^>]*>([\s\S]*?)<\/span>/gi, '$1');
+
         const printStyles = `
             <style>
                 /* ========================================
@@ -57,6 +60,18 @@ export class PDFGenerator {
                         margin: 0 !important;
                         padding: 0 !important;
                         background: #ffffff !important;
+                    }
+
+                    /* ========================================
+                       AI 생성 주황색 텍스트 제거
+                    ======================================== */
+
+                    /* 주황색 span 태그의 색상을 기본 텍스트 색상으로 변경 */
+                    span[style*="color:orange"],
+                    span[style*="color: orange"],
+                    span[style*="color:Orange"],
+                    span[style*="color: Orange"] {
+                        color: inherit !important;
                     }
 
                     /* ========================================
@@ -729,10 +744,10 @@ export class PDFGenerator {
         `;
 
         // HTML에 스타일 삽입
-        if (htmlContent.includes('</head>')) {
-            return htmlContent.replace('</head>', printStyles + '</head>');
-        } else if (htmlContent.includes('<body>')) {
-            return htmlContent.replace('<body>', '<head>' + printStyles + '</head><body>');
+        if (processedContent.includes('</head>')) {
+            return processedContent.replace('</head>', printStyles + '</head>');
+        } else if (processedContent.includes('<body>')) {
+            return processedContent.replace('<body>', '<head>' + printStyles + '</head><body>');
         } else {
             return `<!DOCTYPE html>
 <html lang="ko">
@@ -743,7 +758,7 @@ export class PDFGenerator {
     ${printStyles}
 </head>
 <body>
-    ${htmlContent}
+    ${processedContent}
 </body>
 </html>`;
         }

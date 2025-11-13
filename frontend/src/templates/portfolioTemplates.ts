@@ -2,8 +2,8 @@
 const processTextForDisplay = (text: string | undefined | null): string => {
     if (!text) return '';
 
-    // 주황색 AI 추가 표시 제거 (실시간 미리보기용)
-    let processed = text.replace(/<span style="color:orange">(.*?)<\/span>/g, '$1');
+    // 주황색 AI 추가 표시 제거 (실시간 미리보기용) - 여러 줄 지원
+    let processed = text.replace(/<span style="color:\s*orange[^"]*"[^>]*>([\s\S]*?)<\/span>/gi, '$1');
 
     // Convert line breaks to <br> tags for HTML display
     // This preserves newlines when users press Enter in textarea
@@ -17,8 +17,8 @@ const processTextWithMarkdown = (text: string | undefined | null): string => {
     console.log('🔍 [processTextWithMarkdown] 원본 텍스트:', text);
     console.log('🔍 [processTextWithMarkdown] \\n 포함 여부:', text.includes('\n'));
 
-    // 주황색 AI 추가 표시 제거 (실시간 미리보기용)
-    let processed = text.replace(/<span style="color:orange">(.*?)<\/span>/g, '$1');
+    // 주황색 AI 추가 표시 제거 (실시간 미리보기용) - 여러 줄 지원
+    let processed = text.replace(/<span style="color:\s*orange[^"]*"[^>]*>([\s\S]*?)<\/span>/gi, '$1');
 
     // Remove unwanted HTML tags (h1-h6, p, div, etc.) but preserve content
     // This fixes the issue where AI generates HTML tags in text content
@@ -389,13 +389,22 @@ export const minimalTemplate: PortfolioTemplate = {
         }
         
         .contact-links {
-            display: flex;
-            justify-content: center;
-            gap: 1.5rem;
             margin-top: 1.5rem;
         }
-        
-        .contact-links a {
+
+        .contact-links > div {
+            display: flex;
+            gap: 1.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .contact-links > div + div {
+            margin-top: 0.75rem;
+        }
+
+        .contact-links a,
+        .contact-links span {
             color: var(--accent-color);
             text-decoration: none;
             padding: 0.5rem 1rem;
@@ -403,7 +412,7 @@ export const minimalTemplate: PortfolioTemplate = {
             border-radius: 8px;
             transition: all 0.3s ease;
         }
-        
+
         .contact-links a:hover {
             background: var(--accent-color);
             color: white;
@@ -534,10 +543,15 @@ export const minimalTemplate: PortfolioTemplate = {
             <h1>${data.name || '안녕하세요, 박기훈입니다'}</h1>
             <p class="subtitle">${data.title || '백엔드와 데이터 처리에 강점을 가진 주니어 개발자'}</p>
             <div class="contact-links">
-                ${data.contact?.email ? `<a href="mailto:${data.contact.email}">${data.contact.email}</a>` : ''}
-                ${data.contact?.github ? `<a href="https://${data.contact.github}" target="_blank">GitHub</a>` : ''}
-                ${data.contact?.blog ? `<a href="https://${data.contact.blog}" target="_blank">Blog</a>` : ''}
-                ${data.contact?.linkedin ? `<a href="https://${data.contact.linkedin}" target="_blank">LinkedIn</a>` : ''}
+                <div>
+                    ${data.contact?.email ? `<a href="mailto:${data.contact.email}">${data.contact.email}</a>` : ''}
+                    ${data.contact?.phone ? `<span>${data.contact.phone}</span>` : ''}
+                </div>
+                <div>
+                    ${data.contact?.github ? `<a href="https://${data.contact.github}" target="_blank">${data.contact.github}</a>` : ''}
+                    ${data.contact?.blog ? `<a href="https://${data.contact.blog}" target="_blank">${data.contact.blog}</a>` : ''}
+                    ${data.contact?.linkedin ? `<a href="https://${data.contact.linkedin}" target="_blank">${data.contact.linkedin}</a>` : ''}
+                </div>
             </div>
         </header>
         
@@ -1118,7 +1132,7 @@ export const cleanTemplate: PortfolioTemplate = {
 // Template 3: Colorful - Colorful Cards
 export const colorfulTemplate: PortfolioTemplate = {
     id: 'colorful',
-    name: '컴러풀 레이아웃',
+    name: '컬러풀 레이아웃',
     description: '하늘색 배경과 이모지 아이콘의 컬러풀 레이아웃',
     thumbnail: '/templates/eunseong.png',
     author: 'Colorful Template',
@@ -1492,6 +1506,11 @@ export const colorfulTemplate: PortfolioTemplate = {
             <h1>${data.name || 'Portfolio Owner'}</h1>
             <p class="subtitle">${data.title || 'Creative Developer'}</p>
             <p>${data.description || 'Building colorful and engaging digital experiences'}</p>
+            <div style="display: flex; gap: 1.5rem; margin-top: 1rem; justify-content: center; flex-wrap: wrap; font-size: 0.95rem;">
+                ${data.email ? `<span>📧 ${data.email}</span>` : ''}
+                ${data.phone ? `<span>📱 ${data.phone}</span>` : ''}
+                ${data.github ? `<span>🔗 ${data.github}</span>` : ''}
+            </div>
         </div>
     </header>
     
@@ -1589,35 +1608,31 @@ export const colorfulTemplate: PortfolioTemplate = {
                 </div>
             `}
         </section>
-        
+
+        ${data.awards && data.awards.length > 0 ? `
         <section class="section">
             <div class="section-header">
-                <div class="section-emoji" style="background: linear-gradient(135deg, var(--accent-1), var(--accent-4));">
-                    📬
+                <div class="section-emoji" style="background: linear-gradient(135deg, var(--accent-3), var(--accent-1));">
+                    🏆
                 </div>
-                <h2 class="section-title">Contact</h2>
+                <h2 class="section-title">${data.sectionTitles?.awards || '수상/자격증'}</h2>
             </div>
-            <div class="contact-grid">
-                ${data.email ? `
-                    <a href="mailto:${data.email}" class="contact-item">
-                        <span>📧</span>
-                        <span>Email</span>
-                    </a>
-                ` : ''}
-                ${data.github ? `
-                    <a href="${data.github}" class="contact-item">
-                        <span>🐙</span>
-                        <span>GitHub</span>
-                    </a>
-                ` : ''}
-                ${data.linkedin ? `
-                    <a href="${data.linkedin}" class="contact-item">
-                        <span>💼</span>
-                        <span>LinkedIn</span>
-                    </a>
-                ` : ''}
+            <div class="cards-grid">
+                ${data.awards.map((award: any, index: number) => `
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-icon" style="background: var(--accent-${(index % 4) + 1});">
+                                🏅
+                            </div>
+                            <h3>${award.title}</h3>
+                        </div>
+                        <p class="card-meta">${award.organization} • ${award.year}</p>
+                        ${award.description ? `<p>${processTextWithMarkdown(award.description)}</p>` : ''}
+                    </div>
+                `).join('')}
             </div>
         </section>
+        ` : ''}
     </div>
 </body>
 </html>
@@ -2069,10 +2084,10 @@ export const elegantTemplate: PortfolioTemplate = {
             <p class="hero-description">
                 ${data.description || 'Crafting elegant digital experiences with passion and precision'}
             </p>
-            <div class="social-links">
-                ${data.email ? `<a href="mailto:${data.email}" class="social-link">✉️</a>` : ''}
-                ${data.github ? `<a href="${data.github}" class="social-link">🐱</a>` : ''}
-                ${data.linkedin ? `<a href="${data.linkedin}" class="social-link">💼</a>` : ''}
+            <div style="display: flex; gap: 1.5rem; justify-content: center; align-items: center; flex-wrap: wrap; margin-top: 1rem; font-size: 0.95rem; color: var(--text-secondary); text-align: center;">
+                ${data.email ? `<span>📧 ${data.email}</span>` : ''}
+                ${data.phone ? `<span>📱 ${data.phone}</span>` : ''}
+                ${data.github ? `<span>🔗 ${data.github}</span>` : ''}
             </div>
         </header>
 
@@ -2141,6 +2156,23 @@ export const elegantTemplate: PortfolioTemplate = {
                                 `<li>${typeof skill === 'string' ? skill : skill.name || skill}</li>`
                             ).join('')}
                         </ul>
+                    </div>
+                `).join('')}
+            </div>
+        </section>
+        ` : ''}
+
+        ${data.awards && data.awards.length > 0 ? `
+        <section class="section">
+            <h2 class="section-title">${data.sectionTitles?.awards || '수상/자격증'}</h2>
+            <div class="timeline">
+                ${data.awards.map((award: any) => `
+                    <div class="timeline-item">
+                        <div class="timeline-content">
+                            <h3>🏆 ${award.title}</h3>
+                            <p class="meta">${award.organization} • ${award.year}</p>
+                            ${award.description ? `<p>${processTextWithMarkdown(award.description)}</p>` : ''}
+                        </div>
                     </div>
                 `).join('')}
             </div>

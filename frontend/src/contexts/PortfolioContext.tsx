@@ -13,6 +13,8 @@ interface PortfolioState {
   feedbackResult: FeedbackResult | null;
   finalResult: GenerationResult | null;
   currentStep: 'template' | 'organize' | 'autofill' | 'enhanced-edit' | 'feedback' | 'complete';
+  portfolioId?: number;
+  editMode?: boolean;
 }
 
 type PortfolioAction =
@@ -22,6 +24,7 @@ type PortfolioAction =
   | { type: 'SET_FEEDBACK_RESULT'; payload: FeedbackResult }
   | { type: 'SET_FINAL_RESULT'; payload: GenerationResult }
   | { type: 'SET_CURRENT_STEP'; payload: PortfolioState['currentStep'] }
+  | { type: 'SET_EDIT_MODE'; payload: { portfolioId: number; selectedTemplate: TemplateType; organizedContent: OrganizedContent } }
   | { type: 'RESET' };
 
 const STORAGE_KEY = 'portfolio_state';
@@ -84,6 +87,15 @@ function portfolioReducer(state: PortfolioState, action: PortfolioAction): Portf
       return { ...state, finalResult: action.payload };
     case 'SET_CURRENT_STEP':
       return { ...state, currentStep: action.payload };
+    case 'SET_EDIT_MODE':
+      return {
+        ...state,
+        editMode: true,
+        portfolioId: action.payload.portfolioId,
+        selectedTemplate: action.payload.selectedTemplate,
+        organizedContent: action.payload.organizedContent,
+        currentStep: 'organize'
+      };
     case 'RESET':
       return { ...initialState, userId: `user_${Date.now()}` };
     default:
@@ -102,6 +114,7 @@ interface PortfolioContextValue {
   setFeedbackResult: (result: FeedbackResult) => void;
   setFinalResult: (result: GenerationResult) => void;
   setCurrentStep: (step: PortfolioState['currentStep']) => void;
+  setEditMode: (portfolioId: number, selectedTemplate: TemplateType, organizedContent: OrganizedContent) => void;
   reset: () => void;
 }
 
@@ -158,6 +171,10 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'SET_CURRENT_STEP', payload: step });
   }, []);
 
+  const setEditMode = useCallback((portfolioId: number, selectedTemplate: TemplateType, organizedContent: OrganizedContent) => {
+    dispatch({ type: 'SET_EDIT_MODE', payload: { portfolioId, selectedTemplate, organizedContent } });
+  }, []);
+
   const reset = useCallback(() => {
     clearStorage();
     dispatch({ type: 'RESET' });
@@ -172,6 +189,7 @@ export function PortfolioProvider({ children }: { children: ReactNode }) {
     setFeedbackResult,
     setFinalResult,
     setCurrentStep,
+    setEditMode,
     reset
   };
 

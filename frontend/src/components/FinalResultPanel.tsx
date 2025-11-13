@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import {
     CheckCircleIcon,
     DocumentArrowDownIcon,
@@ -19,7 +20,10 @@ import { BoostResult } from "../services/interactiveBooster";
 import { FeedbackResult } from "../services/userFeedbackService";
 import { portfolioTemplates } from "../templates/portfolioTemplates";
 import { htmlToMarkdownConverter } from "../services/htmlToMarkdownConverter";
+import { pdfGenerator } from "../services/pdfGenerator";
 import { trackRating, trackPDFDownload, trackButtonClick } from "../utils/analytics";
+import { CustomAlert } from "./CustomAlert";
+import { useAlert } from "../hooks/useAlert";
 
 type TemplateType = "minimal" | "clean" | "colorful" | "elegant";
 
@@ -38,6 +42,8 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
     selectedTemplate = "minimal",
     onReset,
 }) => {
+    const navigate = useNavigate();
+    const { alertState, hideAlert, success, error: showError, warning } = useAlert();
     const [showPreview, setShowPreview] = useState(false);
     const [userRating, setUserRating] = useState<number>(0);
     const [hoverRating, setHoverRating] = useState<number>(0);
@@ -549,7 +555,7 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
 
         const printWindow = window.open("", "_blank");
         if (!printWindow) {
-            alert("팝업이 차단되었습니다. 팝업을 허용해주세요.");
+            warning("팝업이 차단되었습니다. 팝업을 허용해주세요.");
             return;
         }
 
@@ -560,177 +566,10 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
             console.log("=== PDF 생성 (미리보기 HTML 사용) ===");
             console.log("HTML 길이:", htmlContent.length);
 
-            // CSS를 추가하여 페이지 나누기 적용
-            const printStyles = `
-                <style>
-                    @page {
-                        size: A4;
-                        margin: 20mm;
-                    }
+            // pdfGenerator 서비스를 사용하여 PDF 최적화 HTML 생성 (주황색 텍스트 제거 포함)
+            const optimizedHTML = pdfGenerator.generatePrintOptimizedHTML(htmlContent);
 
-                    body {
-                        -webkit-print-color-adjust: exact;
-                        print-color-adjust: exact;
-                        line-height: 1.5 !important;
-                    }
-
-                    /* 목차 숨기기 */
-                    nav,
-                    .nav,
-                    .navigation,
-                    .menu,
-                    .toc,
-                    [role="navigation"] {
-                        display: none !important;
-                    }
-
-                    /* 줄 간격 조정 */
-                    p {
-                        line-height: 1.5 !important;
-                        margin-bottom: 0.5em !important;
-                    }
-
-                    /* 섹션별 페이지 나누기 */
-                    .section {
-                        page-break-inside: avoid;
-                        margin-bottom: 1.5rem !important;
-                    }
-
-                    /* 프로젝트/경력 카드 깨짐 방지 */
-                    .project-card,
-                    .timeline-item,
-                    .card {
-                        page-break-inside: avoid !important;
-                        margin-bottom: 1rem !important;
-                    }
-
-                    /* 프로젝트 카드 2개마다 페이지 나누기 */
-                    .project-card:nth-child(2n) {
-                        page-break-after: always;
-                    }
-
-                    /* 경력 카드 2개마다 페이지 나누기 */
-                    .timeline-item:nth-child(2n) {
-                        page-break-after: always;
-                    }
-
-                    /* 스킬셋 간격 조정 */
-                    .skills-container,
-                    .skill-category {
-                        gap: 0.8rem !important;
-                        margin-bottom: 0.8rem !important;
-                    }
-
-                    .skill-category {
-                        padding: 1rem !important;
-                    }
-
-                    .skill-list li {
-                        padding: 0.3rem 0 !important;
-                    }
-
-                    /* 인쇄 시 그림자/애니메이션 제거 */
-                    @media print {
-                        * {
-                            box-shadow: none !important;
-                            animation: none !important;
-                            transition: none !important;
-                        }
-
-                        /* 줄바꿈 제거 (연속된 텍스트로) */
-                        br {
-                            display: none !important;
-                        }
-
-                        p {
-                            display: inline !important;
-                        }
-
-                        p + p {
-                            display: block !important;
-                            margin-top: 0.5em !important;
-                        }
-
-                        /* Clean 템플릿 레이아웃 수정: 사이드바와 메인을 세로로 배치 */
-                        .layout {
-                            display: block !important;
-                            flex-direction: column !important;
-                        }
-
-                        .sidebar {
-                            position: relative !important;
-                            width: 100% !important;
-                            height: auto !important;
-                            border-right: none !important;
-                            page-break-after: avoid !important;
-                            padding: 2rem !important;
-                            background: white !important;
-                            border: none !important;
-                            margin-bottom: 1.5rem !important;
-                        }
-
-                        .main-content {
-                            margin-left: 0 !important;
-                            padding: 0 !important;
-                        }
-
-                        /* 프로필 섹션과 개인소개를 같은 페이지에 */
-                        .profile-section {
-                            page-break-after: avoid !important;
-                            margin-bottom: 0 !important;
-                        }
-
-                        #about {
-                            page-break-before: avoid !important;
-                            padding: 1.5rem !important;
-                            border: 2px solid #ddd !important;
-                            border-radius: 8px !important;
-                            background: white !important;
-                        }
-
-                        /* 네비게이션 메뉴 숨기기 */
-                        nav,
-                        .nav-menu {
-                            display: none !important;
-                        }
-
-                        /* 프로젝트와 수상내역을 세로로 배치 */
-                        .grid {
-                            display: block !important;
-                            grid-template-columns: none !important;
-                        }
-
-                        .grid .card {
-                            margin-bottom: 1.5rem !important;
-                        }
-
-                        /* 스킬셋은 가로로 배치 (3개씩 한 줄) */
-                        #skills .grid,
-                        .skills-container {
-                            display: grid !important;
-                            grid-template-columns: repeat(3, 1fr) !important;
-                            gap: 1rem !important;
-                        }
-
-                        /* 수상내역도 세로로 배치 */
-                        #awards .grid {
-                            display: block !important;
-                            grid-template-columns: none !important;
-                        }
-                    }
-                </style>
-            `;
-
-            // HTML에 인쇄 스타일 삽입
-            let modifiedHTML = htmlContent;
-            if (htmlContent.includes('</head>')) {
-                modifiedHTML = htmlContent.replace('</head>', printStyles + '</head>');
-            } else {
-                // head 태그가 없으면 body 앞에 삽입
-                modifiedHTML = printStyles + htmlContent;
-            }
-
-            printWindow.document.write(modifiedHTML);
+            printWindow.document.write(optimizedHTML);
             printWindow.document.close();
 
             // 콘텐츠 로딩 대기 후 인쇄 다이얼로그 표시
@@ -741,7 +580,7 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
             };
         } catch (error) {
             console.error("PDF 생성 중 오류:", error);
-            alert("PDF 생성 중 오류가 발생했습니다.");
+            showError("PDF 생성 중 오류가 발생했습니다.");
         }
     };
 
@@ -756,7 +595,7 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
             htmlToMarkdownConverter.downloadMarkdown(markdown, `${finalResult.id}_portfolio.md`);
         } catch (error) {
             console.error("Markdown 다운로드 실패:", error);
-            alert("Markdown 다운로드에 실패했습니다.");
+            showError("Markdown 다운로드에 실패했습니다.");
         }
     };
 
@@ -765,17 +604,17 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
         try {
             const htmlContent = generateTemplatedHTML();
             const markdown = htmlToMarkdownConverter.convertToMarkdown(htmlContent);
-            const success = await htmlToMarkdownConverter.copyToClipboard(markdown);
+            const copySuccess = await htmlToMarkdownConverter.copyToClipboard(markdown);
 
-            if (success) {
+            if (copySuccess) {
                 setCopySuccess('Markdown이 클립보드에 복사되었습니다!');
                 setTimeout(() => setCopySuccess(''), 3000);
             } else {
-                alert("클립보드 복사에 실패했습니다.");
+                showError("클립보드 복사에 실패했습니다.");
             }
         } catch (error) {
             console.error("Markdown 복사 실패:", error);
-            alert("Markdown 복사에 실패했습니다.");
+            showError("Markdown 복사에 실패했습니다.");
         }
     };
 
@@ -797,7 +636,7 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
             URL.revokeObjectURL(url);
         } catch (error) {
             console.error("HTML 다운로드 실패:", error);
-            alert("HTML 다운로드에 실패했습니다.");
+            showError("HTML 다운로드에 실패했습니다.");
         }
     };
 
@@ -850,10 +689,10 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
         } else {
             try {
                 await navigator.clipboard.writeText(window.location.href);
-                alert("포트폴리오 링크가 클립보드에 복사되었습니다!");
+                success("포트폴리오 링크가 클립보드에 복사되었습니다!");
             } catch (error) {
                 console.error("클립보드 복사 실패:", error);
-                alert("클립보드 복사에 실패했습니다.");
+                showError("클립보드 복사에 실패했습니다.");
             }
         }
     };
@@ -877,6 +716,37 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                         AI가 생성한 포트폴리오가 완성되었습니다. 미리보기를
                         확인하고 다운로드하세요.
                     </p>
+                </motion.div>
+
+                {/* 저장 완료 안내 배너 */}
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.2 }}
+                    className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-6 mb-8 shadow-sm"
+                >
+                    <div className="flex items-start justify-between">
+                        <div className="flex items-start flex-1">
+                            <div className="flex-shrink-0">
+                                <CheckCircleIcon className="w-6 h-6 text-green-600 mt-1" />
+                            </div>
+                            <div className="ml-4 flex-1">
+                                <h3 className="text-lg font-semibold text-green-900 mb-2">
+                                    마이페이지에 저장되었습니다
+                                </h3>
+                                <p className="text-sm text-green-800 mb-3">
+                                    작성하신 포트폴리오가 자동으로 마이페이지에 저장되었습니다.
+                                    언제든지 마이페이지에서 확인하고 수정할 수 있습니다.
+                                </p>
+                            </div>
+                        </div>
+                        <button
+                            onClick={() => navigate('/mypage')}
+                            className="ml-4 px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors shadow-sm whitespace-nowrap"
+                        >
+                            마이페이지로 이동
+                        </button>
+                    </div>
                 </motion.div>
 
                 {/* 메인 콘텐츠 그리드 */}
@@ -1264,6 +1134,16 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                         </motion.div>
                     )}
                 </AnimatePresence>
+
+                {/* Custom Alert */}
+                <CustomAlert
+                    isOpen={alertState.isOpen}
+                    onClose={hideAlert}
+                    title={alertState.title}
+                    message={alertState.message}
+                    type={alertState.type}
+                    confirmText={alertState.confirmText}
+                />
             </div>
         </div>
     );

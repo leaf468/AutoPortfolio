@@ -4,9 +4,12 @@ export interface BaseEditorProps {
   document: PortfolioDocument;
   selectedTemplate: 'minimal' | 'clean' | 'colorful' | 'elegant';
   onSave: (updatedDocument: PortfolioDocument) => void;
+  onSaveOnly?: () => void;
+  onDocumentChange?: (updatedDocument: PortfolioDocument) => void;
   onBack: () => void;
   onSkipToNaturalEdit?: () => void;
   onTemplateChange?: (template: 'minimal' | 'clean' | 'colorful' | 'elegant') => void;
+  isSaving?: boolean;
 }
 
 export interface SkillCategory {
@@ -18,6 +21,7 @@ export interface SkillCategory {
 export interface PortfolioData {
   name: string;
   title: string;
+  description?: string;
   email: string;
   phone: string;
   github?: string;
@@ -34,6 +38,7 @@ export interface PortfolioData {
 // 템플릿별 특화 데이터 타입
 export interface MinimalPortfolioData extends PortfolioData {
   education: EducationData[];
+  awards?: AwardData[];
 }
 
 export interface CleanPortfolioData extends Omit<PortfolioData, 'education'> {
@@ -42,12 +47,14 @@ export interface CleanPortfolioData extends Omit<PortfolioData, 'education'> {
   skillCategories?: SkillCategory[];
 }
 
-export interface ColorfulPortfolioData extends Omit<PortfolioData, 'education' | 'location' | 'awards'> {
+export interface ColorfulPortfolioData extends Omit<PortfolioData, 'education' | 'location'> {
   skillCategories?: SkillCategory[];
+  awards?: AwardData[];
 }
 
-export interface ElegantPortfolioData extends Omit<PortfolioData, 'education' | 'location' | 'awards'> {
+export interface ElegantPortfolioData extends Omit<PortfolioData, 'education' | 'location'> {
   skillCategories?: SkillCategory[];
+  awards?: AwardData[];
 }
 
 export interface ProjectData {

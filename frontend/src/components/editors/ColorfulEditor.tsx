@@ -18,6 +18,8 @@ import { BaseEditorProps, ColorfulPortfolioData, ProjectData, ExperienceData, Sk
 import { useScrollPreservation } from '../../hooks/useScrollPreservation';
 import NaturalLanguageModal from '../NaturalLanguageModal';
 import { userFeedbackService } from '../../services/userFeedbackService';
+import { useAlert } from '../../hooks/useAlert';
+import { CustomAlert } from '../CustomAlert';
 
 // 스킬 입력 컴포넌트
 const SkillInput: React.FC<{
@@ -63,13 +65,17 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
     document,
     selectedTemplate,
     onSave,
+    onSaveOnly,
+    onDocumentChange,
     onBack,
     onSkipToNaturalEdit,
-    onTemplateChange
+    onTemplateChange,
+    isSaving
 }) => {
     const [portfolioData, setPortfolioData] = useState<ColorfulPortfolioData>({
         name: '',
         title: '',
+        description: '창의적이고 매력적인 디지털 경험을 만들어가는 개발자입니다',
         email: '',
         phone: '',
         github: '',
@@ -80,7 +86,8 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
             { category: '디자인', skills: [], icon: '✨' }
         ],
         projects: [],
-        experience: []
+        experience: [],
+        awards: []
     });
 
     const [currentHtml, setCurrentHtml] = useState<string>('');
@@ -92,6 +99,7 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
     const [dataLoaded, setDataLoaded] = useState(false);
     const [showTemplateSelector, setShowTemplateSelector] = useState(false);
     const [showNaturalLanguage, setShowNaturalLanguage] = useState(false);
+    const { alertState, hideAlert, error } = useAlert();
 
     // Colorful 템플릿 전용 섹션 제목
     const [sectionTitles, setSectionTitles] = useState({
@@ -99,7 +107,8 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
         about: 'About Me',
         experience: 'Experience',
         projects: 'Projects',
-        skills: 'Skills'
+        skills: 'Skills',
+        awards: '수상/자격증'
     });
 
     const hasInitialized = useRef(false);
@@ -154,6 +163,12 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
             extractedData.title = titleElement.textContent?.trim() || '';
         }
 
+        // Description 추출 (hero 아래 p 태그)
+        const descriptionElement = doc.querySelector('.hero .hero-content > p:not(.subtitle)');
+        if (descriptionElement) {
+            extractedData.description = descriptionElement.textContent?.trim() || '';
+        }
+
         // About 섹션 추출
         const aboutCard = doc.querySelector('.section .card p');
         if (aboutCard) {
@@ -179,19 +194,68 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
 
             try {
                 const firstBlock = document.sections?.[0]?.blocks?.[0];
-                if (firstBlock && firstBlock.text) {
-                    const html = firstBlock.text;
+                if (firstBlock) {
+                    const html = firstBlock.text || '';
+                    console.log('🔍 ColorfulEditor Initial HTML Loading:');
+                    console.log('  - HTML preview (first 200 chars):', html.substring(0, 200));
+                    console.log('  - Has extractedData:', !!firstBlock.extractedData);
                     setCurrentHtml(html);
 
                     let actualData: ColorfulPortfolioData;
 
                     if (firstBlock.extractedData) {
                         const extracted = firstBlock.extractedData as any;
-                        actualData = {
-                            ...extracted,
-                            education: [] // Colorful 템플릿은 education 지원 안함
-                        };
-                        delete (actualData as any).location; // location 필드도 제거
+                        console.log('📦 ColorfulEditor extractedData:', extracted);
+                        console.log('📦 extractedData keys:', Object.keys(extracted));
+
+                        // DB에서 온 데이터가 summary, skills, projects 형태인지 확인
+                        if (extracted.summary || extracted.projects) {
+                            console.log('🔄 Converting AI analysis data to ColorfulPortfolioData format');
+
+                            // experiences를 experience로 변환
+                            const experienceData = Array.isArray(extracted.experiences)
+                                ? extracted.experiences.map((exp: any) => ({
+                                    company: exp.company || '',
+                                    position: exp.position || '',
+                                    period: exp.duration || exp.period || '',
+                                    description: exp.achievements?.join(' • ') || exp.description || '',
+                                    achievements: exp.achievements || []
+                                }))
+                                : Array.isArray(extracted.experience) ? extracted.experience : [];
+
+                            // skills 배열 처리
+                            const skillsFlat = Array.isArray(extracted.skills)
+                                ? extracted.skills.flatMap((s: any) =>
+                                    Array.isArray(s.skills) ? s.skills : (typeof s === 'string' ? [s] : [])
+                                  )
+                                : [];
+
+                            actualData = {
+                                name: extracted.name || '',
+                                title: extracted.originalInput?.jobPosition || extracted.position || extracted.title || '개발자',
+                                description: extracted.description || '창의적이고 매력적인 디지털 경험을 만들어가는 개발자입니다',
+                                email: extracted.email || '',
+                                phone: extracted.phone || '',
+                                github: extracted.github || '',
+                                about: extracted.about || extracted.summary || '',
+                                skills: skillsFlat,
+                                skillCategories: [],
+                                projects: Array.isArray(extracted.projects) ? extracted.projects.map((p: any) => ({
+                                    name: p.name || p.title || '',
+                                    period: p.period || p.duration || '',
+                                    description: p.summary || p.description || '',
+                                    techStack: p.technologies || p.techStack || p.skills || [],
+                                    achievements: p.achievements || p.results || []
+                                })) : [],
+                                experience: experienceData
+                            };
+                        } else {
+                            actualData = {
+                                ...extracted
+                            };
+                            delete (actualData as any).location; // location 필드도 제거
+                            delete (actualData as any).education; // education 필드도 제거
+                        }
                     } else {
                         actualData = extractPortfolioData(html);
                     }
@@ -250,8 +314,28 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
                         }
                     }
 
-                    // 데이터가 부족한 경우 AI로 개선
-                    const needsEnhancement = !actualData.about || actualData.about.length < 50;
+                    // DB에서 불러온 데이터인지 확인 (summary 또는 이미 충분한 데이터가 있는 경우)
+                    const extracted = firstBlock.extractedData as any;
+                    const isFromDB = extracted && (
+                        extracted.summary ||  // AI 분석 결과
+                        extracted.about ||    // 이미 저장된 about 필드
+                        (extracted.projects && extracted.projects.length > 0) ||  // 프로젝트 데이터 존재
+                        (extracted.experience && extracted.experience.length > 0) ||  // 경력 데이터 존재
+                        (extracted.experiences && extracted.experiences.length > 0)  // 경력 데이터 존재 (복수형)
+                    );
+                    const needsEnhancement = !isFromDB && (!actualData.about || actualData.about.length < 50);
+
+                    console.log('🔍 ColorfulEditor Enhancement check:', {
+                        isFromDB,
+                        hasExtractedData: !!extracted,
+                        hasSummary: !!(extracted?.summary),
+                        hasAbout: !!actualData.about,
+                        hasProjects: !!(extracted?.projects?.length),
+                        hasExperience: !!(extracted?.experience?.length || extracted?.experiences?.length),
+                        aboutLength: actualData.about?.length,
+                        needsEnhancement
+                    });
+
                     if (needsEnhancement) {
                         setIsEnhancing(true);
                         try {
@@ -307,9 +391,10 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
             const dataForTemplate = {
                 name: portfolioData.name || '포트폴리오 작성자',
                 title: portfolioData.title || '크리에이티브 개발자',
-                description: '창의적이고 매력적인 디지털 경험을 만들어가는 개발자입니다',
+                description: portfolioData.description || '창의적이고 매력적인 디지털 경험을 만들어가는 개발자입니다',
                 about: portfolioData.about || '창의적인 개발자로서 아름답고 기능적인 애플리케이션을 현대 기술로 구축하는데 열정적입니다.',
                 email: portfolioData.email || 'contact@example.com',
+                phone: portfolioData.phone || '',
                 github: portfolioData.github ? `https://${portfolioData.github}` : 'https://github.com/username',
                 linkedin: portfolioData.phone ? `tel:${portfolioData.phone}` : 'https://linkedin.com/in/username',
                 skills: portfolioData.skillCategories?.flatMap(cat => cat.skills) || portfolioData.skills || [],
@@ -334,6 +419,7 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
                     tech: project.tech?.length > 0 ? project.tech : ['React', 'Framer Motion', 'Styled Components'],
                     results: project.results || ['월 방문자 증가', '디자인 어워드 수상']
                 })) || [],
+                awards: portfolioData.awards || [],
                 sectionTitles: sectionTitles
             };
 
@@ -361,6 +447,27 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
         }
         return currentHtml;
     }, [portfolioData, sectionTitles, preserveScrollAndUpdate]);
+
+    // portfolioData 변경 시 상위 컴포넌트에 알림
+    useEffect(() => {
+        if (dataLoaded && onDocumentChange) {
+            const updatedDocument = {
+                ...document,
+                metadata: {
+                    extractedData: portfolioData,
+                    lastUpdated: new Date().toISOString()
+                },
+                sections: document.sections?.map(section => ({
+                    ...section,
+                    blocks: section.blocks?.map(block => ({
+                        ...block,
+                        extractedData: portfolioData
+                    }))
+                }))
+            };
+            onDocumentChange(updatedDocument);
+        }
+    }, [portfolioData, dataLoaded]);
 
     // 데이터 변경시 HTML 업데이트 (실시간 업데이트)
     useEffect(() => {
@@ -420,9 +527,9 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
                 setUserEnhancedFields(prev => ({ ...prev, about: true }));
                 setInitialEnhancedFields(prev => ({ ...prev, about: false }));
             }
-        } catch (error) {
-            console.error('자기소개 개선 실패:', error);
-            alert('AI 개선에 실패했습니다. 다시 시도해주세요.');
+        } catch (err) {
+            console.error('자기소개 개선 실패:', err);
+            error('AI 개선에 실패했습니다. 다시 시도해주세요.');
         } finally {
             setIsEnhancing(false);
             setEnhancingSection(null);
@@ -458,9 +565,9 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
                 ...prev,
                 [`experience_${index}_description`]: false
             }));
-        } catch (error) {
-            console.error('경력 개선 실패:', error);
-            alert('AI 개선에 실패했습니다. 다시 시도해주세요.');
+        } catch (err) {
+            console.error('경력 개선 실패:', err);
+            error('AI 개선에 실패했습니다. 다시 시도해주세요.');
         } finally {
             setIsEnhancing(false);
             setEnhancingSection(null);
@@ -525,9 +632,9 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
                 setUserEnhancedFields(prev => ({ ...prev, [`project_${index}_description`]: true }));
                 setInitialEnhancedFields(prev => ({ ...prev, [`project_${index}_description`]: false }));
             }
-        } catch (error) {
-            console.error('프로젝트 개선 실패:', error);
-            alert('AI 개선에 실패했습니다. 다시 시도해주세요.');
+        } catch (err) {
+            console.error('프로젝트 개선 실패:', err);
+            error('AI 개선에 실패했습니다. 다시 시도해주세요.');
         } finally {
             setIsEnhancing(false);
             setEnhancingSection(null);
@@ -614,6 +721,38 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
                     ? { ...cat, skills: cat.skills.filter((_, j) => j !== skillIndex) }
                     : cat
             ) || []
+        }));
+    };
+
+    // 수상/자격증 관련 핸들러들
+    const handleAddAward = () => {
+        const newAward = {
+            title: '수상/자격증명',
+            organization: '발급 기관',
+            year: '2024',
+            description: '상세 내용을 입력하세요'
+        };
+        setPortfolioData(prev => ({
+            ...prev,
+            awards: [...(prev.awards || []), newAward]
+        }));
+    };
+
+    const handleUpdateAward = (index: number, field: string, value: string) => {
+        setPortfolioData(prev => {
+            const updatedAwards = [...(prev.awards || [])];
+            updatedAwards[index] = {
+                ...updatedAwards[index],
+                [field]: value
+            };
+            return { ...prev, awards: updatedAwards };
+        });
+    };
+
+    const handleDeleteAward = (index: number) => {
+        setPortfolioData(prev => ({
+            ...prev,
+            awards: (prev.awards || []).filter((_, i) => i !== index)
         }));
     };
 
@@ -712,12 +851,25 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
                             </h1>
                         </div>
                         <div className="flex items-center space-x-3">
+                            {onSaveOnly && (
+                                <button
+                                    onClick={onSaveOnly}
+                                    disabled={isSaving}
+                                    className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-all duration-200 font-medium text-sm shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                                >
+                                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                                    </svg>
+                                    {isSaving ? '저장 중...' : '저장하기'}
+                                </button>
+                            )}
                             <button
                                 onClick={handleSave}
-                                className="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-purple-600 to-pink-600 border border-transparent rounded-lg hover:from-purple-700 hover:to-pink-700 transition-colors flex items-center"
+                                disabled={isSaving}
+                                className="px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 font-medium text-sm shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                             >
                                 <CheckCircleIcon className="w-4 h-4 mr-2" />
-                                저장
+                                {isSaving ? '완성 중...' : '완성하기'}
                             </button>
                         </div>
                     </div>
@@ -760,6 +912,16 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
                                                 className="w-full p-2 border border-purple-300 rounded-lg focus:border-purple-500 outline-none"
                                             />
                                         </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 mb-1">소개 문구</label>
+                                        <input
+                                            type="text"
+                                            value={portfolioData.description || ''}
+                                            onChange={(e) => setPortfolioData(prev => ({ ...prev, description: e.target.value }))}
+                                            className="w-full p-2 border border-purple-300 rounded-lg focus:border-purple-500 outline-none"
+                                            placeholder="창의적이고 매력적인 디지털 경험을 만들어가는 개발자입니다"
+                                        />
                                     </div>
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
@@ -1237,6 +1399,87 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
                                 )}
                             </div>
                         </BlurFade>
+
+                        {/* Awards 섹션 */}
+                        <BlurFade delay={0.5}>
+                            <div className="bg-white rounded-xl border border-purple-200 p-6 shadow-sm">
+                                <div className="flex items-center justify-between mb-4">
+                                    <input
+                                        type="text"
+                                        value={sectionTitles.awards}
+                                        onChange={(e) => setSectionTitles(prev => ({ ...prev, awards: e.target.value }))}
+                                        className="text-lg font-bold text-gray-900 bg-transparent border-b border-purple-300 focus:border-purple-500 outline-none"
+                                        placeholder="섹션 제목"
+                                    />
+                                    <button
+                                        onClick={handleAddAward}
+                                        className="px-3 py-1.5 bg-gradient-to-r from-purple-600 to-pink-600 text-white text-sm rounded-lg hover:from-purple-700 hover:to-pink-700 transition-colors flex items-center"
+                                    >
+                                        <PlusIcon className="w-4 h-4 mr-1" />
+                                        수상/자격증 추가
+                                    </button>
+                                </div>
+
+                                <div className="space-y-3">
+                                    {(portfolioData.awards || []).map((award, index) => (
+                                        <div key={index} className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200">
+                                            <div className="flex items-start justify-between mb-3">
+                                                <input
+                                                    type="text"
+                                                    value={award.title}
+                                                    onChange={(e) => handleUpdateAward(index, 'title', e.target.value)}
+                                                    className="flex-1 font-semibold bg-transparent border-b border-purple-300 focus:border-purple-500 outline-none"
+                                                    placeholder="수상/자격증명"
+                                                />
+                                                <button
+                                                    onClick={() => handleDeleteAward(index)}
+                                                    className="ml-2 p-1 text-red-600 hover:bg-red-100 rounded transition-colors"
+                                                >
+                                                    <XMarkIcon className="w-4 h-4" />
+                                                </button>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-2 mb-2">
+                                                <div>
+                                                    <label className="text-xs text-gray-600">발급 기관</label>
+                                                    <input
+                                                        type="text"
+                                                        value={award.organization}
+                                                        onChange={(e) => handleUpdateAward(index, 'organization', e.target.value)}
+                                                        className="w-full p-1 text-sm border border-purple-300 rounded focus:border-purple-500 outline-none"
+                                                        placeholder="발급 기관"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="text-xs text-gray-600">취득 연도</label>
+                                                    <input
+                                                        type="text"
+                                                        value={award.year}
+                                                        onChange={(e) => handleUpdateAward(index, 'year', e.target.value)}
+                                                        className="w-full p-1 text-sm border border-purple-300 rounded focus:border-purple-500 outline-none"
+                                                        placeholder="2024"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <label className="text-xs text-gray-600">상세 내용</label>
+                                            <textarea
+                                                value={award.description || ''}
+                                                onChange={(e) => handleUpdateAward(index, 'description', e.target.value)}
+                                                className="w-full p-2 border border-purple-300 rounded min-h-[60px] text-sm focus:border-purple-500 outline-none"
+                                                placeholder="상세 내용을 입력하세요"
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {(!portfolioData.awards || portfolioData.awards.length === 0) && (
+                                    <p className="text-gray-500 text-center py-8">
+                                        수상/자격증을 추가해주세요
+                                    </p>
+                                )}
+                            </div>
+                        </BlurFade>
                     </div>
 
                     {/* 오른쪽: HTML 미리보기 */}
@@ -1348,6 +1591,16 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
                 onClose={() => setShowNaturalLanguage(false)}
                 onApplyChange={handleNaturalLanguageChange}
                 currentContent={JSON.stringify(portfolioData)}
+            />
+
+            {/* 알림 팝업 */}
+            <CustomAlert
+                isOpen={alertState.isOpen}
+                onClose={hideAlert}
+                title={alertState.title}
+                message={alertState.message}
+                type={alertState.type}
+                confirmText={alertState.confirmText}
             />
         </div>
     );

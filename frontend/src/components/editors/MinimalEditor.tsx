@@ -19,6 +19,8 @@ import { useScrollPreservation } from '../../hooks/useScrollPreservation';
 import NaturalLanguageModal from '../NaturalLanguageModal';
 import { userFeedbackService } from '../../services/userFeedbackService';
 import { getButtonClass } from '../../styles/buttonStyles';
+import { useAlert } from '../../hooks/useAlert';
+import { CustomAlert } from '../CustomAlert';
 
 // 스킬 입력 컴포넌트
 const SkillInput: React.FC<{
@@ -64,9 +66,12 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
     document,
     selectedTemplate,
     onSave,
+    onSaveOnly,
+    onDocumentChange,
     onBack,
     onSkipToNaturalEdit,
-    onTemplateChange
+    onTemplateChange,
+    isSaving
 }) => {
     const [portfolioData, setPortfolioData] = useState<MinimalPortfolioData>({
         name: '',
@@ -82,7 +87,8 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
         ],
         projects: [],
         experience: [],
-        education: []
+        education: [],
+        awards: []
     });
 
     const [currentHtml, setCurrentHtml] = useState<string>('');
@@ -93,6 +99,7 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
     const [isInitializing, setIsInitializing] = useState(true);
     const [showTemplateSelector, setShowTemplateSelector] = useState(false);
     const [showNaturalLanguage, setShowNaturalLanguage] = useState(false);
+    const { alertState, hideAlert, error } = useAlert();
 
     // Minimal 템플릿 전용 섹션 제목
     const [sectionTitles, setSectionTitles] = useState({
@@ -101,7 +108,8 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
         skills: '기술 스택',
         projects: '프로젝트',
         experience: '경력',
-        education: '학력'
+        education: '학력',
+        awards: '수상/자격증'
     });
 
     const hasInitialized = useRef(false);
@@ -200,21 +208,88 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
 
             try {
                 const firstBlock = document.sections?.[0]?.blocks?.[0];
-                if (firstBlock && firstBlock.text) {
-                    const html = firstBlock.text;
+                if (firstBlock) {
+                    const html = firstBlock.text || '';
                     console.log('🔍 MinimalEditor Initial HTML Loading:');
                     console.log('  - HTML preview (first 200 chars):', html.substring(0, 200));
                     console.log('  - HTML contains "colorful":', html.includes('colorful'));
                     console.log('  - HTML contains "minimal":', html.includes('minimal'));
                     console.log('  - HTML contains "clean":', html.includes('clean'));
                     console.log('  - HTML contains "elegant":', html.includes('elegant'));
+                    console.log('  - Has extractedData:', !!firstBlock.extractedData);
 
                     setCurrentHtml(html);
 
                     let actualData: MinimalPortfolioData;
 
                     if (firstBlock.extractedData) {
-                        actualData = firstBlock.extractedData as MinimalPortfolioData;
+                        const extracted = firstBlock.extractedData as any;
+                        console.log('📦 MinimalEditor extractedData:', extracted);
+                        console.log('📦 extractedData keys:', Object.keys(extracted));
+
+                        // DB에서 온 데이터가 summary, skills, projects 형태인지 확인
+                        if (extracted.summary || extracted.projects) {
+                            console.log('🔄 Converting AI analysis data to MinimalPortfolioData format');
+
+                            // experiences를 experience로 변환
+                            const experienceData = Array.isArray(extracted.experiences)
+                                ? extracted.experiences.map((exp: any) => ({
+                                    company: exp.company || '',
+                                    position: exp.position || '',
+                                    period: exp.duration || exp.period || '',
+                                    description: exp.achievements?.join(' • ') || exp.description || '',
+                                    achievements: exp.achievements || []
+                                }))
+                                : Array.isArray(extracted.experience) ? extracted.experience : [];
+
+                            // skills 배열 처리 (category별로 그룹화되어 있는 경우)
+                            const skillsFlat = Array.isArray(extracted.skills)
+                                ? extracted.skills.flatMap((s: any) =>
+                                    Array.isArray(s.skills) ? s.skills : (typeof s === 'string' ? [s] : [])
+                                  )
+                                : [];
+
+                            console.log('📊 Data mapping details:');
+                            console.log('  - extracted.name:', extracted.name);
+                            console.log('  - extracted.email:', extracted.email);
+                            console.log('  - extracted.phone:', extracted.phone);
+                            console.log('  - extracted.github:', extracted.github);
+                            console.log('  - originalInput:', extracted.originalInput);
+                            console.log('  - skills flat:', skillsFlat);
+                            console.log('  - projects (first item):', extracted.projects?.[0]);
+                            console.log('  - experiences (first item):', extracted.experiences?.[0]);
+
+                            actualData = {
+                                name: extracted.name || '',
+                                title: extracted.originalInput?.jobPosition || extracted.position || extracted.title || '개발자',
+                                email: extracted.email || '',
+                                phone: extracted.phone || '',
+                                github: extracted.github || '',
+                                location: extracted.location || '',
+                                about: extracted.about || extracted.summary || '',
+                                skills: skillsFlat,
+                                skillCategories: [],
+                                projects: Array.isArray(extracted.projects) ? extracted.projects.map((p: any) => ({
+                                    name: p.name || p.title || '',
+                                    period: p.period || p.duration || '',
+                                    description: p.summary || p.description || '',
+                                    techStack: p.technologies || p.techStack || p.skills || [],
+                                    achievements: p.achievements || p.results || []
+                                })) : [],
+                                experience: experienceData,
+                                education: Array.isArray(extracted.education) ? extracted.education.map((edu: any) => ({
+                                    school: edu.school || edu.institution || '',
+                                    degree: edu.degree || '',
+                                    major: edu.major || edu.field || '',
+                                    period: edu.period || edu.duration || '',
+                                    description: edu.description || edu.details || ''
+                                })) : []
+                            };
+
+                            console.log('✅ Final actualData:', actualData);
+                        } else {
+                            actualData = extracted as MinimalPortfolioData;
+                        }
                     } else {
                         actualData = extractPortfolioData(html);
                     }
@@ -270,8 +345,29 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                         setInitialEnhancedFields(newInitialEnhancedFields);
                     }
 
-                    // AI 개선은 초기 데이터가 부족한 경우에만 수행
-                    if (!actualData.about || actualData.about.length < 50) {
+                    // DB에서 불러온 데이터인지 확인 (summary 또는 이미 충분한 데이터가 있는 경우)
+                    const extracted = firstBlock.extractedData as any;
+                    const isFromDB = extracted && (
+                        extracted.summary ||  // AI 분석 결과
+                        extracted.about ||    // 이미 저장된 about 필드
+                        (extracted.projects && extracted.projects.length > 0) ||  // 프로젝트 데이터 존재
+                        (extracted.experience && extracted.experience.length > 0) ||  // 경력 데이터 존재
+                        (extracted.experiences && extracted.experiences.length > 0)  // 경력 데이터 존재 (복수형)
+                    );
+                    const needsEnhancement = !isFromDB && (!actualData.about || actualData.about.length < 50);
+
+                    console.log('🔍 Enhancement check:', {
+                        isFromDB,
+                        hasExtractedData: !!extracted,
+                        hasSummary: !!(extracted?.summary),
+                        hasAbout: !!actualData.about,
+                        hasProjects: !!(extracted?.projects?.length),
+                        hasExperience: !!(extracted?.experience?.length || extracted?.experiences?.length),
+                        aboutLength: actualData.about?.length,
+                        needsEnhancement
+                    });
+
+                    if (needsEnhancement) {
                         setIsEnhancing(true);
                         try {
                             const enhanced = await portfolioTextEnhancer.enhancePortfolioData(actualData);
@@ -330,6 +426,27 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
         }
     }, [isInitializing]); // Only depend on initialization state
 
+    // portfolioData 변경 시 상위 컴포넌트에 알림
+    useEffect(() => {
+        if (!isInitializing && onDocumentChange && portfolioData.name) {
+            const updatedDocument = {
+                ...document,
+                metadata: {
+                    extractedData: portfolioData,
+                    lastUpdated: new Date().toISOString()
+                },
+                sections: document.sections?.map(section => ({
+                    ...section,
+                    blocks: section.blocks?.map(block => ({
+                        ...block,
+                        extractedData: portfolioData
+                    }))
+                }))
+            };
+            onDocumentChange(updatedDocument);
+        }
+    }, [portfolioData, isInitializing]);
+
     // HTML 업데이트 with scroll preservation
     const updateHtml = useCallback(async () => {
         console.log('🔧 MinimalEditor updateHtml:');
@@ -375,6 +492,7 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                     results: project.results || ['사용자 만족도 향상', '성능 최적화 달성']
                 })) || [],
                 education: portfolioData.education || [],
+                awards: portfolioData.awards || [],
                 sectionTitles: sectionTitles
             };
 
@@ -465,9 +583,9 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                 setUserEnhancedFields(prev => ({ ...prev, about: true }));
                 setInitialEnhancedFields(prev => ({ ...prev, about: false }));
             }
-        } catch (error) {
-            console.error('자기소개 개선 실패:', error);
-            alert('AI 개선에 실패했습니다. 다시 시도해주세요.');
+        } catch (err) {
+            console.error('자기소개 개선 실패:', err);
+            error('AI 개선에 실패했습니다. 다시 시도해주세요.');
         } finally {
             setIsEnhancing(false);
             setEnhancingSection(null);
@@ -527,9 +645,9 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                 ...prev,
                 [`experience_${index}_description`]: false
             }));
-        } catch (error) {
-            console.error('경력 개선 실패:', error);
-            alert('AI 개선에 실패했습니다. 다시 시도해주세요.');
+        } catch (err) {
+            console.error('경력 개선 실패:', err);
+            error('AI 개선에 실패했습니다. 다시 시도해주세요.');
         } finally {
             setIsEnhancing(false);
             setEnhancingSection(null);
@@ -559,9 +677,9 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                 setUserEnhancedFields(prev => ({ ...prev, [`education_${index}_description`]: true }));
                 setInitialEnhancedFields(prev => ({ ...prev, [`education_${index}_description`]: false }));
             }
-        } catch (error) {
-            console.error('학력 개선 실패:', error);
-            alert('AI 개선에 실패했습니다. 다시 시도해주세요.');
+        } catch (err) {
+            console.error('학력 개선 실패:', err);
+            error('AI 개선에 실패했습니다. 다시 시도해주세요.');
         } finally {
             setIsEnhancing(false);
             setEnhancingSection(null);
@@ -626,9 +744,9 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                 setUserEnhancedFields(prev => ({ ...prev, [`project_${index}_description`]: true }));
                 setInitialEnhancedFields(prev => ({ ...prev, [`project_${index}_description`]: false }));
             }
-        } catch (error) {
-            console.error('프로젝트 개선 실패:', error);
-            alert('AI 개선에 실패했습니다. 다시 시도해주세요.');
+        } catch (err) {
+            console.error('프로젝트 개선 실패:', err);
+            error('AI 개선에 실패했습니다. 다시 시도해주세요.');
         } finally {
             setIsEnhancing(false);
             setEnhancingSection(null);
@@ -696,6 +814,38 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
         setPortfolioData(prev => ({
             ...prev,
             education: prev.education.filter((_, i) => i !== index)
+        }));
+    };
+
+    // 수상/자격증 관련 핸들러들
+    const handleAddAward = () => {
+        const newAward = {
+            title: '수상/자격증명',
+            organization: '발급 기관',
+            year: '2024',
+            description: '상세 내용을 입력하세요'
+        };
+        setPortfolioData(prev => ({
+            ...prev,
+            awards: [...(prev.awards || []), newAward]
+        }));
+    };
+
+    const handleUpdateAward = (index: number, field: string, value: string) => {
+        setPortfolioData(prev => {
+            const updatedAwards = [...(prev.awards || [])];
+            updatedAwards[index] = {
+                ...updatedAwards[index],
+                [field]: value
+            };
+            return { ...prev, awards: updatedAwards };
+        });
+    };
+
+    const handleDeleteAward = (index: number) => {
+        setPortfolioData(prev => ({
+            ...prev,
+            awards: (prev.awards || []).filter((_, i) => i !== index)
         }));
     };
 
@@ -816,12 +966,25 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                             </h1>
                         </div>
                         <div className="flex items-center space-x-3">
+                            {onSaveOnly && (
+                                <button
+                                    onClick={onSaveOnly}
+                                    disabled={isSaving}
+                                    className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-all duration-200 font-medium text-sm shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                                >
+                                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                                    </svg>
+                                    {isSaving ? '저장 중...' : '저장하기'}
+                                </button>
+                            )}
                             <button
                                 onClick={handleSave}
-                                className={getButtonClass('primary', 'md')}
+                                disabled={isSaving}
+                                className="px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-200 font-medium text-sm shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                             >
                                 <CheckCircleIcon className="w-4 h-4 mr-2" />
-                                저장
+                                {isSaving ? '완성 중...' : '완성하기'}
                             </button>
                         </div>
                     </div>
@@ -1514,6 +1677,87 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                                 )}
                             </div>
                         </BlurFade>
+
+                        {/* Awards 섹션 */}
+                        <BlurFade delay={0.6}>
+                            <div className="bg-white rounded-xl border border-gray-200 p-6">
+                                <div className="flex items-center justify-between mb-4">
+                                    <input
+                                        type="text"
+                                        value={sectionTitles.awards}
+                                        onChange={(e) => setSectionTitles(prev => ({ ...prev, awards: e.target.value }))}
+                                        className="text-lg font-bold text-gray-900 bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none"
+                                        placeholder="섹션 제목"
+                                    />
+                                    <button
+                                        onClick={handleAddAward}
+                                        className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+                                    >
+                                        <PlusIcon className="w-4 h-4 mr-1" />
+                                        수상/자격증 추가
+                                    </button>
+                                </div>
+
+                                <div className="space-y-3">
+                                    {(portfolioData.awards || []).map((award, index) => (
+                                        <div key={index} className="p-4 rounded-lg border bg-gray-50 border-gray-200">
+                                            <div className="flex items-start justify-between mb-3">
+                                                <input
+                                                    type="text"
+                                                    value={award.title}
+                                                    onChange={(e) => handleUpdateAward(index, 'title', e.target.value)}
+                                                    className="flex-1 font-semibold bg-transparent border-b border-gray-300 focus:border-blue-500 outline-none"
+                                                    placeholder="수상/자격증명"
+                                                />
+                                                <button
+                                                    onClick={() => handleDeleteAward(index)}
+                                                    className="ml-2 p-1 text-red-600 hover:bg-red-100 rounded transition-colors"
+                                                >
+                                                    <XMarkIcon className="w-4 h-4" />
+                                                </button>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-2 mb-2">
+                                                <div>
+                                                    <label className="text-xs text-gray-600">발급 기관</label>
+                                                    <input
+                                                        type="text"
+                                                        value={award.organization}
+                                                        onChange={(e) => handleUpdateAward(index, 'organization', e.target.value)}
+                                                        className="w-full p-1 text-sm border border-gray-300 rounded focus:border-blue-500 outline-none"
+                                                        placeholder="발급 기관"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="text-xs text-gray-600">취득 연도</label>
+                                                    <input
+                                                        type="text"
+                                                        value={award.year}
+                                                        onChange={(e) => handleUpdateAward(index, 'year', e.target.value)}
+                                                        className="w-full p-1 text-sm border border-gray-300 rounded focus:border-blue-500 outline-none"
+                                                        placeholder="2024"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <label className="text-xs text-gray-600">상세 내용</label>
+                                            <textarea
+                                                value={award.description || ''}
+                                                onChange={(e) => handleUpdateAward(index, 'description', e.target.value)}
+                                                className="w-full p-2 border border-gray-300 rounded min-h-[60px] text-sm focus:border-blue-500 outline-none"
+                                                placeholder="상세 내용을 입력하세요"
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {(!portfolioData.awards || portfolioData.awards.length === 0) && (
+                                    <p className="text-gray-500 text-center py-8">
+                                        수상/자격증을 추가해주세요
+                                    </p>
+                                )}
+                            </div>
+                        </BlurFade>
                     </div>
 
                     {/* 오른쪽: HTML 미리보기 */}
@@ -1626,6 +1870,16 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                 onClose={() => setShowNaturalLanguage(false)}
                 onApplyChange={handleNaturalLanguageChange}
                 currentContent={JSON.stringify(portfolioData)}
+            />
+
+            {/* 알림 팝업 */}
+            <CustomAlert
+                isOpen={alertState.isOpen}
+                onClose={hideAlert}
+                title={alertState.title}
+                message={alertState.message}
+                type={alertState.type}
+                confirmText={alertState.confirmText}
             />
         </div>
     );

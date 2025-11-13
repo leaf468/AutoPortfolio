@@ -1,24 +1,123 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   SparklesIcon,
   DocumentTextIcon,
-  ClipboardDocumentListIcon
+  ClipboardDocumentListIcon,
+  DocumentArrowDownIcon
 } from '@heroicons/react/24/outline';
 import { aiOrganizer, OrganizedContent } from '../services/aiOrganizer';
 import { trackButtonClick } from '../utils/analytics';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabaseClient';
+import { CustomAlert } from './CustomAlert';
+import { useAlert } from '../hooks/useAlert';
 
 interface AIOrganizerProps {
   onComplete: (organizedContent: OrganizedContent) => void;
 }
 
 const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
+  const { user } = useAuth();
+  const { alertState, hideAlert, success, error: showError, warning } = useAlert();
   const [input, setInput] = useState('');
   const [inputType, setInputType] = useState<'freetext' | 'resume' | 'markdown'>('freetext');
   const [jobPosting, setJobPosting] = useState('');
+  const [jobPosition, setJobPosition] = useState(''); // 직무 필드 추가
   const [isProcessing, setIsProcessing] = useState(false);
   const [showJobPosting, setShowJobPosting] = useState(false);
   const [showValidationModal, setShowValidationModal] = useState(false);
+  const [showCoverLetterModal, setShowCoverLetterModal] = useState(false);
+  const [coverLetters, setCoverLetters] = useState<any[]>([]);
+  const [loadingCoverLetters, setLoadingCoverLetters] = useState(false);
+
+  // 로그인 사용자의 직무 정보 불러오기
+  useEffect(() => {
+    if (user) {
+      loadUserJobPosition();
+    }
+  }, [user]);
+
+  const loadUserJobPosition = async () => {
+    if (!user) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .select('position')
+        .eq('user_id', user.user_id)
+        .maybeSingle();
+
+      if (data && data.position) {
+        setJobPosition(data.position);
+      }
+    } catch (error) {
+      console.error('직무 정보 로드 오류:', error);
+    }
+  };
+
+  // 자소서 목록 불러오기
+  const loadCoverLetters = async () => {
+    if (!user) {
+      warning('로그인이 필요합니다.');
+      return;
+    }
+
+    setLoadingCoverLetters(true);
+    try {
+      const { data, error } = await supabase
+        .from('user_documents')
+        .select('*')
+        .eq('user_id', user.user_id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setCoverLetters(data || []);
+      setShowCoverLetterModal(true);
+    } catch (error) {
+      console.error('자소서 로드 오류:', error);
+      showError('자소서를 불러오는 중 오류가 발생했습니다.');
+    } finally {
+      setLoadingCoverLetters(false);
+    }
+  };
+
+  // 자소서 선택 및 내용 적용
+  const handleSelectCoverLetter = (doc: any) => {
+    try {
+      const content = JSON.parse(doc.content || '{}');
+      const questions = content.questions || [];
+
+      // 질문에 대한 답변들을 하나의 텍스트로 합치기
+      const combinedText = questions
+        .map((q: any) => {
+          if (q.answer && q.answer.trim()) {
+            return `[${q.question}]\n${q.answer}\n`;
+          }
+          return '';
+        })
+        .filter((text: string) => text.length > 0)
+        .join('\n');
+
+      if (combinedText.trim()) {
+        setInput(combinedText);
+
+        // 기본 정보도 함께 불러오기 (회사명, 직무)
+        if (doc.company_name) {
+          setJobPosting(`회사: ${doc.company_name}${doc.position ? `\n직무: ${doc.position}` : ''}`);
+          setShowJobPosting(true);
+        }
+
+        setShowCoverLetterModal(false);
+        success('자소서 내용과 기본 정보를 불러왔습니다!');
+      } else {
+        warning('자소서에 작성된 답변이 없습니다.');
+      }
+    } catch (error) {
+      console.error('자소서 파싱 오류:', error);
+      showError('자소서 내용을 불러오는 중 오류가 발생했습니다.');
+    }
+  };
 
   const handleOrganize = () => {
     if (!input.trim()) return;
@@ -37,13 +136,15 @@ const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
     console.log('사용자 입력 데이터:', input);
     console.log('입력 타입:', inputType);
     console.log('채용공고:', jobPosting);
+    console.log('직무:', jobPosition);
 
     // AI 처리 없이 바로 원본 데이터만 전달 (필수 필드들을 빈 값으로 채움)
     const rawData = {
       originalInput: {
         rawText: input,
         inputType: inputType,
-        jobPosting: jobPosting.trim() || undefined
+        jobPosting: jobPosting.trim() || undefined,
+        jobPosition: jobPosition.trim() || undefined
       },
       // 필수 필드들을 임시로 빈 값으로 채움
       oneLinerPitch: '',
@@ -91,6 +192,23 @@ const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
       </motion.div>
 
       <div className="space-y-4">
+        {/* 직무 입력 */}
+        <div>
+          <label className="block text-xs font-medium text-gray-700 mb-2">
+            직무 (선택사항)
+          </label>
+          <input
+            type="text"
+            value={jobPosition}
+            onChange={(e) => setJobPosition(e.target.value)}
+            className="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent text-sm"
+            placeholder="예: 개발자, 기획자, 마케터, 은행원 등"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            {user ? '로그인하신 경우 마이페이지의 직무 정보가 자동으로 반영됩니다.' : '직무를 입력하시면 맞춤형 포트폴리오를 생성해드립니다.'}
+          </p>
+        </div>
+
         {/* 입력 타입 선택 */}
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-2">
@@ -127,8 +245,20 @@ const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
               className="w-full h-80 p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent resize-none text-sm"
               placeholder="예: 3년차 풀스택 개발자입니다. React와 Node.js로 쇼핑몰 플랫폼을 개발했고, 사용자 50% 증가와 매출 200% 상승에 기여했습니다..."
             />
-            <div className="text-xs text-gray-500 mt-1.5">
-              {input.length} / 5000 글자
+            <div className="flex items-center justify-between mt-1.5">
+              <div className="text-xs text-gray-500">
+                {input.length} / 5000 글자
+              </div>
+              {user && (
+                <button
+                  onClick={loadCoverLetters}
+                  disabled={loadingCoverLetters}
+                  className="flex items-center gap-2 px-5 py-3 text-sm font-semibold text-purple-600 bg-white border-2 border-purple-300 hover:border-purple-400 hover:bg-purple-50 rounded-lg transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <DocumentArrowDownIcon className="w-5 h-5" />
+                  {loadingCoverLetters ? '불러오는 중...' : '작성한 자소서에서 불러오기'}
+                </button>
+              )}
             </div>
           </div>
 
@@ -216,6 +346,81 @@ const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
             </motion.div>
           </div>
         )}
+
+        {/* 자소서 선택 모달 */}
+        <AnimatePresence>
+          {showCoverLetterModal && (
+            <div
+              className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+              onClick={() => setShowCoverLetterModal(false)}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.9 }}
+                className="bg-white rounded-xl p-6 max-w-2xl w-full max-h-[80vh] overflow-hidden shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-bold text-gray-900">작성한 자소서 선택</h3>
+                  <button
+                    onClick={() => setShowCoverLetterModal(false)}
+                    className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
+
+                <div className="overflow-y-auto max-h-[60vh]">
+                  {coverLetters.length === 0 ? (
+                    <div className="text-center py-12 text-gray-500">
+                      <DocumentTextIcon className="w-12 h-12 mx-auto mb-3 text-gray-400" />
+                      <p>작성한 자소서가 없습니다.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {coverLetters.map((doc) => (
+                        <button
+                          key={doc.document_id}
+                          onClick={() => handleSelectCoverLetter(doc)}
+                          className="w-full p-4 border-2 border-gray-200 rounded-lg hover:border-purple-400 hover:bg-purple-50 transition-all text-left group"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <h4 className="font-semibold text-gray-900 mb-1 group-hover:text-purple-600 transition-colors">
+                                {doc.title}
+                              </h4>
+                              <div className="text-sm text-gray-600 space-y-1">
+                                <p>회사: {doc.company_name || '-'}</p>
+                                <p>직무: {doc.position || '-'}</p>
+                                <p className="text-xs text-gray-500">
+                                  작성일: {new Date(doc.created_at).toLocaleDateString('ko-KR')}
+                                </p>
+                              </div>
+                            </div>
+                            <DocumentArrowDownIcon className="w-5 h-5 text-gray-400 group-hover:text-purple-600 transition-colors ml-3 flex-shrink-0" />
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* Custom Alert */}
+        <CustomAlert
+          isOpen={alertState.isOpen}
+          onClose={hideAlert}
+          title={alertState.title}
+          message={alertState.message}
+          type={alertState.type}
+          confirmText={alertState.confirmText}
+        />
     </div>
   );
 };
