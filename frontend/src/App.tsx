@@ -1,8 +1,9 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
 import { PortfolioProvider } from "./contexts/PortfolioContext";
 import { AuthProvider } from "./contexts/AuthContext";
 import { trackPageView } from "./utils/analytics";
+import { CustomAlert } from "./components/CustomAlert";
 
 // Pages
 import HomePage from './pages/HomePage';
@@ -57,12 +58,67 @@ function getPageTitle(pathname: string): string {
   return titleMap[pathname] || '알 수 없는 페이지';
 }
 
+// 전역 다운로드 완료 알림 컴포넌트
+function GlobalFeedbackAlert() {
+  const [showAlert, setShowAlert] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+
+  useEffect(() => {
+    // localStorage에서 feedbackCompleted 확인
+    const checkFeedbackCompleted = () => {
+      const feedbackData = localStorage.getItem('feedbackCompleted');
+      if (feedbackData) {
+        try {
+          const data = JSON.parse(feedbackData);
+          // 5분 이내의 알림만 표시 (5 * 60 * 1000 = 300000ms)
+          if (Date.now() - data.timestamp < 300000) {
+            setAlertMessage(`✅ 첨삭이 완료되었습니다!\n\nPDF 다운로드가 완료되었습니다.\n평균 점수: ${data.averageScore}점\n\n다운로드 폴더에서 확인하실 수 있습니다.`);
+            setShowAlert(true);
+            // 알림을 표시한 후 localStorage에서 제거
+            localStorage.removeItem('feedbackCompleted');
+          } else {
+            // 오래된 알림은 제거
+            localStorage.removeItem('feedbackCompleted');
+          }
+        } catch (error) {
+          console.error('feedbackCompleted 파싱 오류:', error);
+          localStorage.removeItem('feedbackCompleted');
+        }
+      }
+    };
+
+    // 페이지 로드 시 확인
+    checkFeedbackCompleted();
+
+    // 다른 탭에서 변경사항 감지
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'feedbackCompleted' && e.newValue) {
+        checkFeedbackCompleted();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  return (
+    <CustomAlert
+      isOpen={showAlert}
+      onClose={() => setShowAlert(false)}
+      title="첨삭 완료"
+      message={alertMessage}
+      type="success"
+    />
+  );
+}
+
 function App() {
   return (
     <AuthProvider>
       <PortfolioProvider>
         <Router>
           <PageViewTracker />
+          <GlobalFeedbackAlert />
           <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/template-selection" element={<TemplateSelectionPage />} />

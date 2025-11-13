@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import blockAPI from './api/blockAPI';
 import authRoutes from './routes/auth';
+import coverLetterRoutes from './routes/coverLetter';
 
 dotenv.config();
 
@@ -13,10 +14,11 @@ app.use(cors({
   origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
   credentials: true,
 }));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' })); // 큰 요청 허용
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/cover-letter', coverLetterRoutes);
 app.use(blockAPI);
 
 app.get('/health', (req, res) => {

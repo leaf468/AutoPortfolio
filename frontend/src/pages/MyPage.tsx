@@ -11,10 +11,15 @@ import {
   Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
   TrashIcon,
-  UserCircleIcon
+  UserCircleIcon,
+  ClipboardDocumentCheckIcon,
+  BriefcaseIcon,
+  ArrowDownTrayIcon
 } from '@heroicons/react/24/outline';
 import { CustomAlert } from '../components/CustomAlert';
 import { useAlert } from '../hooks/useAlert';
+import { FeedbackDetailModal } from '../components/FeedbackDetailModal';
+import { generateFeedbackPDF } from '../services/pdfGenerationService';
 
 const MyPage: React.FC = () => {
   const navigate = useNavigate();
@@ -22,7 +27,7 @@ const MyPage: React.FC = () => {
   const { user, loading, setUser } = useAuth();
   const { setEditMode } = usePortfolio();
   const { alertState, hideAlert, success, error: showError, warning } = useAlert();
-  const [activeTab, setActiveTab] = useState<'documents' | 'portfolios' | 'profile'>('documents');
+  const [activeTab, setActiveTab] = useState<'documents' | 'portfolios' | 'feedbacks' | 'jobs' | 'profile'>('documents');
 
   // 프로필 상태
   const [profileData, setProfileData] = useState({
@@ -49,8 +54,13 @@ const MyPage: React.FC = () => {
   // 자소서와 포트폴리오 데이터
   const [documents, setDocuments] = useState<any[]>([]);
   const [portfolios, setPortfolios] = useState<any[]>([]);
+  const [feedbacks, setFeedbacks] = useState<any[]>([]);
+  const [recommendedJobs, setRecommendedJobs] = useState<any[]>([]);
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
   const [isLoadingPortfolios, setIsLoadingPortfolios] = useState(false);
+  const [isLoadingFeedbacks, setIsLoadingFeedbacks] = useState(false);
+  const [isLoadingJobs, setIsLoadingJobs] = useState(false);
+  const [selectedFeedback, setSelectedFeedback] = useState<any>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -60,6 +70,8 @@ const MyPage: React.FC = () => {
       loadProfile();
       loadDocuments();
       loadPortfolios();
+      loadFeedbacks();
+      loadRecommendedJobs();
     }
   }, [user, loading, navigate]);
 
@@ -166,6 +178,80 @@ const MyPage: React.FC = () => {
     }
   };
 
+  const loadFeedbacks = async () => {
+    if (!user) return;
+
+    setIsLoadingFeedbacks(true);
+    try {
+      const { data, error } = await supabase
+        .from('cover_letter_feedback')
+        .select('*')
+        .eq('user_id', user.user_id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setFeedbacks(data || []);
+    } catch (error) {
+      console.error('Load feedbacks error:', error);
+    } finally {
+      setIsLoadingFeedbacks(false);
+    }
+  };
+
+  const loadRecommendedJobs = async () => {
+    if (!user) return;
+
+    setIsLoadingJobs(true);
+    try {
+      // 사용자 프로필에서 직무와 카테고리 정보 가져오기
+      const { data: profileData, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('position, categories')
+        .eq('user_id', user.user_id)
+        .maybeSingle();
+
+      if (profileError) throw profileError;
+
+      if (!profileData?.position && (!profileData?.categories || profileData.categories.length === 0)) {
+        setRecommendedJobs([]);
+        return;
+      }
+
+      // 자소서 DB에서 추천 회사 가져오기 (categoryBasedRecommendationService와 동일한 로직)
+      const { getRecommendedCompaniesByCategory } = await import('../services/categoryBasedRecommendationService');
+
+      // 카테고리가 있으면 해당 카테고리의 회사들 추천
+      if (profileData.categories && profileData.categories.length > 0) {
+        const allRecommendations = [];
+        for (const category of profileData.categories) {
+          const recommendations = await getRecommendedCompaniesByCategory(
+            category,
+            profileData.position || '',
+            5
+          );
+          allRecommendations.push(...recommendations);
+        }
+
+        // 매치 스코어 순으로 정렬하고 중복 제거
+        const uniqueRecommendations = allRecommendations
+          .filter((rec, index, self) =>
+            index === self.findIndex((r) => r.companyName === rec.companyName)
+          )
+          .sort((a, b) => b.matchScore - a.matchScore)
+          .slice(0, 10);
+
+        setRecommendedJobs(uniqueRecommendations);
+      } else {
+        setRecommendedJobs([]);
+      }
+    } catch (error) {
+      console.error('Load recommended jobs error:', error);
+      setRecommendedJobs([]);
+    } finally {
+      setIsLoadingJobs(false);
+    }
+  };
+
   const handleProfileChange = (field: string, value: string) => {
     setProfileData(prev => ({ ...prev, [field]: value }));
   };
@@ -266,6 +352,103 @@ const MyPage: React.FC = () => {
     }
   };
 
+  const handleDownloadPDF = async () => {
+    if (!selectedFeedback) return;
+
+    try {
+      console.log('📥 저장된 피드백 데이터:', selectedFeedback);
+
+      // DB에서 불러온 데이터를 PDF 생성 형식에 맞게 변환
+      const report = {
+        position: selectedFeedback.job_position,
+        averageScore: selectedFeedback.overall_score,
+        totalQuestions: selectedFeedback.questions.length,
+        createdAt: selectedFeedback.created_at,
+        questionFeedbacks: selectedFeedback.questions.map((q: any, index: number) => {
+          // 기본 구조 생성 (모든 필드 포함)
+          const analysis = q.analysis || {};
+
+          return {
+            questionNumber: index + 1,
+            question: q.question,
+            answer: q.answer,
+            userAnswer: q.answer,
+            overallScore: analysis.overallScore || 0,
+            overallSummary: analysis.overallSummary || '',
+
+            // 구조 분석
+            structureAnalysis: {
+              totalScore: analysis.structureAnalysis?.totalScore || 0,
+              logic: analysis.structureAnalysis?.logic || { score: 0, feedback: '' },
+              consistency: analysis.structureAnalysis?.consistency || { score: 0, feedback: '' },
+              completeness: analysis.structureAnalysis?.completeness || { score: 0, feedback: '' },
+              suggestions: analysis.structureAnalysis?.suggestions || []
+            },
+
+            // 내용 분석
+            contentAnalysis: {
+              totalScore: analysis.contentAnalysis?.totalScore || 0,
+              specificity: analysis.contentAnalysis?.specificity || { score: 0, feedback: '' },
+              relevance: analysis.contentAnalysis?.relevance || { score: 0, feedback: '' },
+              differentiation: analysis.contentAnalysis?.differentiation || { score: 0, feedback: '' },
+              strengths: analysis.contentAnalysis?.strengths || [],
+              weaknesses: analysis.contentAnalysis?.weaknesses || []
+            },
+
+            // 표현력 분석
+            expressionAnalysis: {
+              totalScore: analysis.expressionAnalysis?.totalScore || 0,
+              writing: analysis.expressionAnalysis?.writing || { score: 0, feedback: '' },
+              vocabulary: analysis.expressionAnalysis?.vocabulary || { score: 0, feedback: '' },
+              readability: analysis.expressionAnalysis?.readability || { score: 0, feedback: '' },
+              improvements: analysis.expressionAnalysis?.improvements || []
+            },
+
+            // 직무 적합성 분석
+            jobFitAnalysis: {
+              totalScore: analysis.jobFitAnalysis?.totalScore || 0,
+              expertise: analysis.jobFitAnalysis?.expertise || { score: 0, feedback: '' },
+              passion: analysis.jobFitAnalysis?.passion || { score: 0, feedback: '' },
+              growth: analysis.jobFitAnalysis?.growth || { score: 0, feedback: '' }
+            },
+
+            // 경쟁자 비교
+            competitorComparison: {
+              specComparison: analysis.competitorComparison?.specComparison || selectedFeedback.comparison_stats?.specComparison || {
+                gpa: '',
+                toeic: '',
+                certificates: ''
+              },
+              activityComparison: analysis.competitorComparison?.activityComparison || selectedFeedback.comparison_stats?.activityComparison || {
+                quantity: '',
+                quality: '',
+                relevance: ''
+              },
+              summary: analysis.competitorComparison?.summary || selectedFeedback.comparison_stats?.summary || '',
+              missingElements: analysis.competitorComparison?.missingElements || [],
+              recommendations: analysis.competitorComparison?.recommendations || []
+            },
+
+            // 수정 제안
+            revisedVersion: analysis.revisedVersion || '',
+            keyImprovements: analysis.keyImprovements || []
+          };
+        }),
+        overallRecommendations: selectedFeedback.suggestions || [],
+      };
+
+      console.log('📄 PDF 생성 데이터:', report);
+
+      // Generate and download PDF
+      // generateFeedbackPDF(report, userName?, targetCompany?)
+      await generateFeedbackPDF(report, user?.name, selectedFeedback.company_name);
+      success('PDF가 다운로드되었습니다.');
+    } catch (error) {
+      console.error('PDF 다운로드 실패:', error);
+      showError('PDF 다운로드에 실패했습니다.');
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -354,6 +537,28 @@ const MyPage: React.FC = () => {
             >
               <FolderOpenIcon className="w-5 h-5" />
               <span className="font-medium">내 포트폴리오</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('feedbacks')}
+              className={`flex items-center space-x-2 py-4 border-b-2 transition ${
+                activeTab === 'feedbacks'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <ClipboardDocumentCheckIcon className="w-5 h-5" />
+              <span className="font-medium">자소서 첨삭 결과</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('jobs')}
+              className={`flex items-center space-x-2 py-4 border-b-2 transition ${
+                activeTab === 'jobs'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <BriefcaseIcon className="w-5 h-5" />
+              <span className="font-medium">추천 공고</span>
             </button>
             <button
               onClick={() => setActiveTab('profile')}
@@ -559,6 +764,282 @@ const MyPage: React.FC = () => {
                           <TrashIcon className="w-4 h-4" />
                         </button>
                       </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'feedbacks' && (
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">자소서 첨삭 결과</h2>
+            </div>
+            {isLoadingFeedbacks ? (
+              <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">
+                로딩 중...
+              </div>
+            ) : feedbacks.length === 0 ? (
+              <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">
+                <ClipboardDocumentCheckIcon className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                <p className="text-lg font-medium text-gray-700 mb-2">첨삭 결과가 없습니다</p>
+                <p className="text-sm text-gray-500">자소서를 작성하고 AI 첨삭을 받아보세요!</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {feedbacks.map((feedback) => (
+                  <div
+                    key={feedback.feedback_id}
+                    className="bg-gradient-to-br from-white to-green-50 rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-green-100"
+                  >
+                    <div className="p-6">
+                      <div className="flex items-start justify-between mb-3">
+                        <ClipboardDocumentCheckIcon className="w-8 h-8 text-green-600 flex-shrink-0" />
+                        <div className="flex items-center space-x-2">
+                          {feedback.overall_score && (
+                            <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded-full font-bold">
+                              {feedback.overall_score}점
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2">
+                        {feedback.company_name} - {feedback.job_position}
+                      </h3>
+                      <div className="space-y-1 mb-4">
+                        {feedback.category && (
+                          <p className="text-sm text-gray-600 flex items-center">
+                            <span className="font-medium mr-1">카테고리:</span> {feedback.category}
+                          </p>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500 mb-4 flex items-center">
+                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        {new Date(feedback.created_at).toLocaleDateString('ko-KR')}
+                      </p>
+                      <div className="flex gap-2 pt-3 border-t border-green-100">
+                        <button
+                          onClick={() => setSelectedFeedback(feedback)}
+                          className="flex-1 px-4 py-2.5 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 transition-all duration-200 font-medium text-sm shadow-sm hover:shadow-md flex items-center justify-center"
+                        >
+                          <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                          상세보기
+                        </button>
+                        <button
+                          onClick={async () => {
+                            // PDF 다운로드
+                            try {
+                              console.log('📥 저장된 피드백 데이터:', feedback);
+
+                              // DB에서 불러온 데이터를 PDF 생성 형식에 맞게 변환
+                              const report = {
+                                position: feedback.job_position,
+                                averageScore: feedback.overall_score,
+                                totalQuestions: feedback.questions.length,
+                                createdAt: feedback.created_at,
+                                questionFeedbacks: feedback.questions.map((q: any, index: number) => {
+                                  const analysis = q.analysis || {};
+
+                                  return {
+                                    questionNumber: index + 1,
+                                    question: q.question,
+                                    answer: q.answer,
+                                    userAnswer: q.answer,
+                                    overallScore: analysis.overallScore || 0,
+                                    overallSummary: analysis.overallSummary || '',
+
+                                    structureAnalysis: {
+                                      totalScore: analysis.structureAnalysis?.totalScore || 0,
+                                      logic: analysis.structureAnalysis?.logic || { score: 0, feedback: '' },
+                                      consistency: analysis.structureAnalysis?.consistency || { score: 0, feedback: '' },
+                                      completeness: analysis.structureAnalysis?.completeness || { score: 0, feedback: '' },
+                                      suggestions: analysis.structureAnalysis?.suggestions || []
+                                    },
+
+                                    contentAnalysis: {
+                                      totalScore: analysis.contentAnalysis?.totalScore || 0,
+                                      specificity: analysis.contentAnalysis?.specificity || { score: 0, feedback: '' },
+                                      relevance: analysis.contentAnalysis?.relevance || { score: 0, feedback: '' },
+                                      differentiation: analysis.contentAnalysis?.differentiation || { score: 0, feedback: '' },
+                                      strengths: analysis.contentAnalysis?.strengths || [],
+                                      weaknesses: analysis.contentAnalysis?.weaknesses || []
+                                    },
+
+                                    expressionAnalysis: {
+                                      totalScore: analysis.expressionAnalysis?.totalScore || 0,
+                                      writing: analysis.expressionAnalysis?.writing || { score: 0, feedback: '' },
+                                      vocabulary: analysis.expressionAnalysis?.vocabulary || { score: 0, feedback: '' },
+                                      readability: analysis.expressionAnalysis?.readability || { score: 0, feedback: '' },
+                                      improvements: analysis.expressionAnalysis?.improvements || []
+                                    },
+
+                                    jobFitAnalysis: {
+                                      totalScore: analysis.jobFitAnalysis?.totalScore || 0,
+                                      expertise: analysis.jobFitAnalysis?.expertise || { score: 0, feedback: '' },
+                                      passion: analysis.jobFitAnalysis?.passion || { score: 0, feedback: '' },
+                                      growth: analysis.jobFitAnalysis?.growth || { score: 0, feedback: '' }
+                                    },
+
+                                    competitorComparison: {
+                                      specComparison: analysis.competitorComparison?.specComparison || feedback.comparison_stats?.specComparison || {
+                                        gpa: '',
+                                        toeic: '',
+                                        certificates: ''
+                                      },
+                                      activityComparison: analysis.competitorComparison?.activityComparison || feedback.comparison_stats?.activityComparison || {
+                                        quantity: '',
+                                        quality: '',
+                                        relevance: ''
+                                      },
+                                      summary: analysis.competitorComparison?.summary || feedback.comparison_stats?.summary || '',
+                                      missingElements: analysis.competitorComparison?.missingElements || [],
+                                      recommendations: analysis.competitorComparison?.recommendations || []
+                                    },
+
+                                    revisedVersion: analysis.revisedVersion || '',
+                                    keyImprovements: analysis.keyImprovements || []
+                                  };
+                                }),
+                                overallRecommendations: feedback.suggestions || [],
+                              };
+
+                              await generateFeedbackPDF(report, user?.name, feedback.company_name);
+                              success('PDF가 다운로드되었습니다.');
+                            } catch (error) {
+                              console.error('PDF 다운로드 실패:', error);
+                              showError('PDF 다운로드에 실패했습니다.');
+                            }
+                          }}
+                          className="px-4 py-2.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-all duration-200 font-medium text-sm flex items-center justify-center"
+                          title="PDF 다운로드"
+                        >
+                          <ArrowDownTrayIcon className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (window.confirm('이 첨삭 결과를 삭제하시겠습니까?')) {
+                              const { error } = await supabase
+                                .from('cover_letter_feedback')
+                                .delete()
+                                .eq('feedback_id', feedback.feedback_id);
+
+                              if (!error) {
+                                success('첨삭 결과가 삭제되었습니다.');
+                                loadFeedbacks();
+                              } else {
+                                showError('삭제에 실패했습니다.');
+                              }
+                            }
+                          }}
+                          className="px-4 py-2.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-red-50 hover:text-red-600 transition-all duration-200 font-medium text-sm flex items-center justify-center"
+                          title="삭제"
+                        >
+                          <TrashIcon className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'jobs' && (
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">추천 공고</h2>
+              <p className="text-sm text-gray-500">
+                프로필의 직무와 카테고리를 기반으로 추천합니다
+              </p>
+            </div>
+            {isLoadingJobs ? (
+              <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">
+                로딩 중...
+              </div>
+            ) : recommendedJobs.length === 0 ? (
+              <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">
+                <BriefcaseIcon className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                <p className="text-lg font-medium text-gray-700 mb-2">추천 공고가 없습니다</p>
+                <p className="text-sm text-gray-500 mb-4">
+                  프로필에서 직무와 관심 카테고리를 설정해주세요!
+                </p>
+                <button
+                  onClick={() => setActiveTab('profile')}
+                  className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+                >
+                  프로필 설정하기
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {recommendedJobs.map((job, index) => (
+                  <div
+                    key={`${job.companyName}-${index}`}
+                    className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-200"
+                  >
+                    <div className="p-6">
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex-1">
+                          <h3 className="text-xl font-bold text-gray-900 mb-1">{job.companyName}</h3>
+                          <p className="text-sm text-gray-600">합격자 {job.totalApplicants}명 데이터 기반</p>
+                        </div>
+                        <div className="flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full">
+                          <span className="text-white font-bold text-lg">{Math.round(job.matchScore)}</span>
+                        </div>
+                      </div>
+
+                      <div className="mb-4">
+                        <p className="text-sm text-blue-600 mb-2">{job.reason}</p>
+                      </div>
+
+                      <div className="space-y-2 mb-4">
+                        {job.avgGpa > 0 && (
+                          <div className="flex items-center text-sm text-gray-700">
+                            <span className="font-medium mr-2">평균 학점:</span>
+                            <span>{job.avgGpa.toFixed(2)}/4.5</span>
+                          </div>
+                        )}
+                        {job.avgToeic > 0 && (
+                          <div className="flex items-center text-sm text-gray-700">
+                            <span className="font-medium mr-2">평균 토익:</span>
+                            <span>{Math.round(job.avgToeic)}점</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {job.topActivities && job.topActivities.length > 0 && (
+                        <div className="mb-4">
+                          <p className="text-sm font-medium text-gray-700 mb-2">주요 활동:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {job.topActivities.map((activity, idx) => (
+                              <span
+                                key={idx}
+                                className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium"
+                              >
+                                {activity}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <button
+                        onClick={() => {
+                          // 회사 상세 정보 보기
+                          console.log('View company details:', job);
+                        }}
+                        className="w-full px-4 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 font-medium text-sm shadow-sm hover:shadow-md"
+                      >
+                        상세 정보 보기
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -972,6 +1453,14 @@ const MyPage: React.FC = () => {
         message={alertState.message}
         type={alertState.type}
         confirmText={alertState.confirmText}
+      />
+
+      {/* Feedback Detail Modal */}
+      <FeedbackDetailModal
+        feedback={selectedFeedback}
+        isOpen={!!selectedFeedback}
+        onClose={() => setSelectedFeedback(null)}
+        onDownloadPDF={handleDownloadPDF}
       />
 
       <Footer />

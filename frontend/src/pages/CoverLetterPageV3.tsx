@@ -478,15 +478,93 @@ export const CoverLetterPageV3: React.FC = () => {
           userSpec.targetCompany
         );
 
-        // 완료 정보를 localStorage에 저장 (페이지 이동 시에도 알림 표시)
+        // DB에 첨삭 결과 저장 (로그인한 사용자만)
+        if (user) {
+          try {
+            console.log('📝 첨삭 결과 DB 저장 시작...', {
+              user_id: user.user_id,
+              company: userSpec.targetCompany,
+              position: userSpec.position,
+              score: report.averageScore
+            });
+
+            const feedbackData = {
+              user_id: user.user_id,
+              document_id: documentId || null,
+              company_name: userSpec.targetCompany || '미입력',
+              job_position: userSpec.position,
+              category: userSpec.referenceCategory || null,
+              user_specs: {
+                major: userSpec.major,
+                gpa: userSpec.gpa,
+                toeic: userSpec.toeic,
+                certificates: userSpec.certificates,
+                others: userSpec.others,
+              },
+              questions: answeredQuestions.map(q => ({
+                question: q.question,
+                answer: q.answer,
+                analysis: report.questionFeedbacks.find(f => f.question === q.question)
+              })),
+              overall_score: report.averageScore,
+              strengths: report.questionFeedbacks.flatMap(f => f.contentAnalysis.strengths || []),
+              weaknesses: report.questionFeedbacks.flatMap(f => f.contentAnalysis.weaknesses || []),
+              suggestions: report.overallRecommendations || [],
+              comparison_stats: report.questionFeedbacks.length > 0 ? {
+                specComparison: report.questionFeedbacks[0].competitorComparison.specComparison,
+                activityComparison: report.questionFeedbacks[0].competitorComparison.activityComparison,
+                summary: report.questionFeedbacks[0].competitorComparison.summary
+              } : null,
+              missing_activities: report.questionFeedbacks.flatMap(f => f.competitorComparison.missingElements || []),
+              pdf_url: null, // PDF는 로컬 다운로드이므로 null
+              pdf_generated_at: new Date().toISOString(),
+              feedback_type: 'comprehensive',
+              is_complete: true,
+            };
+
+            console.log('📊 저장할 데이터:', feedbackData);
+
+            const { data, error: feedbackError } = await supabase
+              .from('cover_letter_feedback')
+              .insert(feedbackData)
+              .select();
+
+            if (feedbackError) {
+              console.error('❌ 첨삭 결과 DB 저장 실패:', feedbackError);
+              console.error('에러 상세:', {
+                message: feedbackError.message,
+                details: feedbackError.details,
+                hint: feedbackError.hint,
+                code: feedbackError.code
+              });
+
+              // 테이블이 존재하지 않는 경우
+              if (feedbackError.code === '42P01') {
+                console.error('⚠️ cover_letter_feedback 테이블이 존재하지 않습니다. Supabase에서 SQL을 실행해주세요.');
+              }
+            } else {
+              console.log('✅ 첨삭 결과가 DB에 저장되었습니다:', data);
+            }
+          } catch (dbErr: any) {
+            console.error('❌ DB 저장 중 예외 발생:', dbErr);
+            console.error('예외 상세:', {
+              message: dbErr?.message,
+              stack: dbErr?.stack
+            });
+          }
+        } else {
+          console.log('⚠️ 로그인하지 않은 사용자 - DB 저장 건너뜀');
+        }
+
+        // 다운로드 완료 정보를 localStorage에 저장 (다른 페이지에서도 알림 표시)
         localStorage.setItem('feedbackCompleted', JSON.stringify({
           averageScore: report.averageScore,
           totalQuestions: report.totalQuestions,
           timestamp: Date.now()
         }));
 
-        // 현재 페이지에 있으면 바로 알림 표시
-        success(`✅ 첨삭이 완성되었습니다!\n\n다운로드가 완료되었습니다.\n평균 점수: ${report.averageScore}점\n총 ${report.totalQuestions}개 질문에 대한 상세 분석이 포함되어 있습니다.\n\n다운로드 폴더에서 확인하실 수 있습니다.`);
+        // 현재 페이지에서 바로 알림 표시
+        success(`✅ 첨삭이 완료되었습니다!\n\nPDF 다운로드가 완료되었습니다.\n평균 점수: ${report.averageScore}점\n\n다운로드 폴더에서 확인하실 수 있습니다.`);
       } catch (err) {
         console.error('첨삭 생성 실패:', err);
         showError('첨삭 생성 중 오류가 발생했습니다. OpenAI API 키를 확인하거나 잠시 후 다시 시도해주세요.');
