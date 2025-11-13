@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { UserSpec } from '../services/coverLetterAnalysisService';
 import { ComprehensiveStats, getComprehensiveStats } from '../services/comprehensiveAnalysisService';
 import { CompanyCategoryOnlySelector } from '../components/CompanyCategoryOnlySelector';
@@ -57,6 +57,7 @@ export const CoverLetterPageV3: React.FC = () => {
   const { user } = useAuth();
   const { alertState, hideAlert, success, error: showError, warning, info } = useAlert();
   const location = useLocation();
+  const navigate = useNavigate();
   const editState = location.state as { editMode?: boolean; documentId?: number; savedData?: any } | null;
 
   // URL 파라미터에서 guest mode 확인
@@ -439,7 +440,7 @@ export const CoverLetterPageV3: React.FC = () => {
     }
 
     // 백그라운드 처리 안내
-    info('첨삭 생성을 시작합니다.\n\n평균 2-3분 정도 소요될 수 있습니다.\n다른 페이지로 이동하셔도 괜찮습니다.\n완료되면 자동으로 다운로드되며, 알림으로 안내해드리겠습니다.');
+    info('첨삭 생성을 시작합니다.\n\n평균 2-3분 정도 소요됩니다.\n다른 페이지로 이동하셔도 괜찮습니다.\n완료 시 자동 다운로드 및 알림드립니다.');
 
     setIsGeneratingFeedback(true);
 
@@ -451,7 +452,8 @@ export const CoverLetterPageV3: React.FC = () => {
           answeredQuestions,
           userSpec.position,
           userSpec.gpa,
-          userSpec.certificates
+          userSpec.certificates,
+          userSpec.toeic
         );
 
         // PDF 생성 및 다운로드
@@ -461,7 +463,8 @@ export const CoverLetterPageV3: React.FC = () => {
           userSpec.targetCompany
         );
 
-        success(`자기소개서 첨삭 PDF가 생성되었습니다!\n\n평균 점수: ${report.averageScore}점\n총 ${report.totalQuestions}개 질문에 대한 상세 분석이 포함되어 있습니다.\n\n다운로드 폴더에서 확인하실 수 있습니다.`);
+        // 다운로드 완료 알림
+        success(`✅ 첨삭이 완성되었습니다!\n\n다운로드가 완료되었습니다.\n평균 점수: ${report.averageScore}점\n총 ${report.totalQuestions}개 질문에 대한 상세 분석이 포함되어 있습니다.\n\n다운로드 폴더에서 확인하실 수 있습니다.`);
       } catch (err) {
         console.error('첨삭 생성 실패:', err);
         showError('첨삭 생성 중 오류가 발생했습니다. OpenAI API 키를 확인하거나 잠시 후 다시 시도해주세요.');
@@ -556,6 +559,7 @@ export const CoverLetterPageV3: React.FC = () => {
                           .eq('document_id', documentId);
                         if (error) throw error;
                         success('자소서가 수정되었습니다!');
+                        setTimeout(() => navigate('/mypage'), 1500);
                       } else {
                         // 신규 작성 모드: 삽입
                         const { data, error } = await supabase
@@ -573,6 +577,7 @@ export const CoverLetterPageV3: React.FC = () => {
                         if (error) throw error;
                         setDocumentId(data.document_id);
                         success('자소서가 저장되었습니다!');
+                        setTimeout(() => navigate('/mypage'), 1500);
                       }
                     } catch (err) {
                       console.error('저장 오류:', err);

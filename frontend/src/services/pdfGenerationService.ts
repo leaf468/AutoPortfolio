@@ -322,17 +322,26 @@ export async function generateFeedbackPDF(
     });
 
     currentY += 4;
-    currentY = addKoreanText(doc, feedback.userAnswer, PAGE_MARGIN.left + 5, currentY, {
-      fontSize: 12,
-      maxWidth: CONTENT_WIDTH - 10,
-      color: COLORS.text,
-    });
+
+    // 긴 답변의 경우 페이지 넘김 처리
+    const userAnswerLines = feedback.userAnswer.split('\n');
+    for (const line of userAnswerLines) {
+      if (currentY > 260) {
+        doc.addPage();
+        currentY = PAGE_MARGIN.top;
+      }
+      currentY = addKoreanText(doc, line || ' ', PAGE_MARGIN.left + 5, currentY, {
+        fontSize: 12,
+        maxWidth: CONTENT_WIDTH - 10,
+        color: COLORS.text,
+      });
+    }
 
     // ─────────────────────────────────────
     // 종합 평가 섹션
     // ─────────────────────────────────────
     // 페이지 넘김 방지: 종합 평가 섹션이 페이지 하단에 걸치면 새 페이지로
-    if (currentY > 230) {
+    if (currentY > 220) {
       doc.addPage();
       currentY = PAGE_MARGIN.top;
     } else {
@@ -736,189 +745,6 @@ export async function generateFeedbackPDF(
     });
 
     // ─────────────────────────────────────
-    // 합격자 비교 분석 섹션
-    // ─────────────────────────────────────
-    doc.addPage();
-    currentY = PAGE_MARGIN.top;
-
-    currentY = addKoreanText(doc, `[  합격자 비교 분석  ]`, PAGE_MARGIN.left, currentY, {
-      fontSize: 22,
-      fontWeight: 'bold',
-      align: 'center',
-      color: COLORS.text,
-    });
-
-    currentY += 8;
-
-    // 스펙 비교
-    currentY = addKoreanText(doc, '스펙 비교', PAGE_MARGIN.left, currentY, {
-      fontSize: 18,
-      fontWeight: 'bold',
-      color: COLORS.primary,
-    });
-
-    currentY += 2;
-    currentY = addHorizontalRule(doc, currentY, {
-      width: CONTENT_WIDTH,
-      thickness: 1.3,
-      color: COLORS.secondary,
-      leftMargin: PAGE_MARGIN.left,
-    });
-
-    currentY += 5;
-    if (feedback.competitorComparison.specComparison.gpa) {
-      currentY = addKoreanText(doc, `• 학점: ${feedback.competitorComparison.specComparison.gpa}`, PAGE_MARGIN.left + 5, currentY, {
-        fontSize: 12,
-        maxWidth: CONTENT_WIDTH - 10,
-        color: COLORS.text,
-      });
-      currentY += 5;
-    }
-    if (feedback.competitorComparison.specComparison.toeic) {
-      currentY = addKoreanText(doc, `• 토익: ${feedback.competitorComparison.specComparison.toeic}`, PAGE_MARGIN.left + 5, currentY, {
-        fontSize: 12,
-        maxWidth: CONTENT_WIDTH - 10,
-        color: COLORS.text,
-      });
-      currentY += 5;
-    }
-    if (feedback.competitorComparison.specComparison.certificates) {
-      currentY = addKoreanText(doc, `• 자격증: ${feedback.competitorComparison.specComparison.certificates}`, PAGE_MARGIN.left + 5, currentY, {
-        fontSize: 12,
-        maxWidth: CONTENT_WIDTH - 10,
-        color: COLORS.text,
-      });
-    }
-
-    // 활동 비교
-    currentY += 8;
-    currentY = addKoreanText(doc, '활동 비교', PAGE_MARGIN.left, currentY, {
-      fontSize: 18,
-      fontWeight: 'bold',
-      color: COLORS.primary,
-    });
-
-    currentY += 2;
-    currentY = addHorizontalRule(doc, currentY, {
-      width: CONTENT_WIDTH,
-      thickness: 1.3,
-      color: COLORS.secondary,
-      leftMargin: PAGE_MARGIN.left,
-    });
-
-    currentY += 5;
-    if (feedback.competitorComparison.activityComparison.quantity) {
-      currentY = addKoreanText(doc, `• ${feedback.competitorComparison.activityComparison.quantity}`, PAGE_MARGIN.left + 5, currentY, {
-        fontSize: 12,
-        maxWidth: CONTENT_WIDTH - 10,
-        color: COLORS.text,
-      });
-      currentY += 5;
-    }
-    if (feedback.competitorComparison.activityComparison.quality) {
-      currentY = addKoreanText(doc, `• ${feedback.competitorComparison.activityComparison.quality}`, PAGE_MARGIN.left + 5, currentY, {
-        fontSize: 12,
-        maxWidth: CONTENT_WIDTH - 10,
-        color: COLORS.text,
-      });
-      currentY += 5;
-    }
-    if (feedback.competitorComparison.activityComparison.relevance) {
-      currentY = addKoreanText(doc, `• ${feedback.competitorComparison.activityComparison.relevance}`, PAGE_MARGIN.left + 5, currentY, {
-        fontSize: 12,
-        maxWidth: CONTENT_WIDTH - 10,
-        color: COLORS.text,
-      });
-    }
-
-    // 종합 분석
-    if (currentY > 220) {
-      doc.addPage();
-      currentY = PAGE_MARGIN.top;
-    } else {
-      currentY += 8;
-    }
-
-    currentY = addKoreanText(doc, '종합 분석', PAGE_MARGIN.left, currentY, {
-      fontSize: 18,
-      fontWeight: 'bold',
-      color: COLORS.primary,
-    });
-
-    currentY += 2;
-    currentY = addHorizontalRule(doc, currentY, {
-      width: CONTENT_WIDTH,
-      thickness: 1.3,
-      color: COLORS.secondary,
-      leftMargin: PAGE_MARGIN.left,
-    });
-
-    currentY += 5;
-    currentY = addKoreanText(doc, feedback.competitorComparison.summary, PAGE_MARGIN.left + 5, currentY, {
-      fontSize: 12,
-      maxWidth: CONTENT_WIDTH - 10,
-      color: COLORS.text,
-    });
-
-    // 부족한 요소
-    if (currentY > 230) {
-      doc.addPage();
-      currentY = PAGE_MARGIN.top;
-    } else {
-      currentY += 8;
-    }
-
-    if (feedback.competitorComparison.missingElements.length > 0) {
-      currentY = addKoreanText(doc, '부족한 요소:', PAGE_MARGIN.left + 5, currentY, {
-        fontSize: 13,
-        fontWeight: 'bold',
-        color: COLORS.error,
-      });
-
-      feedback.competitorComparison.missingElements.forEach((element) => {
-        if (currentY > 260) {
-          doc.addPage();
-          currentY = PAGE_MARGIN.top;
-        }
-        currentY += 4;
-        currentY = addKoreanText(doc, `✗ ${element}`, PAGE_MARGIN.left + 10, currentY, {
-          fontSize: 12,
-          maxWidth: CONTENT_WIDTH - 15,
-          color: COLORS.error,
-        });
-      });
-    }
-
-    // 개선 권장사항
-    if (currentY > 230) {
-      doc.addPage();
-      currentY = PAGE_MARGIN.top;
-    } else {
-      currentY += 8;
-    }
-
-    if (feedback.competitorComparison.recommendations.length > 0) {
-      currentY = addKoreanText(doc, '개선 권장사항:', PAGE_MARGIN.left + 5, currentY, {
-        fontSize: 13,
-        fontWeight: 'bold',
-        color: COLORS.primary,
-      });
-
-      feedback.competitorComparison.recommendations.forEach((rec) => {
-        if (currentY > 260) {
-          doc.addPage();
-          currentY = PAGE_MARGIN.top;
-        }
-        currentY += 4;
-        currentY = addKoreanText(doc, `→ ${rec}`, PAGE_MARGIN.left + 10, currentY, {
-          fontSize: 12,
-          maxWidth: CONTENT_WIDTH - 15,
-          color: COLORS.primary,
-        });
-      });
-    }
-
-    // ─────────────────────────────────────
     // 수정된 답변 섹션 (새 페이지)
     // ─────────────────────────────────────
     doc.addPage();
@@ -991,6 +817,187 @@ export async function generateFeedbackPDF(
         color: COLORS.text,
       });
     });
+  });
+
+  // ═══════════════════════════════════════
+  // 합격자 비교 분석 (마지막에 한 번만)
+  // ═══════════════════════════════════════
+  doc.addPage();
+  currentY = PAGE_MARGIN.top;
+
+  currentY = addKoreanText(doc, '[  합격자 비교 분석  ]', PAGE_MARGIN.left, currentY, {
+    fontSize: 24,
+    fontWeight: 'bold',
+    align: 'center',
+    color: COLORS.text,
+  });
+
+  currentY += 10;
+
+  // 첫 번째 질문의 합격자 비교 데이터 사용 (모든 질문이 동일한 합격자 데이터 기반)
+  const firstFeedback = report.questionFeedbacks[0];
+
+  // 스펙 비교
+  currentY = addKoreanText(doc, '스펙 비교', PAGE_MARGIN.left, currentY, {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: COLORS.primary,
+  });
+
+  currentY += 2;
+  currentY = addHorizontalRule(doc, currentY, {
+    width: CONTENT_WIDTH,
+    thickness: 1.3,
+    color: COLORS.secondary,
+    leftMargin: PAGE_MARGIN.left,
+  });
+
+  currentY += 5;
+  if (firstFeedback.competitorComparison.specComparison.gpa) {
+    currentY = addKoreanText(doc, `• 학점: ${firstFeedback.competitorComparison.specComparison.gpa}`, PAGE_MARGIN.left + 5, currentY, {
+      fontSize: 12,
+      maxWidth: CONTENT_WIDTH - 10,
+      color: COLORS.text,
+    });
+    currentY += 5;
+  }
+  if (firstFeedback.competitorComparison.specComparison.toeic) {
+    currentY = addKoreanText(doc, `• 토익: ${firstFeedback.competitorComparison.specComparison.toeic}`, PAGE_MARGIN.left + 5, currentY, {
+      fontSize: 12,
+      maxWidth: CONTENT_WIDTH - 10,
+      color: COLORS.text,
+    });
+    currentY += 5;
+  }
+  if (firstFeedback.competitorComparison.specComparison.certificates) {
+    currentY = addKoreanText(doc, `• 자격증: ${firstFeedback.competitorComparison.specComparison.certificates}`, PAGE_MARGIN.left + 5, currentY, {
+      fontSize: 12,
+      maxWidth: CONTENT_WIDTH - 10,
+      color: COLORS.text,
+    });
+    currentY += 5;
+  }
+
+  // 활동 비교
+  currentY += 5;
+  currentY = addKoreanText(doc, '활동 비교', PAGE_MARGIN.left, currentY, {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: COLORS.primary,
+  });
+
+  currentY += 2;
+  currentY = addHorizontalRule(doc, currentY, {
+    width: CONTENT_WIDTH,
+    thickness: 1.3,
+    color: COLORS.secondary,
+    leftMargin: PAGE_MARGIN.left,
+  });
+
+  currentY += 5;
+  if (firstFeedback.competitorComparison.activityComparison.quantity) {
+    currentY = addKoreanText(doc, `• 활동 개수: ${firstFeedback.competitorComparison.activityComparison.quantity}`, PAGE_MARGIN.left + 5, currentY, {
+      fontSize: 12,
+      maxWidth: CONTENT_WIDTH - 10,
+      color: COLORS.text,
+    });
+    currentY += 5;
+  }
+  if (firstFeedback.competitorComparison.activityComparison.quality) {
+    currentY = addKoreanText(doc, `• 성과 구체성: ${firstFeedback.competitorComparison.activityComparison.quality}`, PAGE_MARGIN.left + 5, currentY, {
+      fontSize: 12,
+      maxWidth: CONTENT_WIDTH - 10,
+      color: COLORS.text,
+    });
+    currentY += 5;
+  }
+  if (firstFeedback.competitorComparison.activityComparison.relevance) {
+    currentY = addKoreanText(doc, `• 직무 연관성: ${firstFeedback.competitorComparison.activityComparison.relevance}`, PAGE_MARGIN.left + 5, currentY, {
+      fontSize: 12,
+      maxWidth: CONTENT_WIDTH - 10,
+      color: COLORS.text,
+    });
+  }
+
+  // 전체 자소서에 대한 종합 평가
+  currentY += 10;
+  currentY = addKoreanText(doc, '전체 자소서 종합 평가', PAGE_MARGIN.left, currentY, {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: COLORS.primary,
+  });
+
+  currentY += 2;
+  currentY = addHorizontalRule(doc, currentY, {
+    width: CONTENT_WIDTH,
+    thickness: 1.3,
+    color: COLORS.secondary,
+    leftMargin: PAGE_MARGIN.left,
+  });
+
+  currentY += 5;
+
+  // 질문별 점수 요약
+  currentY = addKoreanText(doc, '질문별 점수:', PAGE_MARGIN.left + 5, currentY, {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: COLORS.text,
+  });
+
+  currentY += 5;
+  report.questionFeedbacks.forEach((feedback, index) => {
+    if (currentY > 260) {
+      doc.addPage();
+      currentY = PAGE_MARGIN.top;
+    }
+    currentY = addKoreanText(doc, `질문 ${index + 1}: ${feedback.overallScore}점 - ${feedback.question.substring(0, 30)}${feedback.question.length > 30 ? '...' : ''}`, PAGE_MARGIN.left + 10, currentY, {
+      fontSize: 12,
+      maxWidth: CONTENT_WIDTH - 15,
+      color: COLORS.text,
+    });
+    currentY += 4;
+  });
+
+  currentY += 5;
+  currentY = addKoreanText(doc, `평균 점수: ${report.averageScore}점`, PAGE_MARGIN.left + 5, currentY, {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: COLORS.accent,
+  });
+
+  currentY += 10;
+  currentY = addKoreanText(doc, '최종 종합 의견', PAGE_MARGIN.left, currentY, {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: COLORS.primary,
+  });
+
+  currentY += 2;
+  currentY = addHorizontalRule(doc, currentY, {
+    width: CONTENT_WIDTH,
+    thickness: 1.3,
+    color: COLORS.secondary,
+    leftMargin: PAGE_MARGIN.left,
+  });
+
+  currentY += 5;
+
+  // 페이지 넘김 체크
+  if (currentY > 240) {
+    doc.addPage();
+    currentY = PAGE_MARGIN.top;
+  }
+
+  const finalComment = report.averageScore >= 75
+    ? `전반적으로 우수한 자기소개서입니다. 구체적인 성과와 경험이 잘 드러나 있으며, 합격 가능성이 높습니다. 제시된 수정안을 참고하여 더욱 완성도를 높이시기 바랍니다.`
+    : report.averageScore >= 65
+    ? `평균 수준의 자기소개서입니다. 기본적인 내용은 갖추었으나, 구체성과 차별성을 높일 필요가 있습니다. 각 질문별 피드백과 수정안을 참고하여 개선하시기 바랍니다.`
+    : `개선이 필요한 자기소개서입니다. 구체적인 수치, STAR 구조, 직무 연관성 등을 보완해야 합니다. 제시된 수정안을 적극 활용하여 전면 개선하시기 바랍니다.`;
+
+  currentY = addKoreanText(doc, finalComment, PAGE_MARGIN.left + 5, currentY, {
+    fontSize: 12,
+    maxWidth: CONTENT_WIDTH - 10,
+    color: COLORS.text,
   });
 
   // PDF 저장
