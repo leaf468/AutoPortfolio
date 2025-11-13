@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import { CompleteFeedbackReport, DetailedQuestionFeedback } from './detailedFeedbackService';
+import { CompleteFeedbackReport } from './detailedFeedbackService';
 
 // 색상 정의 (Python 코드의 HexColor 스타일)
 const COLORS = {
@@ -187,7 +187,7 @@ const PAGE_MARGIN = {
 };
 
 const CONTENT_WIDTH = 210 - (PAGE_MARGIN.left + PAGE_MARGIN.right); // A4 width - margins
-const PAGE_BREAK_THRESHOLD = 270; // 페이지 하단 여백 확보 (250mm → 270mm로 상향)
+// const PAGE_BREAK_THRESHOLD = 270; // 페이지 하단 여백 확보 (현재 미사용)
 
 /**
  * 첨삭 리포트를 PDF로 생성

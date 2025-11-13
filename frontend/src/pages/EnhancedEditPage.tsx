@@ -42,6 +42,7 @@ export default function EnhancedEditPage() {
     }
 
     setCurrentStep('enhanced-edit');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Run only once on mount
 
   const handleSave = (document: PortfolioDocument) => {

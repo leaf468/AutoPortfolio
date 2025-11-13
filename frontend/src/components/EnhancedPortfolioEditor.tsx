@@ -1174,7 +1174,7 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
         }
 
         return filledData;
-    }, [selectedTemplate]);
+    }, [selectedTemplate, currentTemplate, portfolioData]);
 
     const updateHtml = useCallback(async () => {
         const template = portfolioTemplates[currentTemplate];
@@ -1230,7 +1230,7 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
             return html;
         }
         return currentHtml;
-    }, [portfolioData, sectionTitles, selectedTemplate, currentHtml, getTemplateFieldSupport, getCurrentTemplateSections, fillNullValues, preserveScrollAndUpdate]);
+    }, [portfolioData, sectionTitles, selectedTemplate, currentHtml, currentTemplate, getTemplateFieldSupport, getCurrentTemplateSections, fillNullValues, preserveScrollAndUpdate]);
 
     // 포트폴리오 데이터나 섹션 제목이 변경될 때마다 HTML 업데이트 (debounce 적용)
     useEffect(() => {

@@ -264,7 +264,7 @@ export const isAuthenticated = (): boolean => {
 // 구글 로그인
 export const loginWithGoogle = async (): Promise<{ success: boolean; message?: string }> => {
   try {
-    const { data, error } = await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,

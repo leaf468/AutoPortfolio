@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    SparklesIcon,
     PaperAirplaneIcon,
     ChatBubbleLeftRightIcon,
     XMarkIcon,
@@ -40,7 +39,6 @@ const NaturalLanguageModal: React.FC<NaturalLanguageModalProps> = ({
     ]);
     const [inputText, setInputText] = useState('');
     const [isProcessing, setIsProcessing] = useState(false);
-    const [lastInstruction, setLastInstruction] = useState<string>('');
 
     const handleSendMessage = async () => {
         if (!inputText.trim() || isProcessing) return;
@@ -54,7 +52,6 @@ const NaturalLanguageModal: React.FC<NaturalLanguageModalProps> = ({
 
         setMessages(prev => [...prev, userMessage]);
         const instruction = inputText.trim();
-        setLastInstruction(instruction);
         setInputText('');
         setIsProcessing(true);
 

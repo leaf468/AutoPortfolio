@@ -86,6 +86,7 @@ export default function TemplateEditPage() {
 
     setIsValidated(true);
     console.log('✅ TemplateEditPage initialized successfully');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty dependency array to run only once
 
   // Separate effect to handle template changes from URL

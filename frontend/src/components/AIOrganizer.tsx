@@ -6,7 +6,7 @@ import {
   ClipboardDocumentListIcon,
   DocumentArrowDownIcon
 } from '@heroicons/react/24/outline';
-import { aiOrganizer, OrganizedContent } from '../services/aiOrganizer';
+import { OrganizedContent } from '../services/aiOrganizer';
 import { trackButtonClick } from '../utils/analytics';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabaseClient';
@@ -24,25 +24,17 @@ const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
   const [inputType, setInputType] = useState<'freetext' | 'resume' | 'markdown'>('freetext');
   const [jobPosting, setJobPosting] = useState('');
   const [jobPosition, setJobPosition] = useState(''); // 직무 필드 추가
-  const [isProcessing, setIsProcessing] = useState(false);
   const [showJobPosting, setShowJobPosting] = useState(false);
   const [showValidationModal, setShowValidationModal] = useState(false);
   const [showCoverLetterModal, setShowCoverLetterModal] = useState(false);
   const [coverLetters, setCoverLetters] = useState<any[]>([]);
   const [loadingCoverLetters, setLoadingCoverLetters] = useState(false);
 
-  // 로그인 사용자의 직무 정보 불러오기
-  useEffect(() => {
-    if (user) {
-      loadUserJobPosition();
-    }
-  }, [user]);
-
   const loadUserJobPosition = async () => {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('user_profiles')
         .select('position')
         .eq('user_id', user.user_id)
@@ -51,10 +43,18 @@ const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
       if (data && data.position) {
         setJobPosition(data.position);
       }
-    } catch (error) {
-      console.error('직무 정보 로드 오류:', error);
+    } catch (err) {
+      console.error('직무 정보 로드 오류:', err);
     }
   };
+
+  // 로그인 사용자의 직무 정보 불러오기
+  useEffect(() => {
+    if (user) {
+      loadUserJobPosition();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   // 자소서 목록 불러오기
   const loadCoverLetters = async () => {
@@ -295,20 +295,13 @@ const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
           {/* 실행 버튼 */}
           <button
             onClick={handleOrganize}
-            disabled={!input.trim() || isProcessing}
+            disabled={!input.trim()}
             className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white py-3 px-5 rounded-lg font-semibold text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-all duration-200 flex items-center justify-center"
           >
-            {isProcessing ? (
-              <>
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                AI 정리 및 포트폴리오 생성 중...
-              </>
-            ) : (
-              <>
-                <SparklesIcon className="w-5 h-5 mr-2" />
-                포트폴리오 생성하기
-              </>
-            )}
+            <>
+              <SparklesIcon className="w-5 h-5 mr-2" />
+              포트폴리오 생성하기
+            </>
           </button>
         </div>
 

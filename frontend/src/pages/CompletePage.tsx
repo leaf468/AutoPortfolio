@@ -16,6 +16,7 @@ export default function CompletePage() {
       navigate('/template');
       return;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleReset = () => {

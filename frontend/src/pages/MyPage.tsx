@@ -11,9 +11,7 @@ import {
   Cog6ToothIcon,
   ArrowRightOnRectangleIcon,
   TrashIcon,
-  UserCircleIcon,
   ClipboardDocumentCheckIcon,
-  BriefcaseIcon,
   ArrowDownTrayIcon
 } from '@heroicons/react/24/outline';
 import { CustomAlert } from '../components/CustomAlert';
@@ -25,8 +23,7 @@ const MyPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, loading, setUser } = useAuth();
-  const { setEditMode } = usePortfolio();
-  const { alertState, hideAlert, success, error: showError, warning } = useAlert();
+  const { alertState, hideAlert, success, error: showError } = useAlert();
   const [activeTab, setActiveTab] = useState<'documents' | 'portfolios' | 'feedbacks' | 'jobs' | 'profile'>('documents');
 
   // 프로필 상태
@@ -55,12 +52,12 @@ const MyPage: React.FC = () => {
   const [documents, setDocuments] = useState<any[]>([]);
   const [portfolios, setPortfolios] = useState<any[]>([]);
   const [feedbacks, setFeedbacks] = useState<any[]>([]);
-  const [recommendedJobs, setRecommendedJobs] = useState<any[]>([]);
   const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
   const [isLoadingPortfolios, setIsLoadingPortfolios] = useState(false);
   const [isLoadingFeedbacks, setIsLoadingFeedbacks] = useState(false);
-  const [isLoadingJobs, setIsLoadingJobs] = useState(false);
   const [selectedFeedback, setSelectedFeedback] = useState<any>(null);
+  const [recommendedJobs, setRecommendedJobs] = useState<any[]>([]);
+  const [isLoadingJobs, setIsLoadingJobs] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -71,8 +68,9 @@ const MyPage: React.FC = () => {
       loadDocuments();
       loadPortfolios();
       loadFeedbacks();
-      loadRecommendedJobs();
+      // loadRecommendedJobs(); // 현재 미사용
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, loading, navigate]);
 
   // location.state가 변경될 때 포트폴리오 다시 불러오기 (저장 후 돌아왔을 때)
@@ -82,6 +80,7 @@ const MyPage: React.FC = () => {
       console.log('🔄 Refreshing portfolios after save');
       loadPortfolios();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state, user]);
 
   const loadProfile = async () => {

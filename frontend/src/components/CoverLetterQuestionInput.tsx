@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { PencilIcon, TrashIcon, PlusIcon, Cog6ToothIcon, SparklesIcon } from '@heroicons/react/24/outline';
+import { PencilIcon, TrashIcon, PlusIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
 
 export interface CoverLetterQuestion {
   id: string;

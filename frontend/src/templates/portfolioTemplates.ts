@@ -1,5 +1,5 @@
-// Text processing utilities for line breaks and markdown
-const processTextForDisplay = (text: string | undefined | null): string => {
+// Text processing utilities for line breaks and markdown (현재 미사용)
+/* const processTextForDisplay = (text: string | undefined | null): string => {
     if (!text) return '';
 
     // 주황색 AI 추가 표시 제거 (실시간 미리보기용) - 여러 줄 지원
@@ -8,7 +8,7 @@ const processTextForDisplay = (text: string | undefined | null): string => {
     // Convert line breaks to <br> tags for HTML display
     // This preserves newlines when users press Enter in textarea
     return processed.replace(/\n/g, '<br>');
-};
+}; */
 
 // Process text with markdown support
 const processTextWithMarkdown = (text: string | undefined | null): string => {

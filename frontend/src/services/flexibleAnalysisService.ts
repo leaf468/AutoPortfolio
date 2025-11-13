@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabaseClient';
-import { inferCompanyCategory, isSameIndustry } from './companyCategories';
+import { isSameIndustry } from './companyCategories';
 import { CoverLetter, Activity } from './coverLetterAnalysisService';
-import { normalizeUserPosition, STANDARD_POSITIONS } from './positionNormalizationService';
+import { normalizeUserPosition } from './positionNormalizationService';
 
 export enum MatchLevel {
   완전일치 = '완전일치',

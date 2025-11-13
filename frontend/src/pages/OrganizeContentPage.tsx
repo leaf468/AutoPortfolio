@@ -17,6 +17,7 @@ export default function OrganizeContentPage() {
       navigate('/template');
       return;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // AI 조직화 완료 후 AutoFill 페이지로 이동하는 함수

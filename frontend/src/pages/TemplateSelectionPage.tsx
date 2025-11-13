@@ -13,6 +13,7 @@ export default function TemplateSelectionPage() {
 
   useEffect(() => {
     setCurrentStep('template');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleTemplateSelect = (templateType: TemplateType) => {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     EyeIcon,
@@ -101,7 +101,6 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
     const [showTemplateSelector, setShowTemplateSelector] = useState(false);
     const [dataLoaded, setDataLoaded] = useState(false);
     const [showNaturalLanguage, setShowNaturalLanguage] = useState(false);
-    const [isAutoExpanding, setIsAutoExpanding] = useState<Record<string, boolean>>({});
     const [language, setLanguage] = useState<'ko' | 'en'>('ko'); // 언어 설정 (기본값: 한글)
     const [isTranslating, setIsTranslating] = useState(false);
 
@@ -407,6 +406,7 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
         if (document && !hasInitialized.current) {
             initializeData();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // Empty dependency array - run only once
 
     // portfolioData 변경 시 상위 컴포넌트에 알림
@@ -428,6 +428,7 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
             };
             onDocumentChange(updatedDocument);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [portfolioData, dataLoaded]);
 
     // 빈 섹션 감지 및 AI 더미 데이터 생성
@@ -544,6 +545,7 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
             return html;
         }
         return currentHtml;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [portfolioData, sectionTitles, preserveScrollAndUpdate]);
 
     // 데이터 변경시 HTML 업데이트 (실시간 업데이트)

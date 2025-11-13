@@ -324,8 +324,8 @@ export async function compareCoverLetter(
     // 참고할 회사 또는 실제 지원 회사 사용
     const searchCompany = userSpec.targetCompany;
 
-    // 비슷한 지원자 찾기
-    const similarApplicants = await findSimilarApplicants(userSpec, 10);
+    // 비슷한 지원자 찾기 (현재 미사용 - 추후 비교 기능 추가 시 활용 예정)
+    // const similarApplicants = await findSimilarApplicants(userSpec, 10);
 
     // 통계 가져오기
     const stats = await getCompanyStatistics(searchCompany, userSpec.position);

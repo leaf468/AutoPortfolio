@@ -104,8 +104,8 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
         }
     };
 
-    // 데이터를 페이지별로 분할하는 함수
-    const splitDataIntoPages = (data: any) => {
+    // 데이터를 페이지별로 분할하는 함수 (현재 미사용, 추후 다중 페이지 기능 추가 시 활용 예정)
+    /* const splitDataIntoPages = (data: any) => {
         const pages: any[] = [];
 
         const projects = data.projects || [];
@@ -170,10 +170,10 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
         }
 
         return pages;
-    };
+    }; */
 
-    // 페이지별 HTML 생성
-    const generatePageHTML = (page: any, templateData: any, template: any) => {
+    // 페이지별 HTML 생성 (현재 미사용, 추후 다중 페이지 기능 추가 시 활용 예정)
+    /* const generatePageHTML = (page: any, templateData: any, template: any) => {
         const { type, data } = page;
         const colors = template.designSystem.colors;
 
@@ -345,10 +345,10 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
         }
 
         return '';
-    };
+    }; */
 
-    // HTML에서 포트폴리오 데이터 추출
-    const extractPortfolioDataFromHTML = (html: string) => {
+    // HTML에서 포트폴리오 데이터 추출 (현재 미사용, 추후 HTML 파싱 기능 추가 시 활용 예정)
+    /* const extractPortfolioDataFromHTML = (html: string) => {
         if (!html) {
             return null;
         }
@@ -490,13 +490,15 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                     skillGroups.forEach(group => {
                         const categoryH3 = group.querySelector('h3');
                         let category = categoryH3?.textContent?.trim() || '';
-                        // 이모지 제거 (✨ 같은 것들)
-                        category = category.replace(/[\u{1F300}-\u{1F9FF}]/gu, '').trim();
+                        // Remove emoji
+                        category = category.replace(/[^\w\s가-힣]/g, '').trim();
 
                         const skillItems = group.querySelectorAll('.skill-list li, li');
-                        const skills = Array.from(skillItems).map(li =>
-                            li.textContent?.trim().replace(/^[✨💡🚀⚡️]+\s*/, '') || ''
-                        ).filter(Boolean);
+                        const skills = Array.from(skillItems).map(li => {
+                            const text = li.textContent?.trim() || '';
+                            // Remove leading special characters
+                            return text.replace(/^[^\w가-힣]+\s*!/g, '');
+                        }).filter(Boolean);
 
                         if (category && skills.length > 0) {
                             extractedData.skillCategories.push({ category, skills });
@@ -545,7 +547,7 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
         });
 
         return extractedData;
-    };
+    }; */
 
     // 브라우저 인쇄 기능을 사용한 PDF 저장 (미리보기 HTML 그대로 사용)
     const handlePrintToPDF = () => {

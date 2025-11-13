@@ -394,6 +394,7 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
         if (document && !hasInitialized.current) {
             initializeData();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // Empty dependency array - run only once
 
     // AI 더미 데이터 생성 (초기화 완료 후 한 번만)
@@ -424,6 +425,7 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
             const timer = setTimeout(checkAndGenerateDummyData, 300);
             return () => clearTimeout(timer);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [isInitializing]); // Only depend on initialization state
 
     // portfolioData 변경 시 상위 컴포넌트에 알림
@@ -445,6 +447,7 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
             };
             onDocumentChange(updatedDocument);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [portfolioData, isInitializing]);
 
     // HTML 업데이트 with scroll preservation
@@ -507,6 +510,7 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
             return html;
         }
         return currentHtml;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [portfolioData, sectionTitles, preserveScrollAndUpdate]);
 
     // 데이터 변경시 HTML 업데이트 (실시간 업데이트)

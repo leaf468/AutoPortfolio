@@ -6,11 +6,7 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
 } from 'recharts';
 import { CompanyStatistics } from '../services/coverLetterAnalysisService';
 

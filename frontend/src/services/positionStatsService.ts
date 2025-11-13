@@ -1,11 +1,10 @@
 import { supabase } from '../lib/supabaseClient';
-import { extractCoreActivity } from './comprehensiveAnalysisService';
 import { IntegratedCoverLetter, parseGpa, parseToeic, getAllActivities } from './integratedCoverLetterTypes';
 import { calculatePositionSimilarity } from './flexibleAnalysisService';
 import { inferPositionFromIntegratedData, normalizeUserPosition } from './positionNormalizationService';
 
 // 유사 직무 매핑 (더 이상 사용하지 않음 - calculatePositionSimilarity 사용)
-function getSimilarPositions_OLD(position: string): string[] {
+/* function getSimilarPositions_OLD(position: string): string[] {
   const normalizedPosition = position.toLowerCase().trim();
 
   const similarityMap: { [key: string]: string[] } = {
@@ -57,7 +56,7 @@ function getSimilarPositions_OLD(position: string): string[] {
   }
 
   return [];
-}
+} */
 
 export interface PositionStats {
   position: string;
@@ -205,8 +204,8 @@ export async function getPositionStats(position: string): Promise<PositionStats 
       }))
     );
 
-    // 활동 타입별 카테고리 (프로젝트, 논문, 대회 등)
-    const activityTypeKeywords: { [key: string]: string[] } = {
+    // 활동 타입별 카테고리 (프로젝트, 논문, 대회 등) - 현재 미사용
+    /* const activityTypeKeywords: { [key: string]: string[] } = {
       '프로젝트': ['프로젝트', 'project', '개발', '제작', '구현', '설계'],
       '논문 작성': ['논문 작성', '논문 게재', '논문 발표', '연구 논문', 'paper'],
       '논문 읽기': ['논문 읽기', '논문 리뷰', '페이퍼 리뷰', 'paper review'],
@@ -221,7 +220,7 @@ export async function getPositionStats(position: string): Promise<PositionStats 
       '교육': ['교육', '강의', '수강', '부트캠프'],
     };
 
-    // 주제별 카테고리 (AI, 데이터, 환경 등)
+    // 주제별 카테고리 (AI, 데이터, 환경 등) - 현재 미사용
     const topicKeywords: { [key: string]: string[] } = {
       'AI/머신러닝': ['ai', '인공지능', '머신러닝', '딥러닝', 'ml', 'dl', '자연어', 'nlp', '컴퓨터 비전', 'cv'],
       '데이터 분석': ['데이터', 'data', '빅데이터', '분석', 'sql', 'tableau', 'python 분석'],
@@ -238,7 +237,7 @@ export async function getPositionStats(position: string): Promise<PositionStats 
       '게임': ['게임', 'unity', 'unreal', '게임 개발'],
       'IoT/하드웨어': ['iot', '하드웨어', '임베디드', '센서', '아두이노', '라즈베리파이'],
       '클라우드': ['클라우드', 'aws', 'azure', 'gcp', 'devops'],
-    };
+    }; */
 
     // 매우 구체적인 활동 카테고리 매핑 (우선순위: 구체적 -> 일반적)
     const activityCategories: { [key: string]: string[] } = {

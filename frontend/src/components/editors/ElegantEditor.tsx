@@ -391,6 +391,7 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
         if (document && !hasInitialized.current) {
             initializeData();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // Empty dependency array - run only once
 
     // HTML 업데이트
@@ -469,6 +470,7 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
             return html;
         }
         return currentHtml;
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [portfolioData, sectionTitles, preserveScrollAndUpdate]);
 
     // portfolioData 변경 시 상위 컴포넌트에 알림
@@ -490,6 +492,7 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
             };
             onDocumentChange(updatedDocument);
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [portfolioData, dataLoaded]);
 
     // 데이터 변경시 HTML 업데이트 (실시간 업데이트)

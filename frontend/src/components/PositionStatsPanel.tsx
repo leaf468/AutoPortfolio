@@ -1,6 +1,6 @@
 import React from 'react';
 import { PositionStats } from '../services/positionStatsService';
-import { ChartBarIcon, AcademicCapIcon, DocumentTextIcon, TrophyIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
+import { ChartBarIcon, AcademicCapIcon, DocumentTextIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
 import { useNavigate } from 'react-router-dom';
 
 interface PositionStatsPanelProps {

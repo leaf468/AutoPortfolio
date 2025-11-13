@@ -10,7 +10,6 @@ import { aiOrganizer } from '../services/aiOrganizer';
 export default function AutoFillPage() {
   const navigate = useNavigate();
   const { state, setInitialResult, setCurrentStep, setOrganizedContent } = usePortfolio();
-  const [isProcessingAI, setIsProcessingAI] = useState(false);
 
   useEffect(() => {
     setCurrentStep('autofill');
@@ -30,12 +29,11 @@ export default function AutoFillPage() {
       }
       return;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const processAIOrganization = async () => {
     if (!state.organizedContent?.originalInput) return;
-
-    setIsProcessingAI(true);
     try {
       const { rawText, inputType, jobPosting } = state.organizedContent.originalInput;
 
@@ -58,10 +56,8 @@ export default function AutoFillPage() {
 
       // 처리된 데이터 저장
       setOrganizedContent(organized);
-      setIsProcessingAI(false);
     } catch (error) {
       console.error('AI 정리 중 오류:', error);
-      setIsProcessingAI(false);
       // 오류 발생 시 이전 페이지로 돌아가기
       navigate('/organize');
     }

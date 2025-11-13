@@ -6,7 +6,7 @@ import { CompanyCategoryOnlySelector } from '../components/CompanyCategoryOnlySe
 import { CompanyCategory } from '../services/companyCategories';
 import { CoverLetterQuestion, CoverLetterQuestionInput } from '../components/CoverLetterQuestionInput';
 import { QuestionAIRecommendationCard } from '../components/QuestionAIRecommendationCard';
-import { ComprehensiveStatsDashboard } from '../components/ComprehensiveStatsDashboard';
+// import { ComprehensiveStatsDashboard } from '../components/ComprehensiveStatsDashboard'; // 현재 미사용
 import { analyzeCoverLetterComplete } from '../services/aiRecommendationService';
 import { generateCompleteFeedbackReport } from '../services/detailedFeedbackService';
 import { generateFeedbackPDF } from '../services/pdfGenerationService';
@@ -15,8 +15,8 @@ import {
   RecommendedCompany,
   getRecommendedCompaniesByCategory
 } from '../services/categoryBasedRecommendationService';
-import { analyzeAllQuestions, QuestionAnalysis } from '../services/questionAnalysisService';
-import { QuestionAnalysisPanel } from '../components/QuestionAnalysisPanel';
+import { QuestionAnalysis } from '../services/questionAnalysisService';
+// import { QuestionAnalysisPanel } from '../components/QuestionAnalysisPanel'; // 현재 미사용
 import { PositionStats, getPositionStats } from '../services/positionStatsService';
 import { PositionStatsPanel } from '../components/PositionStatsPanel';
 import { useAuth } from '../contexts/AuthContext';
@@ -139,7 +139,7 @@ export const CoverLetterPageV3: React.FC = () => {
   );
   const [focusedQuestionId, setFocusedQuestionId] = useState<string>('');
 
-  // 추천 회사
+  // 추천 회사 (현재 미사용 - 추후 기능 추가 예정)
   const [recommendedCompanies, setRecommendedCompanies] = useState<RecommendedCompany[]>([]);
   const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
 
@@ -147,11 +147,10 @@ export const CoverLetterPageV3: React.FC = () => {
   const [positionStats, setPositionStats] = useState<PositionStats | null>(null);
   const [isLoadingPositionStats, setIsLoadingPositionStats] = useState(false);
 
-  // 분석 상태
+  // 분석 상태 (현재 일부 미사용 - 추후 기능 추가 예정)
   const [comprehensiveStats, setComprehensiveStats] = useState<ComprehensiveStats | null>(null);
   const [isLoadingStats, setIsLoadingStats] = useState(false);
   const [questionAnalyses, setQuestionAnalyses] = useState<QuestionAnalysis[]>([]);
-  const [isLoadingQuestionAnalysis, setIsLoadingQuestionAnalysis] = useState(false);
   const [analyzingQuestionId, setAnalyzingQuestionId] = useState<string | null>(null);
   const [overallAnalysis, setOverallAnalysis] = useState<{
     strengths: string[];
@@ -175,6 +174,7 @@ export const CoverLetterPageV3: React.FC = () => {
       // 알림 표시 후 삭제
       localStorage.removeItem('feedbackCompleted');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 질문 분석 자동 갱신을 위한 디바운스 타이머
@@ -574,13 +574,13 @@ export const CoverLetterPageV3: React.FC = () => {
     })();
   };
 
-  const currentInput = focusedQuestionId
-    ? questions.find((q) => q.id === focusedQuestionId)?.answer || ''
-    : '';
+  // const currentInput = focusedQuestionId
+  //   ? questions.find((q) => q.id === focusedQuestionId)?.answer || ''
+  //   : '';
 
-  const currentQuestion = focusedQuestionId
-    ? questions.find((q) => q.id === focusedQuestionId)?.question
-    : undefined;
+  // const currentQuestion = focusedQuestionId
+  //   ? questions.find((q) => q.id === focusedQuestionId)?.question
+  //   : undefined;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex flex-col">
