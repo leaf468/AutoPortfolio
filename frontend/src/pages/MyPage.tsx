@@ -550,17 +550,6 @@ const MyPage: React.FC = () => {
               <span className="font-medium">자소서 첨삭 결과</span>
             </button>
             <button
-              onClick={() => setActiveTab('jobs')}
-              className={`flex items-center space-x-2 py-4 border-b-2 transition ${
-                activeTab === 'jobs'
-                  ? 'border-blue-600 text-blue-600'
-                  : 'border-transparent text-gray-600 hover:text-gray-900'
-              }`}
-            >
-              <BriefcaseIcon className="w-5 h-5" />
-              <span className="font-medium">추천 공고</span>
-            </button>
-            <button
               onClick={() => setActiveTab('profile')}
               className={`flex items-center space-x-2 py-4 border-b-2 transition ${
                 activeTab === 'profile'
@@ -944,102 +933,6 @@ const MyPage: React.FC = () => {
                           <TrashIcon className="w-4 h-4" />
                         </button>
                       </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {activeTab === 'jobs' && (
-          <div>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">추천 공고</h2>
-              <p className="text-sm text-gray-500">
-                프로필의 직무와 카테고리를 기반으로 추천합니다
-              </p>
-            </div>
-            {isLoadingJobs ? (
-              <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">
-                로딩 중...
-              </div>
-            ) : recommendedJobs.length === 0 ? (
-              <div className="bg-white rounded-lg shadow p-8 text-center text-gray-500">
-                <BriefcaseIcon className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                <p className="text-lg font-medium text-gray-700 mb-2">추천 공고가 없습니다</p>
-                <p className="text-sm text-gray-500 mb-4">
-                  프로필에서 직무와 관심 카테고리를 설정해주세요!
-                </p>
-                <button
-                  onClick={() => setActiveTab('profile')}
-                  className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-                >
-                  프로필 설정하기
-                </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {recommendedJobs.map((job, index) => (
-                  <div
-                    key={`${job.companyName}-${index}`}
-                    className="bg-white rounded-xl shadow-md hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-200"
-                  >
-                    <div className="p-6">
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex-1">
-                          <h3 className="text-xl font-bold text-gray-900 mb-1">{job.companyName}</h3>
-                          <p className="text-sm text-gray-600">합격자 {job.totalApplicants}명 데이터 기반</p>
-                        </div>
-                        <div className="flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full">
-                          <span className="text-white font-bold text-lg">{Math.round(job.matchScore)}</span>
-                        </div>
-                      </div>
-
-                      <div className="mb-4">
-                        <p className="text-sm text-blue-600 mb-2">{job.reason}</p>
-                      </div>
-
-                      <div className="space-y-2 mb-4">
-                        {job.avgGpa > 0 && (
-                          <div className="flex items-center text-sm text-gray-700">
-                            <span className="font-medium mr-2">평균 학점:</span>
-                            <span>{job.avgGpa.toFixed(2)}/4.5</span>
-                          </div>
-                        )}
-                        {job.avgToeic > 0 && (
-                          <div className="flex items-center text-sm text-gray-700">
-                            <span className="font-medium mr-2">평균 토익:</span>
-                            <span>{Math.round(job.avgToeic)}점</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {job.topActivities && job.topActivities.length > 0 && (
-                        <div className="mb-4">
-                          <p className="text-sm font-medium text-gray-700 mb-2">주요 활동:</p>
-                          <div className="flex flex-wrap gap-2">
-                            {job.topActivities.map((activity, idx) => (
-                              <span
-                                key={idx}
-                                className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium"
-                              >
-                                {activity}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      <button
-                        onClick={() => {
-                          // 회사 상세 정보 보기
-                          console.log('View company details:', job);
-                        }}
-                        className="w-full px-4 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-200 font-medium text-sm shadow-sm hover:shadow-md"
-                      >
-                        상세 정보 보기
-                      </button>
                     </div>
                   </div>
                 ))}
