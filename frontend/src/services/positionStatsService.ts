@@ -2,6 +2,7 @@ import { supabase } from '../lib/supabaseClient';
 import { extractCoreActivity } from './comprehensiveAnalysisService';
 import { IntegratedCoverLetter, parseGpa, parseToeic, getAllActivities } from './integratedCoverLetterTypes';
 import { calculatePositionSimilarity } from './flexibleAnalysisService';
+import { inferPositionFromIntegratedData, normalizeUserPosition } from './positionNormalizationService';
 
 // 유사 직무 매핑 (더 이상 사용하지 않음 - calculatePositionSimilarity 사용)
 function getSimilarPositions_OLD(position: string): string[] {
@@ -121,18 +122,34 @@ export async function getPositionStats(position: string): Promise<PositionStats 
       return null;
     }
 
-    // job_position으로 유사도 기반 필터링 (50% 이상)
+    // 사용자가 입력한 직무를 표준 직무명으로 정규화
+    const normalizedPositions = normalizeUserPosition(position);
+
+    // job_position, activities, user_spec을 종합하여 필터링
     let finalCoverLetters = (coverLetters as IntegratedCoverLetter[]).filter(cl => {
-      if (!cl.job_position) return false;
-      const similarity = calculatePositionSimilarity(cl.job_position, position);
-      return similarity >= 50;
+      // 각 자소서의 직무를 추론
+      const inferredPosition = inferPositionFromIntegratedData(
+        cl.job_position,
+        cl.activities,
+        cl.user_spec,
+        cl.company_name || ''
+      );
+
+      // 정규화된 직무 중 하나와 일치하거나, 기존 유사도 기반 매칭도 함께 사용
+      const matchesNormalized = normalizedPositions.includes(inferredPosition);
+      const matchesSimilarity = cl.job_position && calculatePositionSimilarity(cl.job_position, position) >= 50;
+
+      return matchesNormalized || matchesSimilarity;
     });
 
     console.log('📊 positionStatsService 필터링:', {
       검색_직무: position,
+      정규화된_직무: normalizedPositions,
       전체_데이터: coverLetters.length,
       매칭된_데이터: finalCoverLetters.length,
-      매칭된_직무_샘플: Array.from(new Set(finalCoverLetters.map(cl => cl.job_position))).slice(0, 10)
+      매칭된_직무_샘플: Array.from(new Set(finalCoverLetters.map(cl =>
+        inferPositionFromIntegratedData(cl.job_position, cl.activities, cl.user_spec, cl.company_name || '')
+      ))).slice(0, 10)
     });
 
     if (finalCoverLetters.length === 0) {
