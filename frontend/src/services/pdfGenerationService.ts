@@ -50,32 +50,51 @@ function addKoreanText(
   // 폰트 설정
   ctx.font = `${fontWeight} ${scaledFontSize}px "Pretendard", "Noto Sans KR", "Malgun Gothic", sans-serif`;
 
-  // 텍스트를 줄바꿈 처리
-  const words = text.split(' ');
+  // 텍스트를 줄바꿈 처리 (단어 단위로 분리하되 한글은 음절 단위 유지)
   const lines: string[] = [];
   let currentLine = '';
 
   const maxWidthPx = maxWidth * 3.7795275591; // mm to px (96 DPI 기준)
 
+  // 공백과 특수문자를 기준으로 분리하되, 한글은 음절 단위로 유지
+  const tokens = text.match(/[\s\S]/g) || []; // 모든 문자를 개별 토큰으로
+  const words: string[] = [];
+  let tempWord = '';
+
+  tokens.forEach((char, i) => {
+    if (char === ' ' || char === '\n') {
+      if (tempWord) words.push(tempWord);
+      words.push(char);
+      tempWord = '';
+    } else {
+      tempWord += char;
+      // 다음 문자가 공백이거나 마지막 문자면 단어 완성
+      if (i === tokens.length - 1 || tokens[i + 1] === ' ' || tokens[i + 1] === '\n') {
+        words.push(tempWord);
+        tempWord = '';
+      }
+    }
+  });
+
   words.forEach(word => {
-    const testLine = currentLine + (currentLine ? ' ' : '') + word;
+    const testLine = currentLine + word;
     const metrics = ctx.measureText(testLine);
     const testWidth = metrics.width / dpiScale;
 
-    if (testWidth > maxWidthPx && currentLine) {
-      lines.push(currentLine);
-      currentLine = word;
+    if (testWidth > maxWidthPx && currentLine.trim()) {
+      lines.push(currentLine.trim());
+      currentLine = word === ' ' ? '' : word;
     } else {
       currentLine = testLine;
     }
   });
-  if (currentLine) {
-    lines.push(currentLine);
+  if (currentLine.trim()) {
+    lines.push(currentLine.trim());
   }
 
   // 각 줄을 PDF에 추가
   let currentY = y;
-  const lineHeight = fontSize * 1.2; // 줄 간격 최적화 (1.3 → 1.2)
+  const lineHeight = fontSize * 1.1; // 줄 간격 최적화 (1.2 → 1.1)
 
   lines.forEach(line => {
     // Canvas 크기 설정
@@ -168,7 +187,7 @@ const PAGE_MARGIN = {
 };
 
 const CONTENT_WIDTH = 210 - (PAGE_MARGIN.left + PAGE_MARGIN.right); // A4 width - margins
-const PAGE_BREAK_THRESHOLD = 250; // 페이지 하단 여백 확보 (270mm → 250mm로 보수적 조정)
+const PAGE_BREAK_THRESHOLD = 270; // 페이지 하단 여백 확보 (250mm → 270mm로 상향)
 
 /**
  * 첨삭 리포트를 PDF로 생성
