@@ -56,7 +56,6 @@ export const PositionStatsPanel: React.FC<PositionStatsPanelProps> = ({ stats, i
             <ArrowTopRightOnSquareIcon className="w-4 h-4" />
           </button>
         </div>
-        <p className="text-sm opacity-90">분석 데이터: {stats.totalApplicants}개</p>
       </div>
 
       {/* 평균 학점 & TOEIC */}

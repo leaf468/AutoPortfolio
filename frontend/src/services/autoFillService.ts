@@ -555,12 +555,16 @@ ${examplesText}
 
             const organizedContent = profileData?.organizedContent;
             const originalInput = profileData?.originalInput || organizedContent?.originalInput;
+            const userName = profileData?.name || ''; // 마이페이지에서 전달받은 사용자 이름
 
             console.log('AI 가공 결과:', organizedContent);
             console.log('원본 사용자 입력:', originalInput);
+            console.log('👤 사용자 이름:', userName);
 
             // UserMessage 구성 - 더 상세하고 구조화된 정보 제공
-            const userMessage = "=== 📋 사용자 원본 입력 (가장 중요한 진정성의 근거) ===\n" +
+            const userMessage = "=== 📋 사용자 기본 정보 ===\n" +
+                "**이름:** " + (userName || '사용자 이름 없음') + " (⚠️ CRITICAL: 이 이름을 portfolioData의 name 필드에 반드시 사용하세요)\n\n" +
+                "=== 📋 사용자 원본 입력 (가장 중요한 진정성의 근거) ===\n" +
                 "**원본 텍스트:**\n" + (originalInput?.rawText || '정보 없음') + "\n\n" +
                 "**입력 형식:** " + (originalInput?.inputType || '정보 없음') + "\n" +
                 "**채용공고:** " + (originalInput?.jobPosting || '정보 없음') + "\n\n" +

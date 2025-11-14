@@ -53,7 +53,7 @@ export const ComprehensiveStatsDashboard: React.FC<ComprehensiveStatsDashboardPr
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg p-6">
         <h2 className="text-2xl font-bold mb-2">{stats.position} 직무 종합 분석</h2>
         <p className="text-blue-100">
-          총 {stats.totalApplicants}명의 합격자 데이터를 기반으로 분석했습니다
+          합격자 데이터를 기반으로 분석했습니다
         </p>
       </div>
 
@@ -112,12 +112,15 @@ export const ComprehensiveStatsDashboard: React.FC<ComprehensiveStatsDashboardPr
             <div>
               <p className="text-sm text-gray-600 mb-3">전공 분포</p>
               <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={stats.topMajors.slice(0, 5).map(m => ({ name: m.name, count: m.count }))}>
+                <BarChart data={stats.topMajors.slice(0, 5).map(m => ({
+                  name: m.name,
+                  percentage: stats.totalApplicants > 0 ? (m.count / stats.totalApplicants * 100) : 0
+                }))}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" tick={{ fontSize: 11 }} angle={-15} textAnchor="end" height={60} />
-                  <YAxis tick={{ fontSize: 12 }} />
-                  <Tooltip />
-                  <Bar dataKey="count" fill="#8B5CF6" />
+                  <YAxis tick={{ fontSize: 12 }} unit="%" />
+                  <Tooltip formatter={(value) => `${Number(value).toFixed(1)}%`} />
+                  <Bar dataKey="percentage" fill="#8B5CF6" />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -134,7 +137,7 @@ export const ComprehensiveStatsDashboard: React.FC<ComprehensiveStatsDashboardPr
                   key={index}
                   className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-sm border border-blue-200"
                 >
-                  {univ.name} ({univ.count}명)
+                  {univ.name}
                 </span>
               ))}
             </div>
@@ -294,8 +297,7 @@ export const ComprehensiveStatsDashboard: React.FC<ComprehensiveStatsDashboardPr
                   <p className="font-semibold text-gray-900 text-sm truncate" title={skill.skill}>
                     {skill.skill}
                   </p>
-                  <div className="flex items-center justify-between mt-1">
-                    <span className="text-xs text-gray-500">{skill.count}명</span>
+                  <div className="flex items-center justify-end mt-1">
                     <span className="text-xs font-semibold text-pink-600">
                       {skill.percentage.toFixed(0)}%
                     </span>
@@ -390,9 +392,6 @@ export const ComprehensiveStatsDashboard: React.FC<ComprehensiveStatsDashboardPr
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-900 truncate" title={cert.name}>
                           {cert.name}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {cert.count}명 보유
                         </p>
                       </div>
                     </div>

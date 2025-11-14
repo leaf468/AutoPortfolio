@@ -21,9 +21,13 @@ import { FeedbackResult } from "../services/userFeedbackService";
 import { portfolioTemplates } from "../templates/portfolioTemplates";
 import { htmlToMarkdownConverter } from "../services/htmlToMarkdownConverter";
 import { pdfGenerator } from "../services/pdfGenerator";
+import pptxGenerationService from "../services/pptxGenerationService";
 import { trackRating, trackPDFDownload, trackButtonClick } from "../utils/analytics";
 import { CustomAlert } from "./CustomAlert";
 import { useAlert } from "../hooks/useAlert";
+import { PortfolioData } from "../types/portfolio";
+import { supabase } from "../lib/supabaseClient";
+import { useAuth } from "../contexts/AuthContext";
 
 type TemplateType = "minimal" | "clean" | "colorful" | "elegant";
 
@@ -43,12 +47,14 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
     onReset,
 }) => {
     const navigate = useNavigate();
+    const { user } = useAuth();
     const { alertState, hideAlert, success, error: showError, warning } = useAlert();
     const [showPreview, setShowPreview] = useState(false);
     const [userRating, setUserRating] = useState<number>(0);
     const [hoverRating, setHoverRating] = useState<number>(0);
     const [ratingSubmitted, setRatingSubmitted] = useState(false);
     const [copySuccess, setCopySuccess] = useState<string>('');
+    const [isPPTGenerating, setIsPPTGenerating] = useState(false);
     const portfolioRef = useRef<HTMLDivElement>(null);
 
     // 기존 평가 불러오기
@@ -640,6 +646,167 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
         }
     };
 
+    /**
+     * 마이페이지 프로필 정보 가져오기
+     */
+    const getUserProfile = async () => {
+        if (!user) {
+            console.warn('⚠️ user 객체가 없습니다');
+            return null;
+        }
+
+        try {
+            console.log('🔍 프로필 조회 시작 - user_id:', user.user_id);
+
+            // users 테이블에서 name 가져오기 (마이페이지에서 저장한 최신 이름)
+            const { data: userData, error: userError } = await supabase
+                .from('users')
+                .select('name')
+                .eq('user_id', user.user_id)
+                .single();
+
+            if (userError) {
+                console.error('❌ users 테이블 조회 실패:', userError);
+                console.log('📋 에러 상세:', {
+                    code: userError.code,
+                    message: userError.message,
+                    details: userError.details
+                });
+            } else {
+                console.log('✅ users 테이블에서 가져온 이름:', userData?.name);
+            }
+
+            // user_profiles 테이블에서 프로필 정보 가져오기
+            const { data: profileData, error: profileError } = await supabase
+                .from('user_profiles')
+                .select('*')
+                .eq('user_id', user.user_id)
+                .maybeSingle();
+
+            if (profileError) {
+                console.error('❌ user_profiles 테이블 조회 실패:', profileError);
+            } else {
+                console.log('✅ user_profiles 테이블 조회 성공');
+            }
+
+            // 이름 우선순위: DB users 테이블 (마이페이지에서 저장한 이름) > AuthContext user 객체 > 기본값
+            const userName = userData?.name || user.name || '사용자';
+            console.log('👤 최종 사용자 이름:', userName);
+            console.log('📊 이름 출처:', userData?.name ? 'DB users 테이블' : (user.name ? 'AuthContext' : '기본값'));
+
+            const profile = {
+                name: userName,
+                phone: profileData?.phone || '',
+                email: user.email || '',
+                company: profileData?.company || '',
+                position: profileData?.position || '',
+                github_url: profileData?.github_url || '',
+                blog_url: profileData?.blog_url || '',
+            };
+
+            console.log('📦 최종 프로필 데이터:', profile);
+            return profile;
+        } catch (error) {
+            console.error('❌ 프로필 로드 중 예외 발생:', error);
+            // 에러 발생 시에도 최소한 user 객체의 정보는 반환
+            const fallbackProfile = {
+                name: user.name || '사용자',
+                phone: '',
+                email: user.email || '',
+                company: '',
+                position: '',
+                github_url: '',
+                blog_url: '',
+            };
+            console.log('⚠️ fallback 프로필 사용:', fallbackProfile);
+            return fallbackProfile;
+        }
+    };
+
+    // PPT 다운로드
+    const handleDownloadPPT = async () => {
+        trackButtonClick('PPT 다운로드', 'FinalResultPanel');
+        setIsPPTGenerating(true);
+
+        try {
+            // HTML에서 포트폴리오 데이터 추출
+            const htmlContent = generateTemplatedHTML();
+            const extractedData = extractPortfolioDataFromHTML(htmlContent);
+
+            if (!extractedData) {
+                throw new Error('포트폴리오 데이터를 추출할 수 없습니다.');
+            }
+
+            // 마이페이지 프로필 정보 가져오기
+            const userProfile = await getUserProfile();
+            console.log('👤 사용자 프로필 정보:', userProfile);
+
+            // PortfolioData 형식으로 변환 (프로필 정보를 fallback으로 사용)
+            const portfolioData: PortfolioData = {
+                userInfo: {
+                    name: extractedData.name || userProfile?.name || '이름 없음',
+                    title: extractedData.title || userProfile?.position || '직무 없음',
+                    email: extractedData.contact?.email || userProfile?.email || '',
+                    phone: extractedData.contact?.phone || userProfile?.phone || '',
+                    github: extractedData.contact?.github || userProfile?.github_url || '',
+                    website: extractedData.contact?.linkedin || userProfile?.blog_url || '',
+                    summary: extractedData.about || '자기소개 없음',
+                },
+                experiences: extractedData.experience.map((exp: any) => ({
+                    company: exp.company || '',
+                    position: exp.position || '',
+                    startDate: exp.duration?.split('-')[0]?.trim() || '',
+                    endDate: exp.duration?.split('-')[1]?.trim(),
+                    description: exp.description || '',
+                    achievements: exp.achievements || [],
+                    technologies: []
+                })),
+                projects: extractedData.projects.slice(0, 3).map((proj: any) => ({
+                    name: proj.name || '',
+                    description: proj.description || '',
+                    technologies: proj.tech || [],
+                    highlights: proj.results || [],
+                    date: ''
+                })),
+                education: extractedData.education.map((edu: any) => ({
+                    institution: edu.school || '',
+                    degree: edu.degree || '',
+                    startDate: '',
+                    endDate: ''
+                })),
+                skills: extractedData.skillCategories.map((cat: any) => ({
+                    category: cat.category || '',
+                    items: cat.skills || []
+                })),
+                certifications: [],
+                languages: []
+            };
+
+            console.log('🔄 포트폴리오 데이터 (프로필 fallback 적용):', portfolioData);
+
+            // PPT 템플릿 경로
+            const templatePath = '/corporate_portfolio_template.pptx';
+
+            // PPT 생성 (프로필 정보 전달)
+            const pptBlob = await pptxGenerationService.generatePPT(portfolioData, templatePath, userProfile);
+
+            // 파일명 생성: 사용자님_직무_포트폴리오
+            const userName = userProfile?.name || extractedData.name || '사용자';
+            const userPosition = userProfile?.position || extractedData.title || '포트폴리오';
+            const filename = `${userName}_${userPosition}_포트폴리오.pptx`;
+
+            // 다운로드
+            pptxGenerationService.downloadPPT(pptBlob, filename);
+
+            success('PPT 파일이 생성되었습니다!');
+        } catch (error) {
+            console.error('PPT 생성 실패:', error);
+            showError('PPT 생성에 실패했습니다. 다시 시도해주세요.');
+        } finally {
+            setIsPPTGenerating(false);
+        }
+    };
+
     // 별점 평가 핸들러
     const handleRating = (rating: number) => {
         setUserRating(rating);
@@ -969,7 +1136,7 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                             </h2>
 
                             {/* 메인 액션 버튼들 */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
                                 <button
                                     onClick={() => setShowPreview(true)}
                                     className="group flex items-center justify-center p-6 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-xl font-medium hover:from-blue-700 hover:to-cyan-700 shadow-md hover:shadow-lg transition-all duration-200"
@@ -984,6 +1151,15 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                                 >
                                     <DocumentArrowDownIcon className="w-6 h-6 mr-2" />
                                     PDF 다운로드
+                                </button>
+
+                                <button
+                                    onClick={handleDownloadPPT}
+                                    disabled={isPPTGenerating}
+                                    className="group flex items-center justify-center p-6 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-xl font-medium hover:from-orange-700 hover:to-red-700 shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    <DocumentArrowDownIcon className="w-6 h-6 mr-2" />
+                                    {isPPTGenerating ? 'PPT 생성 중...' : 'PPT 다운로드'}
                                 </button>
                             </div>
 

@@ -26,8 +26,15 @@ const processTextWithMarkdown = (text: string | undefined | null): string => {
     processed = processed.replace(/<p[^>]*>(.*?)<\/p>/gi, '$1\n\n');
     processed = processed.replace(/<div[^>]*>(.*?)<\/div>/gi, '$1\n');
 
-    // Clean up excessive newlines (more than 2 consecutive newlines)
+    // Clean up excessive whitespace and newlines
+    // 1. 먼저 각 줄의 앞뒤 공백 제거
+    processed = processed.split('\n').map(line => line.trim()).join('\n');
+
+    // 2. 3개 이상의 연속된 줄바꿈을 2개로 제한
     processed = processed.replace(/\n{3,}/g, '\n\n');
+
+    // 3. 빈 줄이 너무 많으면 1개로 제한 (문단 구분은 1줄 여백만)
+    processed = processed.replace(/\n{2,}/g, '\n\n');
 
     // Handle markdown formatting
     // Bold: **text** or __text__
