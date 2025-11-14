@@ -6,11 +6,49 @@ import { usePortfolio } from '../contexts/PortfolioContext';
 import { PortfolioDocument } from '../services/autoFillService';
 import { GenerationResult } from '../services/oneClickGenerator';
 import { aiOrganizer } from '../services/aiOrganizer';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabaseClient';
 
 export default function AutoFillPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { state, setInitialResult, setCurrentStep, setOrganizedContent } = usePortfolio();
   const [isProcessingAI, setIsProcessingAI] = useState(false);
+  const [userName, setUserName] = useState<string>('');
+
+  // 사용자 이름 가져오기
+  useEffect(() => {
+    const loadUserName = async () => {
+      if (!user) return;
+
+      try {
+        console.log('👤 사용자 이름 로드 시작 - user_id:', user.user_id);
+
+        // users 테이블에서 name 가져오기
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('name')
+          .eq('user_id', user.user_id)
+          .single();
+
+        if (userError) {
+          console.error('❌ users 테이블 조회 실패:', userError);
+        } else {
+          console.log('✅ users 테이블에서 가져온 이름:', userData?.name);
+        }
+
+        // 이름 우선순위: DB users 테이블 > AuthContext user 객체 > 기본값
+        const name = userData?.name || user.name || '';
+        setUserName(name);
+        console.log('👤 최종 사용자 이름:', name);
+      } catch (error) {
+        console.error('❌ 사용자 이름 로드 실패:', error);
+        setUserName(user.name || '');
+      }
+    };
+
+    loadUserName();
+  }, [user]);
 
   useEffect(() => {
     setCurrentStep('autofill');
@@ -144,6 +182,7 @@ export default function AutoFillPage() {
             // 원본 사용자 입력 추가
             content: state.organizedContent?.originalInput?.rawText || '',
             profile: JSON.stringify({
+              name: userName, // 마이페이지에서 가져온 사용자 이름
               organizedContent: state.organizedContent, // AI로 가공된 결과
               originalInput: state.organizedContent?.originalInput || null // 전체 originalInput 객체 전달
             }),

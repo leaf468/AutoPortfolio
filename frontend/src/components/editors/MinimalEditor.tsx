@@ -266,6 +266,14 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                             let userProfileData = { name: '', email: '', phone: '', github: '' };
                             if (user) {
                                 try {
+                                    // users 테이블에서 name 가져오기
+                                    const { data: userData } = await supabase
+                                        .from('users')
+                                        .select('name')
+                                        .eq('user_id', user.user_id)
+                                        .maybeSingle();
+
+                                    // user_profiles 테이블에서 추가 정보 가져오기
                                     const { data: profile } = await supabase
                                         .from('user_profiles')
                                         .select('phone, github_url')
@@ -273,7 +281,7 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                                         .maybeSingle();
 
                                     userProfileData = {
-                                        name: user.name || '',
+                                        name: userData?.name || user.name || '',
                                         email: user.email || '',
                                         phone: profile?.phone || '',
                                         github: profile?.github_url || ''
@@ -285,10 +293,10 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                             }
 
                             actualData = {
-                                name: (extracted.name && extracted.name.trim()) || userProfileData.name || '',
+                                name: (extracted.name && extracted.name.trim() && extracted.name !== '사용자 이름 없음') ? extracted.name.trim() : (userProfileData.name || ''),
                                 title: extracted.originalInput?.jobPosition || extracted.position || extracted.title || '개발자',
-                                email: (extracted.email && extracted.email.trim()) || userProfileData.email || '',
-                                phone: (extracted.phone && extracted.phone.trim()) || userProfileData.phone || '',
+                                email: (extracted.email && extracted.email.trim() && !extracted.email.includes('example.com') && !extracted.email.includes('default')) ? extracted.email.trim() : (userProfileData.email || ''),
+                                phone: (extracted.phone && extracted.phone.trim() && extracted.phone !== '010-0000-0000' && extracted.phone !== '010-1234-5678') ? extracted.phone.trim() : (userProfileData.phone || ''),
                                 github: (extracted.github && extracted.github.trim()) || userProfileData.github || '',
                                 location: extracted.location || '',
                                 about: extracted.about || extracted.summary || '',
