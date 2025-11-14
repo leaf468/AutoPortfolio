@@ -650,10 +650,15 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
      * 마이페이지 프로필 정보 가져오기
      */
     const getUserProfile = async () => {
-        if (!user) return null;
+        if (!user) {
+            console.warn('⚠️ user 객체가 없습니다');
+            return null;
+        }
 
         try {
-            // users 테이블에서 name 가져오기
+            console.log('🔍 프로필 조회 시작 - user_id:', user.user_id);
+
+            // users 테이블에서 name 가져오기 (마이페이지에서 저장한 최신 이름)
             const { data: userData, error: userError } = await supabase
                 .from('users')
                 .select('name')
@@ -661,8 +666,14 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                 .single();
 
             if (userError) {
-                console.error('Load user error:', userError);
-                return null;
+                console.error('❌ users 테이블 조회 실패:', userError);
+                console.log('📋 에러 상세:', {
+                    code: userError.code,
+                    message: userError.message,
+                    details: userError.details
+                });
+            } else {
+                console.log('✅ users 테이블에서 가져온 이름:', userData?.name);
             }
 
             // user_profiles 테이블에서 프로필 정보 가져오기
@@ -673,12 +684,18 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                 .maybeSingle();
 
             if (profileError) {
-                console.error('Load profile error:', profileError);
-                return null;
+                console.error('❌ user_profiles 테이블 조회 실패:', profileError);
+            } else {
+                console.log('✅ user_profiles 테이블 조회 성공');
             }
 
-            return {
-                name: userData.name || '',
+            // 이름 우선순위: DB users 테이블 (마이페이지에서 저장한 이름) > AuthContext user 객체 > 기본값
+            const userName = userData?.name || user.name || '사용자';
+            console.log('👤 최종 사용자 이름:', userName);
+            console.log('📊 이름 출처:', userData?.name ? 'DB users 테이블' : (user.name ? 'AuthContext' : '기본값'));
+
+            const profile = {
+                name: userName,
                 phone: profileData?.phone || '',
                 email: user.email || '',
                 company: profileData?.company || '',
@@ -686,9 +703,23 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                 github_url: profileData?.github_url || '',
                 blog_url: profileData?.blog_url || '',
             };
+
+            console.log('📦 최종 프로필 데이터:', profile);
+            return profile;
         } catch (error) {
-            console.error('프로필 로드 실패:', error);
-            return null;
+            console.error('❌ 프로필 로드 중 예외 발생:', error);
+            // 에러 발생 시에도 최소한 user 객체의 정보는 반환
+            const fallbackProfile = {
+                name: user.name || '사용자',
+                phone: '',
+                email: user.email || '',
+                company: '',
+                position: '',
+                github_url: '',
+                blog_url: '',
+            };
+            console.log('⚠️ fallback 프로필 사용:', fallbackProfile);
+            return fallbackProfile;
         }
     };
 
@@ -708,6 +739,7 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
 
             // 마이페이지 프로필 정보 가져오기
             const userProfile = await getUserProfile();
+            console.log('👤 사용자 프로필 정보:', userProfile);
 
             // PortfolioData 형식으로 변환 (프로필 정보를 fallback으로 사용)
             const portfolioData: PortfolioData = {

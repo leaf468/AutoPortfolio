@@ -162,6 +162,9 @@ export const CoverLetterPageV3: React.FC = () => {
   // 첨삭 PDF 생성 상태
   const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
 
+  // 로그인 확인 모달
+  const [showLoginModal, setShowLoginModal] = useState(false);
+
   // 페이지 로드 시 완료된 첨삭이 있는지 확인
   useEffect(() => {
     const completedFeedback = localStorage.getItem('feedbackCompleted');
@@ -443,6 +446,12 @@ export const CoverLetterPageV3: React.FC = () => {
 
   // 상세 첨삭 PDF 생성
   const handleGenerateDetailedFeedback = async () => {
+    // 비로그인 사용자(게스트 모드)는 첨삭 기능 사용 불가
+    if (!user || isGuestMode) {
+      setShowLoginModal(true);
+      return;
+    }
+
     const answeredQuestions = questions.filter((q) => q.answer.trim());
     if (answeredQuestions.length === 0) {
       warning('최소 하나 이상의 질문에 답변해주세요.');
@@ -995,6 +1004,42 @@ export const CoverLetterPageV3: React.FC = () => {
         type={alertState.type}
         confirmText={alertState.confirmText}
       />
+
+      {/* 로그인 확인 모달 */}
+      {showLoginModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 animate-fade-in">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">로그인이 필요합니다</h3>
+              <p className="text-gray-600">
+                자소서 첨삭은 로그인한 사용자만 사용할 수 있는 기능입니다.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowLoginModal(false)}
+                className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-medium"
+              >
+                취소
+              </button>
+              <button
+                onClick={() => {
+                  setShowLoginModal(false);
+                  navigate('/login', { state: { from: location.pathname } });
+                }}
+                className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition font-medium shadow-lg"
+              >
+                로그인하기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
