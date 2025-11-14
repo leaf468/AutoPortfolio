@@ -471,7 +471,9 @@ export async function generateFeedbackPDF(
         currentY = PAGE_MARGIN.top;
       }
       currentY += 4;
-      currentY = addKoreanText(doc, `✓ ${suggestion}`, PAGE_MARGIN.left + 10, currentY, {
+      // 기존 체크마크 제거
+      const cleanSuggestion = suggestion.replace(/^[✓✔☑]+\s*/, '').trim();
+      currentY = addKoreanText(doc, `✓ ${cleanSuggestion}`, PAGE_MARGIN.left + 10, currentY, {
         fontSize: 12,
         maxWidth: CONTENT_WIDTH - 15,
         color: COLORS.text,
@@ -570,7 +572,9 @@ export async function generateFeedbackPDF(
         currentY = PAGE_MARGIN.top;
       }
       currentY += 4;
-      currentY = addKoreanText(doc, `✓ ${strength}`, PAGE_MARGIN.left + 10, currentY, {
+      // 기존 체크마크 제거 (LLM 응답에 이미 포함되어 있을 수 있음)
+      const cleanStrength = strength.replace(/^[✓✔☑]+\s*/, '').trim();
+      currentY = addKoreanText(doc, `✓ ${cleanStrength}`, PAGE_MARGIN.left + 10, currentY, {
         fontSize: 12,
         maxWidth: CONTENT_WIDTH - 15,
         color: COLORS.success,
@@ -594,7 +598,9 @@ export async function generateFeedbackPDF(
         currentY = PAGE_MARGIN.top;
       }
       currentY += 4;
-      currentY = addKoreanText(doc, `✗ ${weakness}`, PAGE_MARGIN.left + 10, currentY, {
+      // 기존 X 마크 제거 (LLM 응답에 이미 포함되어 있을 수 있음)
+      const cleanWeakness = weakness.replace(/^[✗✘×]+\s*/, '').trim();
+      currentY = addKoreanText(doc, `✗ ${cleanWeakness}`, PAGE_MARGIN.left + 10, currentY, {
         fontSize: 12,
         maxWidth: CONTENT_WIDTH - 15,
         color: COLORS.error,
@@ -819,7 +825,9 @@ export async function generateFeedbackPDF(
         currentY = PAGE_MARGIN.top;
       }
       currentY += 4;
-      currentY = addKoreanText(doc, `${i + 1}. ${improvement}`, PAGE_MARGIN.left + 5, currentY, {
+      // 기존 번호 제거 (LLM 응답에 이미 포함되어 있을 수 있음)
+      const cleanImprovement = improvement.replace(/^\d+\.\s*/, '').trim();
+      currentY = addKoreanText(doc, `${i + 1}. ${cleanImprovement}`, PAGE_MARGIN.left + 5, currentY, {
         fontSize: 12,
         maxWidth: CONTENT_WIDTH - 10,
         color: COLORS.text,
