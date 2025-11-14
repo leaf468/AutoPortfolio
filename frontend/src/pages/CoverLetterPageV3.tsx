@@ -170,7 +170,7 @@ export const CoverLetterPageV3: React.FC = () => {
       // 5분 이내 완성된 첨삭만 알림 표시 (오래된 알림 방지)
       const fiveMinutes = 5 * 60 * 1000;
       if (Date.now() - timestamp < fiveMinutes) {
-        success(`✅ 첨삭이 완성되었습니다!\n\n다운로드가 완료되었습니다.\n평균 점수: ${averageScore}점\n총 ${totalQuestions}개 질문에 대한 상세 분석이 포함되어 있습니다.\n\n다운로드 폴더에서 확인하실 수 있습니다.`);
+        success(`✅ 첨삭이 완성되었습니다!\n\n다운로드가 완료되었습니다.\n평균 점수: ${averageScore}점\n상세 분석이 포함되어 있습니다.\n\n다운로드 폴더에서 확인하실 수 있습니다.`);
       }
       // 알림 표시 후 삭제
       localStorage.removeItem('feedbackCompleted');

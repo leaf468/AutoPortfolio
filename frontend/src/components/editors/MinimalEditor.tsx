@@ -21,6 +21,8 @@ import { userFeedbackService } from '../../services/userFeedbackService';
 import { getButtonClass } from '../../styles/buttonStyles';
 import { useAlert } from '../../hooks/useAlert';
 import { CustomAlert } from '../CustomAlert';
+import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabaseClient';
 
 // 스킬 입력 컴포넌트
 const SkillInput: React.FC<{
@@ -73,6 +75,7 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
     onTemplateChange,
     isSaving
 }) => {
+    const { user } = useAuth();
     const [portfolioData, setPortfolioData] = useState<MinimalPortfolioData>({
         name: '',
         title: '',
@@ -259,12 +262,34 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                             console.log('  - projects (first item):', extracted.projects?.[0]);
                             console.log('  - experiences (first item):', extracted.experiences?.[0]);
 
+                            // 마이페이지 프로필 정보 가져오기
+                            let userProfileData = { name: '', email: '', phone: '', github: '' };
+                            if (user) {
+                                try {
+                                    const { data: profile } = await supabase
+                                        .from('user_profiles')
+                                        .select('phone, github_url')
+                                        .eq('user_id', user.user_id)
+                                        .maybeSingle();
+
+                                    userProfileData = {
+                                        name: user.name || '',
+                                        email: user.email || '',
+                                        phone: profile?.phone || '',
+                                        github: profile?.github_url || ''
+                                    };
+                                    console.log('✅ User profile loaded:', userProfileData);
+                                } catch (err) {
+                                    console.error('Failed to load user profile:', err);
+                                }
+                            }
+
                             actualData = {
-                                name: extracted.name || '',
+                                name: (extracted.name && extracted.name.trim()) || userProfileData.name || '',
                                 title: extracted.originalInput?.jobPosition || extracted.position || extracted.title || '개발자',
-                                email: extracted.email || '',
-                                phone: extracted.phone || '',
-                                github: extracted.github || '',
+                                email: (extracted.email && extracted.email.trim()) || userProfileData.email || '',
+                                phone: (extracted.phone && extracted.phone.trim()) || userProfileData.phone || '',
+                                github: (extracted.github && extracted.github.trim()) || userProfileData.github || '',
                                 location: extracted.location || '',
                                 about: extracted.about || extracted.summary || '',
                                 skills: skillsFlat,

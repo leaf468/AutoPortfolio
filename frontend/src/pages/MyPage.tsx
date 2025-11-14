@@ -87,6 +87,18 @@ const MyPage: React.FC = () => {
   const loadProfile = async () => {
     if (!user) return;
 
+    // users 테이블에서 name 가져오기
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('name')
+      .eq('user_id', user.user_id)
+      .single();
+
+    if (userError) {
+      console.error('Load user error:', userError);
+      return;
+    }
+
     const { data, error } = await supabase
       .from('user_profiles')
       .select('*')
@@ -98,9 +110,11 @@ const MyPage: React.FC = () => {
       return;
     }
 
+    const userName = userData?.name || user.name;
+
     if (data) {
       setProfileData({
-        name: user.name,
+        name: userName,
         phone: data.phone || '',
         birth_date: data.birth_date || '',
         company: data.company || '',
@@ -119,7 +133,7 @@ const MyPage: React.FC = () => {
     } else {
       // 프로필이 없으면 기본값으로 초기화
       setProfileData({
-        name: user.name,
+        name: userName,
         phone: '',
         birth_date: '',
         company: '',
@@ -132,6 +146,11 @@ const MyPage: React.FC = () => {
         blog_url: '',
         instagram_url: '',
       });
+    }
+
+    // AuthContext의 user 객체도 업데이트
+    if (userData?.name && userData.name !== user.name) {
+      setUser({ ...user, name: userData.name });
     }
   };
 
