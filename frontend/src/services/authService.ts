@@ -68,6 +68,9 @@ export const login = async (data: LoginRequest): Promise<AuthResponse> => {
       last_login_at: userData.last_login_at,
       is_active: userData.is_active,
       email_verified: userData.email_verified,
+      pay: userData.pay,
+      last_pay_date: userData.last_pay_date,
+      free_pdf_used: userData.free_pdf_used,
     };
 
     tokenService.setTokens(authData.session.access_token, authData.session.refresh_token || '');
@@ -150,6 +153,9 @@ export const signup = async (data: SignupRequest): Promise<AuthResponse> => {
       last_login_at: userData.last_login_at,
       is_active: userData.is_active,
       email_verified: userData.email_verified,
+      pay: userData.pay,
+      last_pay_date: userData.last_pay_date,
+      free_pdf_used: userData.free_pdf_used,
     };
 
     if (authData.session) {
@@ -210,6 +216,9 @@ export const getCurrentUser = async (): Promise<User | null> => {
       last_login_at: userData.last_login_at,
       is_active: userData.is_active,
       email_verified: userData.email_verified,
+      pay: userData.pay,
+      last_pay_date: userData.last_pay_date,
+      free_pdf_used: userData.free_pdf_used,
     };
 
     tokenService.setUser(user);
@@ -286,4 +295,183 @@ export const loginWithGoogle = async (): Promise<{ success: boolean; message?: s
       message: '구글 로그인 중 오류가 발생했습니다.',
     };
   }
+};
+
+// ==================== 구독 관리 함수 ====================
+
+/**
+ * 구독 만료 체크 및 자동 업데이트
+ * last_pay_date로부터 30일이 지났는지 확인하고 만료 시 pay를 false로 업데이트
+ */
+export const checkSubscriptionExpiry = async (userId: string): Promise<boolean> => {
+  try {
+    const { data: userData, error } = await supabase
+      .from('users')
+      .select('pay, last_pay_date')
+      .eq('user_id', userId)
+      .single();
+
+    if (error || !userData) {
+      console.error('Check subscription error:', error);
+      return false;
+    }
+
+    // pay가 false이거나 last_pay_date가 없으면 이미 만료 상태
+    if (!userData.pay || !userData.last_pay_date) {
+      return false;
+    }
+
+    // last_pay_date로부터 30일이 지났는지 체크
+    const lastPayDate = new Date(userData.last_pay_date);
+    const now = new Date();
+    const daysDiff = Math.floor((now.getTime() - lastPayDate.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (daysDiff >= 30) {
+      // 30일 이상 경과 → pay를 false로 업데이트
+      const { error: updateError } = await supabase
+        .from('users')
+        .update({ pay: false })
+        .eq('user_id', userId);
+
+      if (updateError) {
+        console.error('Update subscription expiry error:', updateError);
+      }
+
+      return false; // 만료됨
+    }
+
+    return true; // 구독 활성
+  } catch (error) {
+    console.error('Check subscription expiry error:', error);
+    return false;
+  }
+};
+
+/**
+ * 구독 상태 업데이트 (수동 처리용)
+ * 관리자가 결제 확인 후 DB를 업데이트하거나, 향후 자동 결제 연동 시 사용
+ */
+export const updateSubscriptionStatus = async (
+  userId: string,
+  isPro: boolean
+): Promise<boolean> => {
+  try {
+    const updateData: any = { pay: isPro };
+
+    // 프로 플랜 활성화 시 현재 날짜를 last_pay_date로 설정
+    if (isPro) {
+      updateData.last_pay_date = new Date().toISOString();
+    }
+
+    const { error } = await supabase
+      .from('users')
+      .update(updateData)
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('Update subscription status error:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Update subscription status error:', error);
+    return false;
+  }
+};
+
+/**
+ * 무료 자소서 첨삭 사용 기록
+ * 비프로 사용자가 첨삭 기능을 1회 사용했음을 기록
+ */
+export const markFreePdfUsed = async (userId: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('users')
+      .update({ free_pdf_used: true })
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('Mark free PDF used error:', error);
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    console.error('Mark free PDF used error:', error);
+    return false;
+  }
+};
+
+/**
+ * 구독 정보 조회 헬퍼
+ * User 객체로부터 구독 상태를 계산하여 반환
+ */
+export const getSubscriptionInfo = (user: User | null): {
+  isPro: boolean;
+  status: 'active' | 'expired' | 'none';
+  expiresAt: Date | null;
+  daysRemaining: number | null;
+  canUsePdfCorrection: boolean;
+} => {
+  if (!user) {
+    return {
+      isPro: false,
+      status: 'none',
+      expiresAt: null,
+      daysRemaining: null,
+      canUsePdfCorrection: false,
+    };
+  }
+
+  const isPro = user.pay === true;
+  const hasUsedFreePdf = user.free_pdf_used === true;
+
+  if (!isPro && !user.last_pay_date) {
+    // 구독한 적 없음
+    return {
+      isPro: false,
+      status: 'none',
+      expiresAt: null,
+      daysRemaining: null,
+      canUsePdfCorrection: !hasUsedFreePdf, // 무료 1회 사용 가능
+    };
+  }
+
+  if (user.last_pay_date) {
+    const lastPayDate = new Date(user.last_pay_date);
+    const expiresAt = new Date(lastPayDate);
+    expiresAt.setDate(expiresAt.getDate() + 30); // 30일 후 만료
+
+    const now = new Date();
+    const daysRemaining = Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (isPro) {
+      return {
+        isPro: true,
+        status: 'active',
+        expiresAt,
+        daysRemaining,
+        canUsePdfCorrection: true, // 프로는 무제한
+      };
+    } else {
+      // pay=false이지만 last_pay_date가 있음 → 만료됨
+      return {
+        isPro: false,
+        status: 'expired',
+        expiresAt,
+        daysRemaining: 0,
+        canUsePdfCorrection: !hasUsedFreePdf,
+      };
+    }
+  }
+
+  // 기본값
+  return {
+    isPro: false,
+    status: 'none',
+    expiresAt: null,
+    daysRemaining: null,
+    canUsePdfCorrection: !hasUsedFreePdf,
+  };
 };

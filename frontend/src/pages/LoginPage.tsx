@@ -32,7 +32,9 @@ const LoginPage: React.FC = () => {
 
       if (result.success && result.user) {
         setUser(result.user);
-        navigate('/mypage');
+        // returnTo state가 있으면 해당 경로로, 없으면 기본값 /mypage로 이동
+        const returnTo = (location.state as any)?.returnTo || '/mypage';
+        navigate(returnTo);
       } else {
         setError(result.message || '로그인에 실패했습니다.');
       }

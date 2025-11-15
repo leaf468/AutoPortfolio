@@ -20,6 +20,8 @@ import { QuestionAnalysisPanel } from '../components/QuestionAnalysisPanel';
 import { PositionStats, getPositionStats } from '../services/positionStatsService';
 import { PositionStatsPanel } from '../components/PositionStatsPanel';
 import { useAuth } from '../contexts/AuthContext';
+import { markFreePdfUsed } from '../services/authService';
+import { CustomTooltip } from '../components/CustomTooltip';
 import { supabase } from '../lib/supabaseClient';
 import Footer from '../components/Footer';
 import LandingFooter from '../components/LandingFooter';
@@ -54,8 +56,8 @@ const DEFAULT_QUESTIONS: Omit<CoverLetterQuestion, 'answer'>[] = [
 ];
 
 export const CoverLetterPageV3: React.FC = () => {
-  const { user } = useAuth();
-  const { alertState, hideAlert, success, error: showError, warning, info } = useAlert();
+  const { user, subscriptionInfo, refreshUser } = useAuth();
+  const { alertState, hideAlert, success, error: showError, warning, info, confirm } = useAlert();
   const location = useLocation();
   const navigate = useNavigate();
   const editState = location.state as { editMode?: boolean; documentId?: number; savedData?: any } | null;
@@ -452,6 +454,25 @@ export const CoverLetterPageV3: React.FC = () => {
       return;
     }
 
+    // 프로 플랜 구독 체크
+    if (!subscriptionInfo.isPro) {
+      // 무료 사용자: 첨삭 1회만 가능
+      if (!subscriptionInfo.canUsePdfCorrection) {
+        // 이미 무료 첨삭을 사용한 경우 → 확인창 표시
+        confirm(
+          '무료 자소서 첨삭 기능을 이미 사용하셨습니다.\n\n프로 플랜 구독 시 무제한으로 이용하실 수 있습니다.',
+          () => {
+            navigate('/subscribe');
+          },
+          '프로 플랜 필요',
+          '구독하기',
+          '취소'
+        );
+        return;
+      }
+      // 무료 첨삭 사용 가능한 경우 → 사용 후 기록할 예정
+    }
+
     const answeredQuestions = questions.filter((q) => q.answer.trim());
     if (answeredQuestions.length === 0) {
       warning('최소 하나 이상의 질문에 답변해주세요.');
@@ -565,6 +586,18 @@ export const CoverLetterPageV3: React.FC = () => {
           console.log('⚠️ 로그인하지 않은 사용자 - DB 저장 건너뜀');
         }
 
+        // 무료 사용자의 경우 free_pdf_used를 true로 마킹
+        if (!subscriptionInfo.isPro && user?.user_id) {
+          const marked = await markFreePdfUsed(user.user_id);
+          if (marked) {
+            console.log('✅ 무료 첨삭 사용 기록 완료');
+            // 사용자 정보 새로고침 (free_pdf_used 업데이트 반영)
+            await refreshUser();
+          } else {
+            console.error('❌ 무료 첨삭 사용 기록 실패');
+          }
+        }
+
         // 다운로드 완료 정보를 localStorage에 저장 (다른 페이지에서도 알림 표시)
         localStorage.setItem('feedbackCompleted', JSON.stringify({
           averageScore: report.averageScore,
@@ -573,7 +606,10 @@ export const CoverLetterPageV3: React.FC = () => {
         }));
 
         // 현재 페이지에서 바로 알림 표시
-        success(`✅ 첨삭이 완료되었습니다!\n\nPDF 다운로드가 완료되었습니다.\n평균 점수: ${report.averageScore}점\n\n다운로드 폴더에서 확인하실 수 있습니다.`);
+        const successMessage = subscriptionInfo.isPro
+          ? `✅ 첨삭이 완료되었습니다!\n\nPDF 다운로드가 완료되었습니다.\n평균 점수: ${report.averageScore}점\n\n다운로드 폴더에서 확인하실 수 있습니다.`
+          : `✅ 첨삭이 완료되었습니다!\n\nPDF 다운로드가 완료되었습니다.\n평균 점수: ${report.averageScore}점\n\n무료 첨삭을 사용하셨습니다. 추가 첨삭은 프로 플랜 구독 후 이용 가능합니다.`;
+        success(successMessage);
       } catch (err) {
         console.error('첨삭 생성 실패:', err);
         showError('첨삭 생성 중 오류가 발생했습니다. OpenAI API 키를 확인하거나 잠시 후 다시 시도해주세요.');
@@ -920,22 +956,28 @@ export const CoverLetterPageV3: React.FC = () => {
             >
               답변 종합 분석
             </button>
-            <button
-              onClick={handleGenerateDetailedFeedback}
-              disabled={!userSpec.position.trim() || isGeneratingFeedback}
-              className="px-8 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-lg hover:from-emerald-700 hover:to-teal-700 transition-all font-medium shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            <CustomTooltip
+              content="무료 플랜 사용자의 경우 1회만 사용하실 수 있습니다."
+              visible={!subscriptionInfo.isPro}
+              position="top"
             >
-              {isGeneratingFeedback ? (
-                <>
-                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  첨삭 생성 중...
-                </>
-              ) : (
-                <>
-                  📄 자소서 첨삭 받기 (PDF)
-                </>
-              )}
-            </button>
+              <button
+                onClick={handleGenerateDetailedFeedback}
+                disabled={!userSpec.position.trim() || isGeneratingFeedback}
+                className="px-8 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-lg hover:from-emerald-700 hover:to-teal-700 transition-all font-medium shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {isGeneratingFeedback ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    첨삭 생성 중...
+                  </>
+                ) : (
+                  <>
+                    📄 자소서 첨삭 받기 (PDF)
+                  </>
+                )}
+              </button>
+            </CustomTooltip>
           </div>
         </div>
 
@@ -999,10 +1041,12 @@ export const CoverLetterPageV3: React.FC = () => {
       <CustomAlert
         isOpen={alertState.isOpen}
         onClose={hideAlert}
+        onConfirm={alertState.onConfirm}
         title={alertState.title}
         message={alertState.message}
         type={alertState.type}
         confirmText={alertState.confirmText}
+        cancelText={alertState.cancelText}
       />
 
       {/* 로그인 확인 모달 */}

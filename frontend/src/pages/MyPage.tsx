@@ -24,7 +24,7 @@ import { generateFeedbackPDF } from '../services/pdfGenerationService';
 const MyPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, loading, setUser } = useAuth();
+  const { user, loading, setUser, subscriptionInfo } = useAuth();
   const { setEditMode } = usePortfolio();
   const { alertState, hideAlert, success, error: showError, warning } = useAlert();
   const [activeTab, setActiveTab] = useState<'documents' | 'portfolios' | 'feedbacks' | 'jobs' | 'profile'>('documents');
@@ -991,6 +991,60 @@ const MyPage: React.FC = () => {
                   </button>
                 </div>
               )}
+            </div>
+
+            {/* 구독 상태 카드 */}
+            <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg shadow p-6 mb-6 border-2 border-purple-100">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <h3 className="text-lg font-bold text-gray-900 mb-2 flex items-center">
+                    {subscriptionInfo.isPro ? (
+                      <>
+                        <span className="mr-2">👑</span>
+                        프로 플랜 구독 중
+                      </>
+                    ) : (
+                      '무료 플랜'
+                    )}
+                  </h3>
+                  {subscriptionInfo.isPro ? (
+                    <div className="space-y-1">
+                      <p className="text-sm text-gray-600">
+                        ✅ 모든 프리미엄 기능 이용 가능
+                      </p>
+                      {subscriptionInfo.expiresAt && (
+                        <p className="text-sm text-gray-600">
+                          만료일: {new Date(subscriptionInfo.expiresAt).toLocaleDateString('ko-KR')}
+                          {subscriptionInfo.daysRemaining !== null && (
+                            <span className="ml-2 text-purple-600 font-medium">
+                              (D-{subscriptionInfo.daysRemaining})
+                            </span>
+                          )}
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <p className="text-sm text-gray-600">
+                        자소서 AI 작성, 기본 템플릿, PDF 다운로드
+                      </p>
+                      {!subscriptionInfo.canUsePdfCorrection && (
+                        <p className="text-sm text-orange-600 font-medium">
+                          ⚠️ 무료 첨삭 사용 완료
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+                {!subscriptionInfo.isPro && (
+                  <button
+                    onClick={() => navigate('/subscribe')}
+                    className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold rounded-lg hover:shadow-lg transition-all transform hover:scale-105"
+                  >
+                    프로 플랜 구독하기
+                  </button>
+                )}
+              </div>
             </div>
 
             {/* 기본 정보 */}

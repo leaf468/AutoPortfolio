@@ -7,6 +7,8 @@ interface AlertState {
   message: string;
   type: AlertType;
   confirmText?: string;
+  cancelText?: string;
+  onConfirm?: () => void;
 }
 
 export const useAlert = () => {
@@ -67,6 +69,21 @@ export const useAlert = () => {
     [showAlert]
   );
 
+  const confirm = useCallback(
+    (message: string, onConfirm: () => void, title?: string, confirmText?: string, cancelText?: string) => {
+      setAlertState({
+        isOpen: true,
+        message,
+        type: 'confirm',
+        title,
+        confirmText,
+        cancelText,
+        onConfirm,
+      });
+    },
+    []
+  );
+
   return {
     alertState,
     showAlert,
@@ -75,5 +92,6 @@ export const useAlert = () => {
     error,
     warning,
     info,
+    confirm,
   };
 };

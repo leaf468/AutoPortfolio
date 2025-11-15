@@ -47,8 +47,8 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
     onReset,
 }) => {
     const navigate = useNavigate();
-    const { user } = useAuth();
-    const { alertState, hideAlert, success, error: showError, warning } = useAlert();
+    const { user, subscriptionInfo } = useAuth();
+    const { alertState, hideAlert, success, error: showError, warning, confirm } = useAlert();
     const [showPreview, setShowPreview] = useState(false);
     const [userRating, setUserRating] = useState<number>(0);
     const [hoverRating, setHoverRating] = useState<number>(0);
@@ -726,6 +726,21 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
     // PPT 다운로드
     const handleDownloadPPT = async () => {
         trackButtonClick('PPT 다운로드', 'FinalResultPanel');
+
+        // 프로 플랜 체크
+        if (!subscriptionInfo.isPro) {
+            confirm(
+                'PPT 다운로드는 프로 플랜 구독 시 이용 가능합니다.\n\n프로 플랜으로 업그레이드하시겠습니까?',
+                () => {
+                    navigate('/subscribe');
+                },
+                '프로 플랜 필요',
+                '구독하기',
+                '취소'
+            );
+            return;
+        }
+
         setIsPPTGenerating(true);
 
         try {
@@ -1315,10 +1330,12 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                 <CustomAlert
                     isOpen={alertState.isOpen}
                     onClose={hideAlert}
+                    onConfirm={alertState.onConfirm}
                     title={alertState.title}
                     message={alertState.message}
                     type={alertState.type}
                     confirmText={alertState.confirmText}
+                    cancelText={alertState.cancelText}
                 />
             </div>
         </div>

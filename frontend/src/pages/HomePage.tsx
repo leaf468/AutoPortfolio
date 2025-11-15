@@ -85,6 +85,16 @@ export default function HomePage() {
     }
   };
 
+  const handleProPlanClick = () => {
+    trackButtonClick('프로 플랜 시작하기', 'HomePage');
+    if (!user) {
+      // 비로그인 사용자는 로그인 페이지로 이동, 로그인 후 구독 페이지로 리다이렉트
+      navigate('/login', { state: { returnTo: '/subscribe' } });
+    } else {
+      navigate('/subscribe');
+    }
+  };
+
   const handleLogin = () => {
     trackButtonClick('로그인', 'HomePage');
     navigate('/login');
@@ -507,7 +517,7 @@ export default function HomePage() {
                 </li>
               </ul>
               <button
-                onClick={handleGetStarted}
+                onClick={handleProPlanClick}
                 className="w-full py-3 bg-white text-indigo-600 font-semibold rounded-lg hover:bg-gray-50 transition-colors"
               >
                 시작하기
