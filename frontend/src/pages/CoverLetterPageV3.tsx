@@ -62,6 +62,10 @@ export const CoverLetterPageV3: React.FC = () => {
   const navigate = useNavigate();
   const editState = location.state as { editMode?: boolean; documentId?: number; savedData?: any } | null;
 
+  // 디버깅: 구독 정보 확인
+  console.log('📋 CoverLetterPageV3 - 구독 정보:', subscriptionInfo);
+  console.log('📋 isPro:', subscriptionInfo.isPro, 'canUsePdfCorrection:', subscriptionInfo.canUsePdfCorrection);
+
   // URL 파라미터에서 guest mode 확인
   const searchParams = new URLSearchParams(location.search);
   const isGuestMode = searchParams.get('mode') === 'guest';
@@ -957,7 +961,7 @@ export const CoverLetterPageV3: React.FC = () => {
               답변 종합 분석
             </button>
             <CustomTooltip
-              content="무료 플랜 사용자의 경우 1회만 사용하실 수 있습니다."
+              content="무료 플랜은 1회 무료 첨삭을 제공합니다. 추가 이용 시 구독이 필요합니다."
               visible={!subscriptionInfo.isPro}
               position="top"
             >
