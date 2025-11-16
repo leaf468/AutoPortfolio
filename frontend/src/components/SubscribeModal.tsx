@@ -3,8 +3,10 @@ import {
   CheckCircleIcon,
   SparklesIcon,
   EnvelopeIcon,
-  XMarkIcon
+  XMarkIcon,
+  QrCodeIcon
 } from '@heroicons/react/24/outline';
+import { QRCodeSVG } from 'qrcode.react';
 
 interface SubscribeModalProps {
   isOpen: boolean;
@@ -53,6 +55,12 @@ const SubscribeModal: React.FC<SubscribeModalProps> = ({ isOpen, onClose }) => {
   const contactEmail = 'careeroad2025@gmail.com';
   const accountInfo = '카카오뱅크 1234-56-789012 (주)오토포트폴리오';
 
+  // 토스 송금 링크 (토스 계정이 있는 경우 toss.me/계정ID 사용)
+  // 또는 카카오뱅크 계좌로 송금하는 딥링크
+  const tossPaymentLink = 'supertoss://send?amount=9900&bank=%EC%B9%B4%EC%B9%B4%EC%98%A4%EB%B1%85%ED%81%AC&accountNo=123456789012&message=%ED%94%84%EB%A1%9C%ED%94%8C%EB%9E%9C%EA%B5%AC%EB%8F%85';
+  // 웹 링크 (모바일에서 토스 앱 설치 여부와 관계없이 동작)
+  const tossMeLink = 'https://toss.me/careeroad'; // 토스 계정이 있다면 이 형식 사용
+
   if (!isOpen) return null;
 
   return (
@@ -87,11 +95,20 @@ const SubscribeModal: React.FC<SubscribeModalProps> = ({ isOpen, onClose }) => {
           </div>
 
           {/* 가격 */}
-          <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-6 mb-6 text-center">
+          <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-6 mb-6 text-center relative overflow-hidden">
+            <div className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+              출시 특가
+            </div>
+            <div className="text-gray-400 text-lg line-through mb-1">
+              ₩14,900
+            </div>
             <div className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-600 mb-1">
-              ₩9,900
+              ₩3,900
             </div>
             <div className="text-gray-600 text-sm">/ 월</div>
+            <div className="mt-2 text-xs text-red-500 font-medium">
+              73% 할인 중!
+            </div>
           </div>
 
           {/* 혜택 목록 */}
@@ -110,9 +127,36 @@ const SubscribeModal: React.FC<SubscribeModalProps> = ({ isOpen, onClose }) => {
               결제 안내
             </h3>
 
+            {/* 토스 QR 코드 */}
+            <div className="bg-white border-2 border-blue-100 rounded-xl p-4 mb-4">
+              <div className="flex items-center justify-center gap-2 mb-3">
+                <QrCodeIcon className="w-5 h-5 text-blue-600" />
+                <div className="text-sm font-bold text-gray-900">토스로 간편 송금</div>
+              </div>
+              <div className="flex justify-center mb-3">
+                <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100">
+                  <QRCodeSVG
+                    value={tossPaymentLink}
+                    size={120}
+                    level="M"
+                    includeMargin={false}
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 text-center mb-2">
+                QR 코드를 스캔하여 토스로 송금하세요
+              </p>
+              <a
+                href={tossPaymentLink}
+                className="block w-full py-2.5 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600 transition-all duration-200 text-center text-sm"
+              >
+                토스 앱으로 송금하기
+              </a>
+            </div>
+
             {/* 계좌 정보 */}
             <div className="bg-white border-2 border-purple-100 rounded-xl p-4 mb-4">
-              <div className="text-xs text-gray-500 mb-2 font-medium">입금 계좌</div>
+              <div className="text-xs text-gray-500 mb-2 font-medium">직접 입금 계좌</div>
               <div className="flex items-center justify-between">
                 <div className="font-mono text-sm font-semibold text-gray-900">
                   {accountInfo}
@@ -124,22 +168,6 @@ const SubscribeModal: React.FC<SubscribeModalProps> = ({ isOpen, onClose }) => {
                   {copiedText === accountInfo ? '✓ 복사됨' : '복사'}
                 </button>
               </div>
-            </div>
-
-            {/* 결제 버튼 */}
-            <div className="space-y-3 mb-4">
-              <button
-                className="w-full py-3.5 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold rounded-xl hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                disabled
-              >
-                카드 결제 (준비 중)
-              </button>
-              <button
-                className="w-full py-3.5 bg-yellow-400 text-gray-900 font-semibold rounded-xl hover:bg-yellow-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled
-              >
-                카카오페이 (준비 중)
-              </button>
             </div>
 
             {/* 문의 안내 */}
