@@ -102,6 +102,13 @@ export const signup = async (data: SignupRequest): Promise<AuthResponse> => {
     });
 
     if (authError) {
+      // Supabase Auth에서 이미 등록된 이메일 에러
+      if (authError.message?.includes('already registered') || authError.message?.includes('already exists')) {
+        return {
+          success: false,
+          message: 'User already registered',
+        };
+      }
       return {
         success: false,
         message: authError.message || '회원가입에 실패했습니다.',
@@ -112,6 +119,14 @@ export const signup = async (data: SignupRequest): Promise<AuthResponse> => {
       return {
         success: false,
         message: '회원가입에 실패했습니다.',
+      };
+    }
+
+    // Supabase Auth에서 이미 등록된 이메일은 identities가 빈 배열
+    if (authData.user.identities && authData.user.identities.length === 0) {
+      return {
+        success: false,
+        message: 'User already registered',
       };
     }
 
@@ -133,6 +148,13 @@ export const signup = async (data: SignupRequest): Promise<AuthResponse> => {
 
     if (insertError) {
       console.error('Insert user error:', insertError);
+      // 409 에러 또는 중복 키 에러는 이미 가입된 이메일
+      if (insertError.code === '23505' || insertError.message?.includes('duplicate') || (insertError as any).status === 409) {
+        return {
+          success: false,
+          message: 'User already registered',
+        };
+      }
       return {
         success: false,
         message: '사용자 정보 저장에 실패했습니다.',
