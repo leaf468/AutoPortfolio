@@ -64,6 +64,7 @@ const MyPage: React.FC = () => {
   const [selectedFeedback, setSelectedFeedback] = useState<any>(null);
   const [showSubscribeModal, setShowSubscribeModal] = useState(false);
   const [showCancelConfirmModal, setShowCancelConfirmModal] = useState(false);
+  const [isCancellingSubscription, setIsCancellingSubscription] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -339,6 +340,32 @@ const MyPage: React.FC = () => {
     await logout();
     setUser(null); // AuthContext의 user 상태를 null로 설정
     navigate('/login?logout=success');
+  };
+
+  const handleCancelSubscription = async () => {
+    if (!user) return;
+
+    setIsCancellingSubscription(true);
+    try {
+      // DB에서 pay를 false로 업데이트
+      const { error } = await supabase
+        .from('users')
+        .update({ pay: false })
+        .eq('user_id', user.user_id);
+
+      if (error) throw error;
+
+      // AuthContext의 user 상태 업데이트
+      setUser({ ...user, pay: false });
+
+      setShowCancelConfirmModal(false);
+      success('구독이 취소되었습니다. 현재 구독 기간이 만료될 때까지 프리미엄 기능을 사용하실 수 있습니다.');
+    } catch (error) {
+      console.error('Subscription cancellation error:', error);
+      showError('구독 취소 중 오류가 발생했습니다. 다시 시도해주세요.');
+    } finally {
+      setIsCancellingSubscription(false);
+    }
   };
 
   const handleDeleteAccount = async () => {
@@ -1006,6 +1033,11 @@ const MyPage: React.FC = () => {
                         <span className="mr-2">👑</span>
                         프로 플랜 구독 중
                       </>
+                    ) : user?.last_pay_date && !user?.pay ? (
+                      <>
+                        <span className="mr-2">⏸️</span>
+                        구독 취소됨
+                      </>
                     ) : (
                       '무료 플랜'
                     )}
@@ -1031,6 +1063,26 @@ const MyPage: React.FC = () => {
                         </p>
                       )}
                     </div>
+                  ) : user?.last_pay_date && !user?.pay ? (
+                    <div className="space-y-2">
+                      <p className="text-sm text-gray-600">
+                        구독이 취소되었습니다.
+                      </p>
+                      {(() => {
+                        const expiryDate = new Date(user.last_pay_date);
+                        expiryDate.setDate(expiryDate.getDate() + 30);
+                        const now = new Date();
+                        const daysLeft = Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+                        if (daysLeft > 0) {
+                          return (
+                            <p className="text-sm text-orange-600 font-medium">
+                              {expiryDate.toLocaleDateString('ko-KR')}까지 프리미엄 기능을 계속 이용하실 수 있습니다.
+                            </p>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </div>
                   ) : (
                     <div className="space-y-1">
                       <p className="text-sm text-gray-600">
@@ -1051,6 +1103,13 @@ const MyPage: React.FC = () => {
                       className="px-6 py-3 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-all"
                     >
                       구독 취소
+                    </button>
+                  ) : user?.last_pay_date && !user?.pay ? (
+                    <button
+                      onClick={() => setShowSubscribeModal(true)}
+                      className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold rounded-lg hover:shadow-lg transition-all transform hover:scale-105"
+                    >
+                      다시 구독하기
                     </button>
                   ) : (
                     <button
@@ -1454,33 +1513,85 @@ const MyPage: React.FC = () => {
 
       {/* 구독 취소 확인 모달 */}
       {showCancelConfirmModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">구독 취소</h3>
-            <p className="text-gray-700 mb-4">
-              구독을 취소하시겠습니까?
-            </p>
-            <p className="text-sm text-gray-600 mb-6">
-              취소하시더라도 현재 구독 기간이 만료될 때까지 모든 프리미엄 기능을 계속 사용하실 수 있습니다.
-              구독 취소 관련 문의는 <a href="mailto:careeroad2025@gmail.com" className="text-purple-600 underline">careeroad2025@gmail.com</a>으로 연락해주세요.
-            </p>
-            <div className="flex space-x-3">
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fadeIn"
+          onClick={() => setShowCancelConfirmModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 animate-scaleIn"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* 헤더 */}
+            <div className="relative p-6 pb-4">
               <button
                 onClick={() => setShowCancelConfirmModal(false)}
-                className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition"
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
               >
-                취소
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
               </button>
-              <button
-                onClick={() => {
-                  setShowCancelConfirmModal(false);
-                  // 실제 구독 취소는 이메일 문의로 처리
-                  window.location.href = 'mailto:careeroad2025@gmail.com?subject=구독 취소 요청&body=안녕하세요, 구독 취소를 요청드립니다.%0A%0A계정 이메일: ' + user?.email;
-                }}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
-              >
-                이메일로 문의하기
-              </button>
+
+              <div className="flex flex-col items-center text-center">
+                <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mb-4">
+                  <svg className="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                  구독 취소
+                </h3>
+              </div>
+            </div>
+
+            {/* 내용 */}
+            <div className="px-6 pb-6">
+              <div className="bg-gray-50 rounded-xl p-4 mb-4">
+                <p className="text-gray-700 text-sm leading-relaxed mb-3">
+                  구독을 취소하시겠습니까?
+                </p>
+                <p className="text-gray-600 text-xs leading-relaxed">
+                  취소하시더라도 현재 구독 기간이 만료될 때까지 모든 프리미엄 기능을 계속 사용하실 수 있습니다.
+                </p>
+              </div>
+              <div className="bg-purple-50 rounded-xl p-4">
+                <p className="text-gray-700 text-sm">
+                  구독 취소 관련 문의:
+                </p>
+                <a
+                  href="mailto:careeroad2025@gmail.com"
+                  className="text-purple-600 font-semibold text-sm hover:text-purple-800 transition-colors"
+                >
+                  careeroad2025@gmail.com
+                </a>
+              </div>
+            </div>
+
+            {/* 버튼 */}
+            <div className="px-6 pb-6">
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowCancelConfirmModal(false)}
+                  disabled={isCancellingSubscription}
+                  className="flex-1 py-3 rounded-xl font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 transition-all duration-200 disabled:opacity-50"
+                >
+                  닫기
+                </button>
+                <button
+                  onClick={handleCancelSubscription}
+                  disabled={isCancellingSubscription}
+                  className="flex-1 py-3 rounded-xl font-semibold bg-red-500 hover:bg-red-600 text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isCancellingSubscription ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      취소 중...
+                    </span>
+                  ) : (
+                    '구독 취소하기'
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>
