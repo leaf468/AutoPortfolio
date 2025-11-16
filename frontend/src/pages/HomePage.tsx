@@ -17,6 +17,7 @@ export default function HomePage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [showSignupModal, setShowSignupModal] = useState(false);
 
   const slides = [
     {
@@ -88,8 +89,8 @@ export default function HomePage() {
   const handleProPlanClick = () => {
     trackButtonClick('프로 플랜 시작하기', 'HomePage');
     if (!user) {
-      // 비로그인 사용자는 로그인 페이지로 이동, 로그인 후 구독 페이지로 리다이렉트
-      navigate('/login', { state: { returnTo: '/subscribe' } });
+      // 비로그인 사용자는 회원가입 안내 모달 표시
+      setShowSignupModal(true);
     } else {
       navigate('/subscribe');
     }
@@ -576,6 +577,52 @@ export default function HomePage() {
       </section>
 
       <LandingFooter />
+
+      {/* 회원가입 안내 모달 */}
+      {showSignupModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-8">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <UserGroupIcon className="w-8 h-8 text-purple-600" />
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                회원가입이 필요합니다
+              </h3>
+              <p className="text-gray-600 mb-6">
+                프로 플랜을 구독하려면 먼저 회원가입이 필요합니다.<br />
+                가입 후 다양한 프리미엄 기능을 이용해보세요!
+              </p>
+              <div className="space-y-3">
+                <button
+                  onClick={() => {
+                    setShowSignupModal(false);
+                    navigate('/signup');
+                  }}
+                  className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold rounded-xl hover:shadow-lg transition-all transform hover:scale-[1.02]"
+                >
+                  회원가입하기
+                </button>
+                <button
+                  onClick={() => {
+                    setShowSignupModal(false);
+                    navigate('/login');
+                  }}
+                  className="w-full px-6 py-3 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200 transition-colors"
+                >
+                  이미 계정이 있어요 (로그인)
+                </button>
+                <button
+                  onClick={() => setShowSignupModal(false)}
+                  className="w-full px-6 py-3 text-gray-500 hover:text-gray-700 transition-colors text-sm"
+                >
+                  닫기
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

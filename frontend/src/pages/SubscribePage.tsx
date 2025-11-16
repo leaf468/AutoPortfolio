@@ -36,7 +36,7 @@ const SubscribePage: React.FC = () => {
   ];
 
   // 결제 안내 정보 (실제 정보로 교체 필요)
-  const contactEmail = 'support@autoportfolio.com';
+  const contactEmail = 'careeroad2025@gmail.com';
   const accountInfo = '카카오뱅크 1234-56-789012 (주)오토포트폴리오';
 
   return (

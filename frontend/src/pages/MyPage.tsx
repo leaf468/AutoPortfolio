@@ -20,6 +20,7 @@ import { CustomAlert } from '../components/CustomAlert';
 import { useAlert } from '../hooks/useAlert';
 import { FeedbackDetailModal } from '../components/FeedbackDetailModal';
 import { generateFeedbackPDF } from '../services/pdfGenerationService';
+import SubscribeModal from '../components/SubscribeModal';
 
 const MyPage: React.FC = () => {
   const navigate = useNavigate();
@@ -61,6 +62,8 @@ const MyPage: React.FC = () => {
   const [isLoadingFeedbacks, setIsLoadingFeedbacks] = useState(false);
   const [isLoadingJobs, setIsLoadingJobs] = useState(false);
   const [selectedFeedback, setSelectedFeedback] = useState<any>(null);
+  const [showSubscribeModal, setShowSubscribeModal] = useState(false);
+  const [showCancelConfirmModal, setShowCancelConfirmModal] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -1008,10 +1011,15 @@ const MyPage: React.FC = () => {
                     )}
                   </h3>
                   {subscriptionInfo.isPro ? (
-                    <div className="space-y-1">
+                    <div className="space-y-2">
                       <p className="text-sm text-gray-600">
                         ✅ 모든 프리미엄 기능 이용 가능
                       </p>
+                      {user?.last_pay_date && (
+                        <p className="text-sm text-gray-600">
+                          결제일: {new Date(user.last_pay_date).toLocaleDateString('ko-KR')}
+                        </p>
+                      )}
                       {subscriptionInfo.expiresAt && (
                         <p className="text-sm text-gray-600">
                           만료일: {new Date(subscriptionInfo.expiresAt).toLocaleDateString('ko-KR')}
@@ -1036,14 +1044,23 @@ const MyPage: React.FC = () => {
                     </div>
                   )}
                 </div>
-                {!subscriptionInfo.isPro && (
-                  <button
-                    onClick={() => navigate('/subscribe')}
-                    className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold rounded-lg hover:shadow-lg transition-all transform hover:scale-105"
-                  >
-                    프로 플랜 구독하기
-                  </button>
-                )}
+                <div className="flex flex-col gap-2">
+                  {subscriptionInfo.isPro ? (
+                    <button
+                      onClick={() => setShowCancelConfirmModal(true)}
+                      className="px-6 py-3 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-all"
+                    >
+                      구독 취소
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setShowSubscribeModal(true)}
+                      className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold rounded-lg hover:shadow-lg transition-all transform hover:scale-105"
+                    >
+                      프로 플랜 구독하기
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -1428,6 +1445,46 @@ const MyPage: React.FC = () => {
         onClose={() => setSelectedFeedback(null)}
         onDownloadPDF={handleDownloadPDF}
       />
+
+      {/* Subscribe Modal */}
+      <SubscribeModal
+        isOpen={showSubscribeModal}
+        onClose={() => setShowSubscribeModal(false)}
+      />
+
+      {/* 구독 취소 확인 모달 */}
+      {showCancelConfirmModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">구독 취소</h3>
+            <p className="text-gray-700 mb-4">
+              구독을 취소하시겠습니까?
+            </p>
+            <p className="text-sm text-gray-600 mb-6">
+              취소하시더라도 현재 구독 기간이 만료될 때까지 모든 프리미엄 기능을 계속 사용하실 수 있습니다.
+              구독 취소 관련 문의는 <a href="mailto:careeroad2025@gmail.com" className="text-purple-600 underline">careeroad2025@gmail.com</a>으로 연락해주세요.
+            </p>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setShowCancelConfirmModal(false)}
+                className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition"
+              >
+                취소
+              </button>
+              <button
+                onClick={() => {
+                  setShowCancelConfirmModal(false);
+                  // 실제 구독 취소는 이메일 문의로 처리
+                  window.location.href = 'mailto:careeroad2025@gmail.com?subject=구독 취소 요청&body=안녕하세요, 구독 취소를 요청드립니다.%0A%0A계정 이메일: ' + user?.email;
+                }}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+              >
+                이메일로 문의하기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </div>
