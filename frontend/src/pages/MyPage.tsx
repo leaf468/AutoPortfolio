@@ -328,7 +328,7 @@ const MyPage: React.FC = () => {
   const handleLogout = async () => {
     await logout();
     setUser(null); // AuthContext의 user 상태를 null로 설정
-    navigate('/login?logout=success');
+    navigate('/');
   };
 
   const handleCancelSubscription = async () => {

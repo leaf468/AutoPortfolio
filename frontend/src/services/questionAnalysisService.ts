@@ -1,4 +1,10 @@
 import { getComprehensiveStats, ComprehensiveStats } from './comprehensiveAnalysisService';
+import OpenAI from 'openai';
+
+const openai = new OpenAI({
+  apiKey: process.env.REACT_APP_OPENAI_API_KEY,
+  dangerouslyAllowBrowser: true,
+});
 
 export interface QuestionAnalysis {
   questionId: string;
@@ -13,6 +19,72 @@ export interface QuestionAnalysis {
   generalAdvice: string;
 }
 
+interface LLMQuestionIntent {
+  intent: string; // 질문의 핵심 의도
+  categories: string[]; // 관련 카테고리 (동기, 역량, 포부, 경험, 성장, 가치관 등)
+  searchKeywords: string[]; // 통계 검색을 위한 키워드
+  suggestedTopics: string[]; // 추천 작성 주제
+  advice: string; // 작성 조언
+}
+
+/**
+ * LLM을 사용하여 질문의 의도를 분석
+ */
+async function analyzeQuestionIntentWithLLM(question: string, position: string, availableActivities: string[]): Promise<LLMQuestionIntent> {
+  try {
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: `당신은 취업 자소서 질문 분석 전문가입니다. 주어진 자소서 질문을 분석하여 JSON 형식으로 응답하세요.
+
+응답 형식:
+{
+  "intent": "질문이 묻고자 하는 핵심 의도 (1문장)",
+  "categories": ["관련 카테고리들", "최대 3개"],
+  "searchKeywords": ["통계 검색용 키워드", "최대 5개"],
+  "suggestedTopics": ["답변에 포함할 추천 주제", "최대 4개"],
+  "advice": "이 질문에 대한 작성 조언 (1-2문장)"
+}
+
+카테고리 옵션: 동기, 역량, 포부, 경험, 성장, 가치관, 협업, 문제해결, 성과, 전문성
+
+검색 키워드는 질문의 의도에 맞는 활동을 선택하세요. 현재 DB에 있는 합격자 활동 유형:
+${availableActivities.slice(0, 20).join(', ')}
+
+중요:
+- "성장 배경", "입사 후 포부", "비전" 등의 질문은 미래 계획과 역량 개발에 관한 것입니다. 검색 키워드로 "기술", "프로젝트", "리더십", "개발", "역량" 등을 사용하세요.
+- "봉사활동", "대외활동 경험" 등의 질문은 과거 활동 경험에 관한 것입니다. 검색 키워드로 "봉사", "대외활동", "동아리" 등을 사용하세요.
+- 질문의 실제 의도를 파악하여 가장 관련성 높은 활동 통계를 선택하세요.`
+        },
+        {
+          role: 'user',
+          content: `직무: ${position}\n질문: ${question}`
+        }
+      ],
+      temperature: 0.3,
+      max_tokens: 500,
+    });
+
+    const content = response.choices[0]?.message?.content || '';
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
+    }
+    throw new Error('JSON parsing failed');
+  } catch (error) {
+    // LLM 실패 시 폴백으로 기본 키워드 추출 사용
+    return {
+      intent: '질문 분석 중',
+      categories: extractKeywordsFromQuestion(question),
+      searchKeywords: ['프로젝트', '인턴', '경험'],
+      suggestedTopics: ['관련 경험 작성', '구체적 사례 포함'],
+      advice: '구체적인 사례와 결과를 포함하여 작성하세요.'
+    };
+  }
+}
+
 /**
  * 질문을 분석하여 관련된 데이터 기반 통계 제공
  */
@@ -24,26 +96,61 @@ export async function analyzeQuestion(
   // 1. 종합 통계 가져오기 (익명화 스킵 - 속도 향상)
   const stats = await getComprehensiveStats(position, true);
 
-  // 2. 질문에서 키워드 추출
-  const keywords = extractKeywordsFromQuestion(question);
+  // 2. DB에 있는 활동 유형 목록 추출
+  const availableActivities = stats.commonActivities.map(a => a.activityType);
 
-  // 3. 관련 통계 찾기
-  const relatedStats = findRelatedStats(keywords, stats);
+  // 3. LLM을 사용하여 질문 의도 분석 (실제 DB 활동 목록 전달)
+  const llmIntent = await analyzeQuestionIntentWithLLM(question, position, availableActivities);
 
-  // 4. 제안 주제 생성
-  const suggestedTopics = generateSuggestedTopics(keywords, stats);
+  // 4. LLM 분석 결과를 기반으로 관련 통계 찾기
+  const relatedStats = findRelatedStatsWithLLM(llmIntent.searchKeywords, stats);
 
-  // 5. 일반 조언 생성
-  const generalAdvice = generateGeneralAdvice(keywords, relatedStats, stats);
+  // 5. LLM이 제안한 주제 사용 (없으면 기본 로직)
+  const suggestedTopics = llmIntent.suggestedTopics.length > 0
+    ? llmIntent.suggestedTopics
+    : generateSuggestedTopics(llmIntent.categories, stats);
+
+  // 6. LLM의 조언 사용
+  const generalAdvice = llmIntent.advice || generateGeneralAdvice(llmIntent.categories, relatedStats, stats);
 
   return {
     questionId,
     question,
-    relevantKeywords: keywords,
+    relevantKeywords: llmIntent.categories,
     suggestedTopics,
     relatedStats,
     generalAdvice,
   };
+}
+
+/**
+ * LLM 키워드를 사용하여 관련 통계 찾기
+ */
+function findRelatedStatsWithLLM(
+  searchKeywords: string[],
+  stats: ComprehensiveStats
+): { activityType: string; percentage: number; insight: string }[] {
+  const relatedStats: { activityType: string; percentage: number; insight: string }[] = [];
+
+  searchKeywords.forEach((keyword) => {
+    stats.commonActivities.forEach((activity) => {
+      if (activity.activityType.toLowerCase().includes(keyword.toLowerCase()) ||
+          keyword.toLowerCase().includes(activity.activityType.toLowerCase())) {
+        relatedStats.push({
+          activityType: activity.activityType,
+          percentage: activity.percentage,
+          insight: activity.insight,
+        });
+      }
+    });
+  });
+
+  // 중복 제거 및 상위 5개만 반환
+  const uniqueStats = Array.from(
+    new Map(relatedStats.map((item) => [item.activityType, item])).values()
+  );
+
+  return uniqueStats.sort((a, b) => b.percentage - a.percentage).slice(0, 5);
 }
 
 /**
