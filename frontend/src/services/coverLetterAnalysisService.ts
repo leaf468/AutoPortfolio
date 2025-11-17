@@ -103,7 +103,6 @@ export async function findSimilarApplicants(
 
     return results.slice(0, limit);
   } catch (error) {
-    console.error('Error finding similar applicants:', error);
     return [];
   }
 }
@@ -260,7 +259,6 @@ export async function getCompanyStatistics(
       topCertificates,
     };
   } catch (error) {
-    console.error('Error getting company statistics:', error);
     return null;
   }
 }
@@ -280,7 +278,6 @@ export async function getCompanyList(): Promise<string[]> {
     const companies = Array.from(new Set(data?.map((d) => d.company_name) || []));
     return companies;
   } catch (error) {
-    console.error('Error getting company list:', error);
     return [];
   }
 }
@@ -301,7 +298,6 @@ export async function getPositionsByCompany(company: string): Promise<string[]> 
     const positions = Array.from(new Set(data?.map((d) => d.job_position) || []));
     return positions;
   } catch (error) {
-    console.error('Error getting positions:', error);
     return [];
   }
 }
@@ -381,7 +377,6 @@ export async function compareCoverLetter(
       missingActivities,
     };
   } catch (error) {
-    console.error('Error comparing cover letter:', error);
     return {
       strengths: [],
       weaknesses: [],

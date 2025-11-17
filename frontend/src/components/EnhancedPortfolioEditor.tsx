@@ -94,12 +94,8 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
 
     // HTML에서 실제 포트폴리오 데이터 추출 - 의존성에서 portfolioData 제거하여 무한 루프 방지
     const extractPortfolioData = useCallback((html: string): PortfolioData => {
-        console.log('=== HTML 데이터 추출 시작 ===');
-        console.log('HTML 길이:', html?.length || 0);
-        console.log('HTML 내용 (처음 500자):', html?.substring(0, 500));
 
         if (!html) {
-            console.log('HTML이 비어있음 - 빈 데이터 반환');
             return {
                 name: '',
                 title: '',
@@ -179,12 +175,6 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
             .map(el => el.textContent?.trim())
             .filter((skill): skill is string => !!skill && skill.length > 0);
 
-        console.log('=== HTML에서 추출된 최종 데이터 ===');
-        console.log('이름:', extractedData.name);
-        console.log('직책:', extractedData.title);
-        console.log('자기소개:', extractedData.about);
-        console.log('기술스택:', extractedData.skills);
-        console.log('전체 추출 데이터:', extractedData);
 
         return extractedData;
     }, []);
@@ -208,21 +198,15 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                     let actualData: PortfolioData;
 
                     if (firstBlock.extractedData) {
-                        console.log('=== 블록에서 실제 추출된 데이터 발견 ===');
-                        console.log('실제 AI 가공 데이터:', firstBlock.extractedData);
                         actualData = firstBlock.extractedData as PortfolioData;
                     } else {
                         // fallback: HTML에서 추출
-                        console.log('=== 블록에 데이터 없음 - HTML에서 추출 시도 ===');
                         actualData = extractPortfolioData(html);
                     }
 
-                    console.log('=== 사용할 최종 포트폴리오 데이터 ===');
-                    console.log(actualData);
 
                     // 기본 데이터가 있다면 먼저 설정하여 미리보기 표시
                     if (actualData.name || actualData.title || actualData.about) {
-                        console.log('기본 데이터 즉시 설정:', actualData);
                         setPortfolioData(actualData);
                         setDataLoaded(true);
                     }
@@ -236,13 +220,9 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                     );
 
                     if (needsEnhancement) {
-                        console.log('=== 데이터가 부족하여 AI 개선 필요 ===');
-                        console.log('About 길이:', actualData.about?.length || 0);
-                        console.log('프로젝트 수:', actualData.projects?.length || 0);
                         setIsEnhancing(true);
                         try {
                             const enhanced = await portfolioTextEnhancer.enhancePortfolioData(actualData);
-                            console.log('AI 개선 완료, 최종 데이터 설정:', enhanced);
                             setPortfolioData(enhanced);
 
                             // AI 생성 필드 표시
@@ -252,7 +232,6 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                             }
                             setEnhancedFields(generatedFields);
                         } catch (error) {
-                            console.error('데이터 개선 실패:', error);
                             // AI 개선이 실패해도 기본 데이터는 유지
                             if (!dataLoaded) {
                                 setPortfolioData(actualData);
@@ -261,18 +240,13 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                             setIsEnhancing(false);
                         }
                     } else {
-                        console.log('=== 추출된 데이터가 충분함 - AI 개선 건너뛰기 ===');
-                        console.log('About 길이:', actualData.about?.length || 0);
-                        console.log('프로젝트 수:', actualData.projects?.length || 0);
                         if (actualData.projects && actualData.projects.length > 0) {
-                            console.log('첫 번째 프로젝트 설명 길이:', actualData.projects[0].description?.length || 0);
                         }
                     }
 
                     setDataLoaded(true);
                 }
             } catch (error) {
-                console.error('초기 데이터 로딩 실패:', error);
             } finally {
                 setIsInitializing(false);
             }
@@ -293,7 +267,6 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                 setEnhancedFields(prev => ({ ...prev, about: true }));
             }
         } catch (error) {
-            console.error('자기소개 개선 실패:', error);
         } finally {
             setIsEnhancing(false);
         }
@@ -322,7 +295,6 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                 preserveScrollAndUpdate(html);
             }
         } catch (error) {
-            console.error('자연어 편집 실패:', error);
             throw error;
         }
     };
@@ -455,7 +427,6 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                 setEnhancedFields(prev => ({ ...prev, [`project_${index}`]: true }));
             }
         } catch (error) {
-            console.error('프로젝트 개선 실패:', error);
         } finally {
             setIsEnhancing(false);
         }
@@ -1170,7 +1141,6 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
             }
 
         } catch (error) {
-            console.error('자동 채우기 중 오류:', error);
         }
 
         return filledData;
@@ -1217,10 +1187,6 @@ const EnhancedPortfolioEditor: React.FC<EnhancedPortfolioEditorProps> = ({
                 (dataForTemplate as any).awards = [];
             }
 
-            console.log('=== 자동 채우기 후 데이터 ===');
-            console.log('템플릿:', currentTemplate);
-            console.log('필드 지원:', fieldSupport);
-            console.log('최종 데이터:', dataForTemplate);
 
             const html = template.generateHTML(dataForTemplate);
 

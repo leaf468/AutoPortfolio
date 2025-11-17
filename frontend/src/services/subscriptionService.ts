@@ -29,7 +29,6 @@ export const getSubscriptionStatus = async (userId: string): Promise<Subscriptio
       .single();
 
     if (error || !data) {
-      console.error('구독 상태 조회 실패:', error);
       return {
         isPro: false,
         lastPayDate: null,
@@ -50,7 +49,6 @@ export const getSubscriptionStatus = async (userId: string): Promise<Subscriptio
       canDownloadPPT: isPro, // Pro 플랜만 가능
     };
   } catch (error) {
-    console.error('구독 상태 조회 중 오류:', error);
     return {
       isPro: false,
       lastPayDate: null,
@@ -73,14 +71,11 @@ export const markFreePdfUsed = async (userId: string): Promise<boolean> => {
       .eq('user_id', userId);
 
     if (error) {
-      console.error('무료 첨삭 사용 기록 실패:', error);
       return false;
     }
 
-    console.log('✅ 무료 첨삭 사용 기록 완료');
     return true;
   } catch (error) {
-    console.error('무료 첨삭 사용 기록 중 오류:', error);
     return false;
   }
 };
@@ -100,14 +95,11 @@ export const activateProPlan = async (userId: string): Promise<boolean> => {
       .eq('user_id', userId);
 
     if (error) {
-      console.error('Pro 플랜 활성화 실패:', error);
       return false;
     }
 
-    console.log('✅ Pro 플랜 활성화 완료');
     return true;
   } catch (error) {
-    console.error('Pro 플랜 활성화 중 오류:', error);
     return false;
   }
 };
@@ -123,14 +115,11 @@ export const deactivateProPlan = async (userId: string): Promise<boolean> => {
       .eq('user_id', userId);
 
     if (error) {
-      console.error('Pro 플랜 비활성화 실패:', error);
       return false;
     }
 
-    console.log('✅ Pro 플랜 비활성화 완료');
     return true;
   } catch (error) {
-    console.error('Pro 플랜 비활성화 중 오류:', error);
     return false;
   }
 };

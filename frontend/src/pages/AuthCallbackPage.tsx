@@ -16,7 +16,6 @@ const AuthCallbackPage: React.FC = () => {
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
         if (sessionError) {
-          console.error('Session error:', sessionError);
           setError('인증 처리 중 오류가 발생했습니다.');
           setTimeout(() => navigate('/login'), 2000);
           return;
@@ -38,7 +37,6 @@ const AuthCallbackPage: React.FC = () => {
           .maybeSingle();
 
         if (checkError && checkError.code !== 'PGRST116') {
-          console.error('User check error:', checkError);
           setError('사용자 정보 확인 중 오류가 발생했습니다.');
           setTimeout(() => navigate('/login'), 2000);
           return;
@@ -64,7 +62,6 @@ const AuthCallbackPage: React.FC = () => {
             .single();
 
           if (insertError) {
-            console.error('Insert user error:', insertError);
             setError('사용자 정보 저장에 실패했습니다.');
             setTimeout(() => navigate('/login'), 2000);
             return;
@@ -107,7 +104,6 @@ const AuthCallbackPage: React.FC = () => {
         // 마이페이지로 이동
         navigate('/mypage');
       } catch (error) {
-        console.error('OAuth callback error:', error);
         setError('인증 처리 중 오류가 발생했습니다.');
         setTimeout(() => navigate('/login'), 2000);
       }

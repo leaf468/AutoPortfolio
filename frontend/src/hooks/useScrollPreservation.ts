@@ -88,7 +88,6 @@ export function useScrollPreservation(): ScrollPreservationHook {
             return; // Successfully updated without srcDoc change
           }
         } catch (domError) {
-          console.warn('DOM manipulation failed, falling back to srcDoc update:', domError);
         }
       }
 
@@ -131,7 +130,6 @@ export function useScrollPreservation(): ScrollPreservationHook {
       });
 
     } catch (error) {
-      console.error('Failed to preserve scroll position during update:', error);
       // Fallback: just update srcDoc normally (cleanHtml 사용)
       const cleanHtml = newHtml.replace(/<span style="color:orange">(.*?)<\/span>/g, '$1');
       iframe.srcdoc = cleanHtml;

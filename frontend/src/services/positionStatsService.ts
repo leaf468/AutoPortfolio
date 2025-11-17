@@ -142,16 +142,6 @@ export async function getPositionStats(position: string): Promise<PositionStats 
       return matchesNormalized || matchesSimilarity;
     });
 
-    console.log('📊 positionStatsService 필터링:', {
-      검색_직무: position,
-      정규화된_직무: normalizedPositions,
-      전체_데이터: coverLetters.length,
-      매칭된_데이터: finalCoverLetters.length,
-      매칭된_직무_샘플: Array.from(new Set(finalCoverLetters.map(cl =>
-        inferPositionFromIntegratedData(cl.job_position, cl.activities, cl.user_spec, cl.company_name || '')
-      ))).slice(0, 10)
-    });
-
     if (finalCoverLetters.length === 0) {
       return null;
     }
@@ -556,7 +546,6 @@ export async function getPositionStats(position: string): Promise<PositionStats 
       yearDistribution,
     };
   } catch (error) {
-    console.error('Error fetching position stats:', error);
     return null;
   }
 }

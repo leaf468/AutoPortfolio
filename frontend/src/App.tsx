@@ -83,7 +83,6 @@ function GlobalFeedbackAlert() {
             localStorage.removeItem('feedbackCompleted');
           }
         } catch (error) {
-          console.error('feedbackCompleted 파싱 오류:', error);
           localStorage.removeItem('feedbackCompleted');
         }
       }

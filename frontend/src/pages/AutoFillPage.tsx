@@ -22,7 +22,6 @@ export default function AutoFillPage() {
       if (!user) return;
 
       try {
-        console.log('👤 사용자 이름 로드 시작 - user_id:', user.user_id);
 
         // users 테이블에서 name 가져오기
         const { data: userData, error: userError } = await supabase
@@ -32,17 +31,13 @@ export default function AutoFillPage() {
           .single();
 
         if (userError) {
-          console.error('❌ users 테이블 조회 실패:', userError);
         } else {
-          console.log('✅ users 테이블에서 가져온 이름:', userData?.name);
         }
 
         // 이름 우선순위: DB users 테이블 > AuthContext user 객체 > 기본값
         const name = userData?.name || user.name || '';
         setUserName(name);
-        console.log('👤 최종 사용자 이름:', name);
       } catch (error) {
-        console.error('❌ 사용자 이름 로드 실패:', error);
         setUserName(user.name || '');
       }
     };
@@ -77,28 +72,21 @@ export default function AutoFillPage() {
     try {
       const { rawText, inputType, jobPosting } = state.organizedContent.originalInput;
 
-      console.log('=== AutoFillPage에서 AI 처리 시작 ===');
       let organized = await aiOrganizer.organizeContent(rawText, inputType);
-      console.log('AI 기본 정리 결과:', organized);
 
       // 채용공고가 있으면 추가 최적화
       if (jobPosting) {
-        console.log('채용공고 최적화 실행 중...');
         organized = await aiOrganizer.enhanceWithJobPosting(organized, jobPosting);
-        console.log('채용공고 최적화 결과:', organized);
       }
 
       // 원본 입력 데이터를 결과에 추가
       organized.originalInput = state.organizedContent.originalInput;
 
-      console.log('=== AI 처리 완료 ===');
-      console.log(organized);
 
       // 처리된 데이터 저장
       setOrganizedContent(organized);
       setIsProcessingAI(false);
     } catch (error) {
-      console.error('AI 정리 중 오류:', error);
       setIsProcessingAI(false);
       // 오류 발생 시 이전 페이지로 돌아가기
       navigate('/organize');
@@ -165,12 +153,6 @@ export default function AutoFillPage() {
   }
 
   // 디버깅: AutoFill 단계로 전달되는 데이터 확인
-  console.log('=== AutoFillPage 데이터 확인 ===');
-  console.log('organizedContent 전체:', state.organizedContent);
-  console.log('originalInput:', state.organizedContent?.originalInput);
-  console.log('originalInput.rawText:', state.organizedContent?.originalInput?.rawText);
-  console.log('originalInput.inputType:', state.organizedContent?.originalInput?.inputType);
-  console.log('originalInput.jobPosting:', state.organizedContent?.originalInput?.jobPosting);
 
   return (
     <MainLayout>

@@ -125,7 +125,6 @@ function addKoreanText(
 
       doc.addImage(imgData, 'PNG', finalX, currentY, imgWidth, imgHeight);
     } catch (e) {
-      console.error('이미지 추가 실패:', e);
     }
 
     currentY += lineHeight;

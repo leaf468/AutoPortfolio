@@ -160,22 +160,6 @@ class AutoFillService {
         // 가장 높은 점수의 카테고리 반환
         const category = Object.entries(scores).reduce((a, b) => a[1] > b[1] ? a : b)[0];
 
-        console.log('');
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log('📊 [카테고리 감지] 분석 시작');
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log('📝 입력 텍스트:', text);
-        console.log('📏 텍스트 길이:', text.length, '자');
-        console.log('');
-        console.log('🔍 키워드 매칭 결과:');
-        console.log('   자기소개:', selfIntro.count, '개 -', selfIntro.matched.join(', ') || '없음');
-        console.log('   성과:', achievement.count, '개 -', achievement.matched.join(', ') || '없음');
-        console.log('   프로젝트:', project.count, '개 -', project.matched.join(', ') || '없음');
-        console.log('   경력:', career.count, '개 -', career.matched.join(', ') || '없음');
-        console.log('');
-        console.log('🎯 최종 분류:', category);
-        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-        console.log('');
 
         return category;
     }
@@ -186,22 +170,13 @@ class AutoFillService {
      */
     async expandText(userInput: string): Promise<string> {
         try {
-            console.log('');
-            console.log('🚀 ========================================');
-            console.log('🚀 [AUTO EXPAND] 자동 확장 시작');
-            console.log('🚀 ========================================');
 
             // 카테고리 감지
             const detectedCategory = this.detectCategory(userInput);
             const examples = CATEGORY_EXAMPLES[detectedCategory as keyof typeof CATEGORY_EXAMPLES] || [];
 
-            console.log('📚 Few-shot 학습 예시:', examples.length, '개');
             examples.forEach((ex, idx) => {
-                console.log(`   예시 ${idx + 1}:`);
-                console.log(`     입력: ${ex.input}`);
-                console.log(`     출력: ${ex.output.substring(0, 80)}...`);
             });
-            console.log('');
 
             // Few-shot 프롬프트 구성
             const examplesText = examples.map((ex, idx) =>
@@ -237,20 +212,6 @@ ${examplesText}
             const userMessage = `입력: "${userInput}"
 출력:`;
 
-            console.log('🤖 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-            console.log('🤖 [AI 요청] OpenAI API 호출 시작');
-            console.log('🤖 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-            console.log('📤 모델:', MODEL);
-            console.log('📤 Temperature:', 0.7);
-            console.log('📤 Max Tokens:', 500);
-            console.log('📤 프롬프트 길이:', systemPrompt.length + userMessage.length, '자');
-            console.log('');
-            console.log('📤 System Prompt (처음 200자):');
-            console.log('   ', systemPrompt.substring(0, 200) + '...');
-            console.log('');
-            console.log('📤 User Message:');
-            console.log('   ', userMessage);
-            console.log('');
 
             const requestStartTime = Date.now();
             const response = await openai.chat.completions.create({
@@ -274,63 +235,24 @@ ${examplesText}
                 expandedText = expandedText.slice(1, -1);
             }
 
-            console.log('📥 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-            console.log('📥 [AI 응답] OpenAI API 응답 수신');
-            console.log('📥 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-            console.log('⏱️  응답 시간:', requestDuration, 'ms');
-            console.log('📊 토큰 사용량:');
-            console.log('   - Prompt:', response.usage?.prompt_tokens || 'N/A');
-            console.log('   - Completion:', response.usage?.completion_tokens || 'N/A');
-            console.log('   - Total:', response.usage?.total_tokens || 'N/A');
-            console.log('');
-            console.log('📝 원본 텍스트 (입력):');
-            console.log('   ', userInput);
-            console.log('   길이:', userInput.length, '자');
-            console.log('');
-            console.log('✨ 확장된 텍스트 (출력):');
-            console.log('   ', expandedText);
-            console.log('   길이:', expandedText.length, '자');
-            console.log('   증가:', expandedText.length - userInput.length, '자');
-            console.log('');
 
             // 변화 분석
             if (expandedText === userInput) {
-                console.log('⚠️  변화 없음: AI가 원본을 그대로 반환했습니다.');
             } else {
-                console.log('✅ 확장 성공: 텍스트가 성공적으로 확장되었습니다.');
 
                 // 추가된 내용 하이라이트
                 if (expandedText.includes(userInput)) {
-                    console.log('');
-                    console.log('🔍 추가된 내용:');
                     const addedText = expandedText.replace(userInput, '');
-                    console.log('   ', addedText.trim());
                 } else {
-                    console.log('');
-                    console.log('⚠️  원본이 포함되지 않음: AI가 완전히 새로운 텍스트를 생성했습니다.');
                 }
             }
 
-            console.log('');
-            console.log('✅ ========================================');
-            console.log('✅ [AUTO EXPAND] 자동 확장 완료');
-            console.log('✅ ========================================');
-            console.log('');
 
             return expandedText;
 
         } catch (error) {
-            console.log('');
-            console.log('❌ ========================================');
-            console.log('❌ [AUTO EXPAND] 자동 확장 실패');
-            console.log('❌ ========================================');
-            console.error('❌ 에러 상세:', error);
             if (error instanceof Error) {
-                console.error('❌ 에러 메시지:', error.message);
-                console.error('❌ 에러 스택:', error.stack);
             }
-            console.log('🔄 원본 텍스트를 그대로 반환합니다.');
-            console.log('');
             // 오류 시 원본 텍스트 반환
             return userInput;
         }
@@ -338,8 +260,6 @@ ${examplesText}
 
     async generatePortfolio(request: GenerateRequest): Promise<PortfolioDocument> {
         try {
-            console.log('=== AutoFill 포트폴리오 생성 시작 ===');
-            console.log('입력 요청 데이터:', request);
 
             // 템플릿별 특화 지침 생성
             const getTemplateGuidance = (template?: string) => {
@@ -551,15 +471,11 @@ ${examplesText}
 
             // 원본 + 가공된 데이터 추출
             const profileData = request.inputs.profile ? JSON.parse(request.inputs.profile) : null;
-            console.log('전달받은 프로필 데이터:', profileData);
 
             const organizedContent = profileData?.organizedContent;
             const originalInput = profileData?.originalInput || organizedContent?.originalInput;
             const userName = profileData?.name || ''; // 마이페이지에서 전달받은 사용자 이름
 
-            console.log('AI 가공 결과:', organizedContent);
-            console.log('원본 사용자 입력:', originalInput);
-            console.log('👤 사용자 이름:', userName);
 
             // UserMessage 구성 - 더 상세하고 구조화된 정보 제공
             const userMessage = "=== 📋 사용자 기본 정보 ===\n" +
@@ -644,10 +560,6 @@ ${examplesText}
                 "□ HTML이 완성되고 스타일이 적용되었나?\n\n" +
                 "지금 바로 채용담당자를 감동시킬 최고의 포트폴리오를 생성하세요! 🚀";
 
-            console.log('=== AutoFillService AI 요청 데이터 ===');
-            console.log('원본 사용자 입력:', originalInput);
-            console.log('AI 가공 결과:', organizedContent);
-            console.log('AI 요청 메시지:', userMessage);
 
             const response = await openai.chat.completions.create({
                 model: MODEL,
@@ -661,12 +573,10 @@ ${examplesText}
             });
 
             const content = response.choices[0].message.content;
-            console.log('AI 응답 원본:', content);
 
             if (!content) throw new Error('No content received from AI');
 
             const aiResponse = JSON.parse(content);
-            console.log('파싱된 AI 응답:', aiResponse);
             const now = new Date().toISOString();
 
             // ====================================================================
@@ -676,7 +586,6 @@ ${examplesText}
             let extractedData = null;
 
             if (aiResponse.portfolioData) {
-                console.log('=== AI가 구조화한 portfolioData 사용 (NEW) ===');
                 const pd = aiResponse.portfolioData;
 
                 // Normalize skills format
@@ -729,25 +638,11 @@ ${examplesText}
                     }))
                 };
 
-                console.log('=== 최종 extractedData (AI portfolioData 기반) ===');
-                console.log('이름:', extractedData.name);
-                console.log('타이틀:', extractedData.title);
-                console.log('About 길이:', extractedData.about.length);
-                console.log('스킬 수:', extractedData.skills.length);
-                console.log('프로젝트 수:', extractedData.projects.length);
-                console.log('경력 수:', extractedData.experience.length);
-                console.log('학력 수:', extractedData.education.length);
                 if (extractedData.projects.length > 0) {
-                    console.log('첫 번째 프로젝트:', extractedData.projects[0].name);
-                    console.log('첫 번째 프로젝트 설명 길이:', extractedData.projects[0].description.length);
                 }
                 if (extractedData.experience.length > 0) {
-                    console.log('첫 번째 경력:', extractedData.experience[0].position);
-                    console.log('첫 번째 경력 설명 길이:', extractedData.experience[0].description.length);
                 }
             } else {
-                console.log('=== portfolioData 없음, organizedContent 기반으로 구조화 ===');
-                console.log('organizedContent 내용:', organizedContent);
 
                 extractedData = {
                     name: '',
@@ -779,29 +674,20 @@ ${examplesText}
                     education: organizedContent?.education || []
                 };
 
-                console.log('organizedContent 기반 extractedData 생성 완료:', extractedData);
             }
 
-            console.log('변환된 extractedData:', extractedData);
 
             // 🚀 AUTO-EXPAND: 포트폴리오 생성 시 자동으로 AI 확장 적용
-            console.log('');
-            console.log('🚀 ========================================');
-            console.log('🚀 [포트폴리오 생성 시 AUTO-EXPAND]');
-            console.log('🚀 ========================================');
 
             const expandPromises: Promise<void>[] = [];
 
             // About 필드 자동 확장
             if (extractedData.about && extractedData.about.length > 0) {
-                console.log(`📝 About 필드 발견 (${extractedData.about.length}자) - 자동 확장 시작`);
                 const expandPromise = (async () => {
                     try {
                         const expanded = await this.expandText(extractedData.about);
                         extractedData.about = expanded;
-                        console.log('✅ About 필드 자동 확장 완료');
                     } catch (error) {
-                        console.error('❌ About 자동 확장 실패:', error);
                     }
                 })();
                 expandPromises.push(expandPromise);
@@ -811,14 +697,11 @@ ${examplesText}
             if (extractedData.projects && extractedData.projects.length > 0) {
                 extractedData.projects.forEach((project, index) => {
                     if (project.description && project.description.length > 0) {
-                        console.log(`📝 프로젝트 ${index} description 발견 (${project.description.length}자) - 자동 확장 시작`);
                         const expandPromise = (async () => {
                             try {
                                 const expanded = await this.expandText(project.description);
                                 extractedData.projects[index].description = expanded;
-                                console.log(`✅ 프로젝트 ${index} description 자동 확장 완료`);
                             } catch (error) {
-                                console.error(`❌ 프로젝트 ${index} 자동 확장 실패:`, error);
                             }
                         })();
                         expandPromises.push(expandPromise);
@@ -830,14 +713,11 @@ ${examplesText}
             if (extractedData.experience && extractedData.experience.length > 0) {
                 extractedData.experience.forEach((exp, index) => {
                     if (exp.description && exp.description.length > 0) {
-                        console.log(`📝 경력 ${index} description 발견 (${exp.description.length}자) - 자동 확장 시작`);
                         const expandPromise = (async () => {
                             try {
                                 const expanded = await this.expandText(exp.description);
                                 extractedData.experience[index].description = expanded;
-                                console.log(`✅ 경력 ${index} description 자동 확장 완료`);
                             } catch (error) {
-                                console.error(`❌ 경력 ${index} 자동 확장 실패:`, error);
                             }
                         })();
                         expandPromises.push(expandPromise);
@@ -847,11 +727,8 @@ ${examplesText}
 
             // 모든 자동 확장 완료 대기
             if (expandPromises.length > 0) {
-                console.log(`⏳ 총 ${expandPromises.length}개 필드 자동 확장 중...`);
                 await Promise.all(expandPromises);
-                console.log('🎉 모든 자동 확장 완료!');
             } else {
-                console.log('ℹ️  자동 확장할 필드 없음');
             }
 
             const portfolioSection: Section = {
@@ -879,13 +756,10 @@ ${examplesText}
                 updated_at: now
             };
 
-            console.log('=== 생성된 최종 포트폴리오 문서 ===');
-            console.log(finalDocument);
 
             return finalDocument;
 
         } catch (error) {
-            console.error('Error generating portfolio:', error);
             throw error;
         }
     }
@@ -954,7 +828,6 @@ ${examplesText}
             }));
 
         } catch (error) {
-            console.error('Error refining section:', error);
             throw error;
         }
     }

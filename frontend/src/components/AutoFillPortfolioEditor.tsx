@@ -70,7 +70,6 @@ const AutoFillPortfolioEditor: React.FC<AutoFillPortfolioEditorProps> = ({
                 onSave(generatedDoc);
             }
         } catch (error) {
-            console.error('Failed to generate portfolio:', error);
         } finally {
             setLoading(false);
         }
@@ -200,7 +199,6 @@ const AutoFillPortfolioEditor: React.FC<AutoFillPortfolioEditorProps> = ({
                 onSave(updatedDoc);
             }
         } catch (error) {
-            console.error('Failed to refine section:', error);
         } finally {
             setLoading(false);
         }
@@ -550,7 +548,6 @@ const AutoFillPortfolioEditor: React.FC<AutoFillPortfolioEditorProps> = ({
                         <button
                             onClick={() => {
                                 // Batch refine selected blocks
-                                console.log('Refining selected blocks:', Array.from(selectedBlocks));
                             }}
                             className="px-3 py-1 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm"
                         >

@@ -441,7 +441,6 @@ ${userCertificates && userCertificates.length > 0 ? `- 자격증: ${userCertific
       keyImprovements: result.keyImprovements || [],
     };
   } catch (error) {
-    console.error('상세 첨삭 생성 실패:', error);
     throw error;
   }
 }

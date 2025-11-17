@@ -32,7 +32,6 @@ export const QuestionBasedAIPanel: React.FC<QuestionBasedAIPanelProps> = ({
           );
           setAIRecommendations(prev => ({ ...prev, [question.id]: recommendations }));
         } catch (error) {
-          console.error('AI 추천 생성 실패:', error);
         } finally {
           setLoadingRecommendations(prev => ({ ...prev, [question.id]: false }));
         }

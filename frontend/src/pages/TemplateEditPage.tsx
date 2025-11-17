@@ -34,16 +34,10 @@ export default function TemplateEditPage() {
     if (initializationRef.current) return;
     initializationRef.current = true;
 
-    console.log('🔍 TemplateEditPage Initialization Debug:');
-    console.log('  - URL template param:', template);
-    console.log('  - Context selectedTemplate:', state.selectedTemplate);
-    console.log('  - Current step:', state.currentStep);
-    console.log('  - Location state:', location.state);
 
     // Validate template parameter first
     const validTemplates = ['minimal', 'clean', 'colorful', 'elegant'];
     if (!template || !validTemplates.includes(template)) {
-      console.log('❌ Invalid template, redirecting to /template');
       navigate('/template', { replace: true });
       return;
     }
@@ -51,7 +45,6 @@ export default function TemplateEditPage() {
     // Check if we have portfolioData from MyPage (direct DB edit mode)
     const locationState = location.state as any;
     if (locationState?.portfolioData && locationState?.editMode) {
-      console.log('✅ Loading portfolio from DB (direct edit mode)');
       setLoadedFromDB(true);
       setTemplate(template);
       setCurrentStep('enhanced-edit');
@@ -61,15 +54,11 @@ export default function TemplateEditPage() {
 
     // Check required data
     if (!state.initialResult) {
-      console.log('❌ No initialResult, checking other conditions...');
       if (!state.selectedTemplate) {
-        console.log('❌ No selectedTemplate, redirecting to /template');
         navigate('/template', { replace: true });
       } else if (!state.organizedContent) {
-        console.log('❌ No organizedContent, redirecting to /organize');
         navigate('/organize', { replace: true });
       } else {
-        console.log('❌ Missing data, redirecting to /autofill');
         navigate('/autofill', { replace: true });
       }
       return;
@@ -78,27 +67,22 @@ export default function TemplateEditPage() {
     // Set current step and sync template only once
     setCurrentStep('enhanced-edit');
     if (template !== state.selectedTemplate) {
-      console.log(`🔄 Template mismatch: URL(${template}) !== Context(${state.selectedTemplate}), updating context`);
       setTemplate(template);
     } else {
-      console.log(`✅ Template match: URL(${template}) === Context(${state.selectedTemplate})`);
     }
 
     setIsValidated(true);
-    console.log('✅ TemplateEditPage initialized successfully');
   }, []); // Empty dependency array to run only once
 
   // Separate effect to handle template changes from URL
   useEffect(() => {
     if (isValidated && template && template !== state.selectedTemplate) {
-      console.log(`🔄 URL Template Change: ${template} !== ${state.selectedTemplate}, updating context`);
       setTemplate(template);
     }
   }, [template, isValidated, state.selectedTemplate, setTemplate]);
 
   // 현재 문서 업데이트 (에디터에서 변경사항 추적)
   const handleDocumentChange = (document: PortfolioDocument) => {
-    console.log('📝 Document changed:', document);
     setCurrentDocument(document);
   };
 
@@ -111,7 +95,6 @@ export default function TemplateEditPage() {
 
     // DB에서 로드된 경우 (마이페이지에서 편집)
     if (loadedFromDB && locationState?.portfolioData) {
-      console.log('📦 Using portfolio data from DB:', locationState.portfolioData);
 
       const dbSections = locationState.portfolioData.sections;
 
@@ -120,7 +103,6 @@ export default function TemplateEditPage() {
         // sections 자체가 document 객체인 경우 (sections.sections가 배열)
         if (dbSections.sections && Array.isArray(dbSections.sections)) {
           docToSet = dbSections;
-          console.log('📦 Format: Full document with sections array');
         } else if (Array.isArray(dbSections)) {
           // sections가 배열인 경우 (레거시 구조)
           docToSet = {
@@ -130,15 +112,11 @@ export default function TemplateEditPage() {
             created_at: locationState.portfolioData.created_at || new Date().toISOString(),
             updated_at: locationState.portfolioData.updated_at || new Date().toISOString()
           };
-          console.log('📦 Format: Wrapped sections array');
         } else if (dbSections.doc_id || dbSections.user_id) {
           // sections가 전체 document 객체인 경우
           docToSet = dbSections;
-          console.log('📦 Format: Document object');
         } else {
           // sections가 HTML 문자열을 포함한 구조가 아닌 경우 - AI 분석 원시 데이터
-          console.warn('⚠️ DB sections does not contain proper PortfolioDocument structure');
-          console.log('⚠️ DB sections structure:', JSON.stringify(dbSections).substring(0, 200));
 
           // AI 분석 원시 데이터를 extractedData로 포함한 document 구조 생성
           // 에디터가 이 extractedData를 읽어서 HTML을 생성할 수 있음
@@ -162,33 +140,21 @@ export default function TemplateEditPage() {
             created_at: locationState.portfolioData.created_at || new Date().toISOString(),
             updated_at: locationState.portfolioData.updated_at || new Date().toISOString()
           };
-          console.log('📦 Format: Created document structure with extractedData from AI analysis');
         }
       } else {
         docToSet = locationState.portfolioData;
-        console.log('📦 Format: Direct portfolio data');
       }
-
-      console.log('📦 Final parsed document structure:', {
-        hasSections: !!docToSet?.sections,
-        sectionsLength: docToSet?.sections?.length,
-        firstSection: docToSet?.sections?.[0] ? 'exists' : 'missing',
-        firstBlock: docToSet?.sections?.[0]?.blocks?.[0] ? 'exists' : 'missing'
-      });
     } else if (state.initialResult) {
       // 일반 플로우 (autofill에서 생성된 데이터)
       try {
         docToSet = JSON.parse(state.initialResult.content);
-        console.log('📦 Parsed from initialResult');
       } catch (error) {
-        console.error('Failed to parse initialResult.content:', error);
       }
     }
 
     if (docToSet) {
       setParsedDocument(docToSet);
       setCurrentDocument(docToSet);
-      console.log('🔧 Initialized parsedDocument and currentDocument');
     }
   }, [isValidated, loadedFromDB, location.state, state.initialResult, parsedDocument]);
 
@@ -206,14 +172,6 @@ export default function TemplateEditPage() {
 
     setIsSaving(true);
     try {
-      console.log('💾 Saving portfolio to DB - currentDocument:', currentDocument);
-      console.log('💾 currentDocument structure:', {
-        hasSections: !!currentDocument.sections,
-        sectionsLength: currentDocument.sections?.length,
-        firstBlock: currentDocument.sections?.[0]?.blocks?.[0],
-        hasExtractedData: !!currentDocument.sections?.[0]?.blocks?.[0]?.extractedData
-      });
-
       // DB에 저장할 데이터 구조화 (currentDocument를 JSON으로 직렬화)
       const portfolioData = {
         title: `포트폴리오 - ${new Date().toLocaleDateString()}`,
@@ -222,25 +180,14 @@ export default function TemplateEditPage() {
         updated_at: new Date().toISOString()
       };
 
-      console.log('💾 Portfolio data to save:', JSON.stringify(portfolioData).substring(0, 500));
 
       // 편집 모드인지 확인 (location.state 또는 context에서)
       const locationState = location.state as any;
       const isEditMode = loadedFromDB || (state.editMode && state.portfolioId);
       const portfolioId = locationState?.portfolioData?.portfolio_id || state.portfolioId;
 
-      console.log('🔍 Save mode check:', {
-        loadedFromDB,
-        isEditMode,
-        portfolioId,
-        locationPortfolioId: locationState?.portfolioData?.portfolio_id,
-        statePortfolioId: state.portfolioId
-      });
-
       if (isEditMode && portfolioId) {
         // 편집 모드: 업데이트
-        console.log('📝 Updating portfolio:', portfolioId);
-        console.log('📝 Update data:', portfolioData);
 
         // 먼저 해당 포트폴리오가 존재하는지 확인
         const { data: existingData, error: checkError } = await supabase
@@ -249,8 +196,6 @@ export default function TemplateEditPage() {
           .eq('portfolio_id', portfolioId)
           .maybeSingle();
 
-        console.log('🔍 Existing portfolio check:', existingData);
-        console.log('🔍 Check error:', checkError);
 
         const { data, error } = await supabase
           .from('portfolios')
@@ -259,16 +204,11 @@ export default function TemplateEditPage() {
           .select();
 
         if (error) {
-          console.error('❌ Update error:', error);
           throw error;
         }
-        console.log('✅ Portfolio updated successfully:', data);
-        console.log('✅ Updated rows:', data?.length);
 
         if (!data || data.length === 0) {
-          console.warn('⚠️ No rows updated - portfolio might not exist or RLS policy issue');
           // 업데이트 실패 시 새로 삽입 시도
-          console.log('🔄 Attempting to insert as new portfolio instead');
           const { error: insertError } = await supabase
             .from('portfolios')
             .insert({
@@ -278,16 +218,13 @@ export default function TemplateEditPage() {
             });
 
           if (insertError) {
-            console.error('❌ Insert error:', insertError);
             throw insertError;
           }
-          console.log('✅ Portfolio inserted successfully');
         }
 
         success('포트폴리오가 저장되었습니다!');
       } else {
         // 신규 작성 모드: 삽입
-        console.log('✨ Creating new portfolio');
         const { error } = await supabase
           .from('portfolios')
           .insert({
@@ -297,16 +234,13 @@ export default function TemplateEditPage() {
           });
 
         if (error) {
-          console.error('Insert error:', error);
           throw error;
         }
-        console.log('✅ Portfolio saved successfully');
         success('포트폴리오가 저장되었습니다!');
       }
       // 저장 후 마이페이지로 이동하면서 강제 새로고침
       navigate('/mypage', { replace: true, state: { refresh: Date.now() } });
     } catch (error) {
-      console.error('저장 오류:', error);
       showError('저장 중 오류가 발생했습니다.');
     } finally {
       setIsSaving(false);
@@ -322,7 +256,6 @@ export default function TemplateEditPage() {
 
     setIsSaving(true);
     try {
-      console.log('💾 Completing and saving portfolio to DB:', document);
 
       // DB에 저장할 데이터 구조화
       const portfolioData = {
@@ -339,7 +272,6 @@ export default function TemplateEditPage() {
 
       if (isEditMode && portfolioId) {
         // 편집 모드: 업데이트
-        console.log('📝 Updating portfolio:', portfolioId);
         const { error } = await supabase
           .from('portfolios')
           .update(portfolioData)
@@ -347,7 +279,6 @@ export default function TemplateEditPage() {
         if (error) throw error;
       } else {
         // 신규 작성 모드: 삽입
-        console.log('✨ Creating new portfolio');
         const { error } = await supabase
           .from('portfolios')
           .insert({
@@ -382,7 +313,6 @@ export default function TemplateEditPage() {
       setCurrentStep('complete');
       navigate('/complete');
     } catch (error) {
-      console.error('저장 오류:', error);
       showError('저장 중 오류가 발생했습니다.');
     } finally {
       setIsSaving(false);
@@ -430,26 +360,17 @@ export default function TemplateEditPage() {
       isSaving: isSaving
     };
 
-    console.log('🎯 Getting Editor Component:');
-    console.log('  - template param:', template);
-    console.log('  - selectedTemplate prop:', commonProps.selectedTemplate);
-    console.log('  - parsedDocument present:', !!parsedDocument);
 
     switch (template) {
       case 'minimal':
-        console.log('📝 Rendering MinimalEditor');
         return <MinimalEditor {...commonProps} />;
       case 'clean':
-        console.log('📝 Rendering CleanEditor');
         return <CleanEditor {...commonProps} />;
       case 'colorful':
-        console.log('📝 Rendering ColorfulEditor');
         return <ColorfulEditor {...commonProps} />;
       case 'elegant':
-        console.log('📝 Rendering ElegantEditor');
         return <ElegantEditor {...commonProps} />;
       default:
-        console.log('📝 Rendering default MinimalEditor (fallback)');
         return <MinimalEditor {...commonProps} />;
     }
   };

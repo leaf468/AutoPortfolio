@@ -47,7 +47,6 @@ export async function generateRealtimeRecommendations(
     );
     recommendations.push(...llmRecommendations);
   } catch (error) {
-    console.error('LLM 추천 생성 실패:', error);
   }
 
   // 4. 활동 패턴 기반 추천
@@ -78,7 +77,6 @@ async function generateLLMRecommendations(
     // API 키 확인
     const apiKey = process.env.REACT_APP_OPENAI_API_KEY;
     if (!apiKey || apiKey.length < 20) {
-      console.warn('OpenAI API 키가 설정되지 않았습니다. LLM 추천을 건너뜁니다.');
       return [];
     }
 
@@ -115,7 +113,6 @@ async function generateLLMRecommendations(
           }
         }
       } catch (error) {
-        console.error('유사 활동 조회 실패:', error);
       }
     }
 
@@ -167,13 +164,11 @@ ${JSON.stringify(topActivities, null, 2)}${similarActivitiesInfo}
     const content = response.choices[0]?.message?.content;
     if (!content) return [];
 
-    console.log('✅ LLM 응답:', content);
 
     // JSON 파싱
     const parsed = JSON.parse(content);
 
     if (!parsed.recommendations || !Array.isArray(parsed.recommendations)) {
-      console.warn('LLM 응답에 recommendations 배열이 없습니다:', parsed);
       return [];
     }
 
@@ -184,11 +179,9 @@ ${JSON.stringify(topActivities, null, 2)}${similarActivitiesInfo}
       relevance: rec.relevance || 90,
     }));
   } catch (error: any) {
-    console.error('LLM 추천 생성 중 오류:', error);
 
     // API 키 오류인 경우 사용자에게 알림
     if (error?.status === 401) {
-      console.error('❌ OpenAI API 키가 유효하지 않습니다. .env 파일을 확인하세요.');
     }
 
     return [];

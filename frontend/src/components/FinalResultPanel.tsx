@@ -74,7 +74,6 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                 setRatingSubmitted(true);
             }
         } catch (error) {
-            console.error("기존 평가 불러오기 실패:", error);
         }
     }, [finalResult.id]);
 
@@ -86,31 +85,26 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
 
             try {
                 portfolioData = JSON.parse(finalResult.content);
-                console.log("파싱된 포트폴리오 데이터:", portfolioData);
 
                 // 편집된 HTML을 우선적으로 사용 (EnhancedPortfolioEditor에서 저장한 HTML)
                 const editedHTML =
                     portfolioData.sections?.[0]?.blocks?.[0]?.text;
                 if (editedHTML) {
                     // 편집된 HTML이 있으면 그대로 사용
-                    console.log("편집된 HTML 사용");
                     return editedHTML;
                 }
             } catch (parseError) {
-                console.error("JSON 파싱 실패:", parseError);
             }
 
             // fallback: 기본 템플릿으로 생성
             const template = portfolioTemplates[selectedTemplate];
             if (template && template.generateHTML) {
                 const defaultData = template.sampleData;
-                console.log("기본 데이터로 템플릿 생성");
                 return template.generateHTML(defaultData);
             }
 
             return finalResult.content;
         } catch (error) {
-            console.error("템플릿 HTML 생성 실패:", error);
             return finalResult.content;
         }
     };
@@ -413,7 +407,6 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
             }
         });
 
-        console.log("📧 추출된 연락처:", extractedData.contact);
 
         // About 추출 - section 안에서 찾기
         const sections = doc.querySelectorAll('section.section, section');
@@ -547,14 +540,6 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
             }
         });
 
-        console.log("📊 추출된 데이터 상세:", {
-            name: extractedData.name,
-            title: extractedData.title,
-            projectsCount: extractedData.projects.length,
-            experienceCount: extractedData.experience.length,
-            skillCategoriesCount: extractedData.skillCategories.length
-        });
-
         return extractedData;
     };
 
@@ -574,8 +559,6 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
             // 미리보기와 동일한 HTML 생성 (데이터 추출 없이 바로 사용)
             const htmlContent = generateTemplatedHTML();
 
-            console.log("=== PDF 생성 (미리보기 HTML 사용) ===");
-            console.log("HTML 길이:", htmlContent.length);
 
             // pdfGenerator 서비스를 사용하여 PDF 최적화 HTML 생성 (주황색 텍스트 제거 포함)
             const optimizedHTML = pdfGenerator.generatePrintOptimizedHTML(htmlContent);
@@ -590,7 +573,6 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                 }, 500);
             };
         } catch (error) {
-            console.error("PDF 생성 중 오류:", error);
             showError("PDF 생성 중 오류가 발생했습니다.");
         }
     };
@@ -605,7 +587,6 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
             const markdown = htmlToMarkdownConverter.convertToMarkdown(htmlContent);
             htmlToMarkdownConverter.downloadMarkdown(markdown, `${finalResult.id}_portfolio.md`);
         } catch (error) {
-            console.error("Markdown 다운로드 실패:", error);
             showError("Markdown 다운로드에 실패했습니다.");
         }
     };
@@ -624,7 +605,6 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                 showError("클립보드 복사에 실패했습니다.");
             }
         } catch (error) {
-            console.error("Markdown 복사 실패:", error);
             showError("Markdown 복사에 실패했습니다.");
         }
     };
@@ -646,7 +626,6 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
         } catch (error) {
-            console.error("HTML 다운로드 실패:", error);
             showError("HTML 다운로드에 실패했습니다.");
         }
     };
@@ -656,12 +635,10 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
      */
     const getUserProfile = async () => {
         if (!user) {
-            console.warn('⚠️ user 객체가 없습니다');
             return null;
         }
 
         try {
-            console.log('🔍 프로필 조회 시작 - user_id:', user.user_id);
 
             // users 테이블에서 name 가져오기 (마이페이지에서 저장한 최신 이름)
             const { data: userData, error: userError } = await supabase
@@ -671,14 +648,7 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                 .single();
 
             if (userError) {
-                console.error('❌ users 테이블 조회 실패:', userError);
-                console.log('📋 에러 상세:', {
-                    code: userError.code,
-                    message: userError.message,
-                    details: userError.details
-                });
             } else {
-                console.log('✅ users 테이블에서 가져온 이름:', userData?.name);
             }
 
             // user_profiles 테이블에서 프로필 정보 가져오기
@@ -689,15 +659,11 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                 .maybeSingle();
 
             if (profileError) {
-                console.error('❌ user_profiles 테이블 조회 실패:', profileError);
             } else {
-                console.log('✅ user_profiles 테이블 조회 성공');
             }
 
             // 이름 우선순위: DB users 테이블 (마이페이지에서 저장한 이름) > AuthContext user 객체 > 기본값
             const userName = userData?.name || user.name || '사용자';
-            console.log('👤 최종 사용자 이름:', userName);
-            console.log('📊 이름 출처:', userData?.name ? 'DB users 테이블' : (user.name ? 'AuthContext' : '기본값'));
 
             const profile = {
                 name: userName,
@@ -709,10 +675,8 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                 blog_url: profileData?.blog_url || '',
             };
 
-            console.log('📦 최종 프로필 데이터:', profile);
             return profile;
         } catch (error) {
-            console.error('❌ 프로필 로드 중 예외 발생:', error);
             // 에러 발생 시에도 최소한 user 객체의 정보는 반환
             const fallbackProfile = {
                 name: user.name || '사용자',
@@ -723,7 +687,6 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                 github_url: '',
                 blog_url: '',
             };
-            console.log('⚠️ fallback 프로필 사용:', fallbackProfile);
             return fallbackProfile;
         }
     };
@@ -769,7 +732,6 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
 
             // 마이페이지 프로필 정보 가져오기
             const userProfile = await getUserProfile();
-            console.log('👤 사용자 프로필 정보:', userProfile);
 
             // PortfolioData 형식으로 변환 (프로필 정보를 fallback으로 사용)
             const portfolioData: PortfolioData = {
@@ -812,7 +774,6 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                 languages: []
             };
 
-            console.log('🔄 포트폴리오 데이터 (프로필 fallback 적용):', portfolioData);
 
             // PPT 템플릿 경로
             const templatePath = selectedTemplate.templatePath;
@@ -830,7 +791,6 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
 
             success('PPT 파일이 생성되었습니다!');
         } catch (error) {
-            console.error('PPT 생성 실패:', error);
             showError('PPT 생성에 실패했습니다. 다시 시도해주세요.');
         } finally {
             setIsPPTGenerating(false);
@@ -858,9 +818,7 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                 `portfolio_rating_${finalResult.id}`,
                 JSON.stringify(ratingData)
             );
-            console.log("사용자 평가 저장됨:", ratingData);
         } catch (error) {
-            console.error("평가 저장 실패:", error);
         }
     };
 
@@ -881,14 +839,12 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                     url: window.location.href,
                 });
             } catch (error) {
-                console.log("공유 취소됨");
             }
         } else {
             try {
                 await navigator.clipboard.writeText(window.location.href);
                 success("포트폴리오 링크가 클립보드에 복사되었습니다!");
             } catch (error) {
-                console.error("클립보드 복사 실패:", error);
                 showError("클립보드 복사에 실패했습니다.");
             }
         }

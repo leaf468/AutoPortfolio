@@ -607,7 +607,6 @@ class OneClickGenerator {
                         }, 1000);
                     }
                 } catch (error) {
-                    console.warn('Trust badge animation failed:', error);
                 }
             });
         }
@@ -1959,8 +1958,6 @@ class OneClickGenerator {
         customTemplate?: string
     ): Promise<GenerationResult> {
         try {
-            console.log("Starting portfolio generation with options:", options);
-            console.log("Custom template provided:", !!customTemplate);
 
             let templateToUse;
             let templateName = "";
@@ -1969,10 +1966,6 @@ class OneClickGenerator {
 
             // Job-focused analysis 수행 (옵션이 활성화된 경우)
             if (options.includeJobAnalysis && options.targetRole) {
-                console.log(
-                    "Generating job-focused portfolio for role:",
-                    options.targetRole
-                );
                 // Use content as-is since jobFocusedPortfolioGenerator was removed
                 enhancedContent = content;
                 jobAnalysis = {
@@ -2020,7 +2013,6 @@ class OneClickGenerator {
                 options,
                 styles
             );
-            console.log("Template data prepared:", templateData);
 
             let generatedContent: string;
 
@@ -2052,7 +2044,6 @@ class OneClickGenerator {
                 );
             }
 
-            console.log("Content generated, length:", generatedContent.length);
 
             // 품질 점수 계산 (에러 시 기본값 사용)
             let qualityScore = 75;
@@ -2062,7 +2053,6 @@ class OneClickGenerator {
                     content
                 );
             } catch (error) {
-                console.error("Quality score calculation failed:", error);
             }
 
             // 개선 제안 생성 (에러 시 기본값 사용)
@@ -2073,7 +2063,6 @@ class OneClickGenerator {
                     content
                 );
             } catch (error) {
-                console.error("Suggestions generation failed:", error);
                 suggestions = ["포트폴리오가 성공적으로 생성되었습니다."];
             }
 
@@ -2100,10 +2089,8 @@ class OneClickGenerator {
                 jobAnalysis,
             };
 
-            console.log("Portfolio generation complete:", result);
             return result;
         } catch (error) {
-            console.error("Portfolio generation error:", error);
             throw error;
         }
     }
@@ -2227,12 +2214,10 @@ ${userTemplate}
 
             return response.choices[0].message.content || userTemplate;
         } catch (error) {
-            console.error("AI template generation error:", error);
             // AI 실패 시 기본 Mustache 렌더링 시도
             try {
                 return Mustache.render(userTemplate, data);
             } catch (mustacheError) {
-                console.error("Mustache fallback error:", mustacheError);
                 return userTemplate; // 최종 fallback
             }
         }
@@ -2274,7 +2259,6 @@ JSON 형식:
 
             return response.choices[0].message.content || "{}";
         } catch (error) {
-            console.error("Notion JSON 생성 오류:", error);
             return JSON.stringify({
                 error: "Notion JSON 생성에 실패했습니다.",
             });
@@ -2337,7 +2321,6 @@ JSON 형식:
             const score = parseInt(response.choices[0].message.content || "70");
             return Math.max(0, Math.min(100, score));
         } catch (error) {
-            console.error("품질 점수 계산 오류:", error);
             return 70; // 기본값
         }
     }
@@ -2380,7 +2363,6 @@ JSON 형식:
             const result = response.choices[0].message.content || "[]";
             return JSON.parse(result) as string[];
         } catch (error) {
-            console.error("제안 생성 오류:", error);
             return [
                 "더 구체적인 성과 수치를 추가해보세요",
                 "프로젝트 이미지를 포함하면 좋겠습니다",

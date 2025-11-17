@@ -149,7 +149,6 @@ ${currentContent}
 
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
-      console.error('챗봇 응답 생성 실패:', error);
 
       const errorMessage: Message = {
         role: 'assistant',

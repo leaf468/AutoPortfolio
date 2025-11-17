@@ -101,7 +101,6 @@ class PortfolioTextEnhancer {
                 suggestions: result.generated_parts
             };
         } catch (error) {
-            console.error("자기소개 개선 실패:", error);
             return {
                 original: originalText,
                 enhanced: originalText,
@@ -194,7 +193,6 @@ React와 TypeScript로 컴포넌트를 모듈화하고, Lazy Loading으로 초�
                 }
             };
         } catch (error) {
-            console.error("프로젝트 개선 실패:", error);
             return {
                 ...project,
                 enhanced: {
@@ -275,7 +273,6 @@ React와 TypeScript로 컴포넌트를 모듈화하고, Lazy Loading으로 초�
                 }
             };
         } catch (error) {
-            console.error("경력 개선 실패:", error);
             return {
                 ...experience,
                 enhanced: {
@@ -351,7 +348,6 @@ React와 TypeScript로 컴포넌트를 모듈화하고, Lazy Loading으로 초�
                 }
             };
         } catch (error) {
-            console.error("학력 개선 실패:", error);
             return {
                 ...education,
                 enhanced: {
@@ -366,8 +362,6 @@ React와 TypeScript로 컴포넌트를 모듈화하고, Lazy Loading으로 초�
     // 전체 포트폴리오 데이터 개선
     async enhancePortfolioData(data: Partial<PortfolioData>): Promise<PortfolioData> {
         try {
-            console.log('=== 포트폴리오 데이터 개선 시작 ===');
-            console.log('입력 데이터:', data);
             const prompt = `
 당신은 전문 포트폴리오 작성 도우미입니다. 제공된 정보를 바탕으로 완성도 높은 포트폴리오 데이터를 생성해주세요.
 
@@ -404,13 +398,10 @@ ${JSON.stringify(data, null, 2)}
             }
 
             const result = JSON.parse(content);
-            console.log('=== 포트폴리오 데이터 개선 결과 ===');
-            console.log(result);
 
             return result as PortfolioData;
 
         } catch (error) {
-            console.error("포트폴리오 데이터 개선 실패:", error);
             return data as PortfolioData;
         }
     }
@@ -459,7 +450,6 @@ JSON 배열 형식으로 응답해주세요:
             return { data: educationData, isGenerated: true };
 
         } catch (error) {
-            console.error("더미 학력 데이터 생성 실패:", error);
             return {
                 data: [
                     { degree: "컴퓨터공학과 학사", school: "서울대학교", year: "2020" },
@@ -515,7 +505,6 @@ JSON 배열 형식으로 응답해주세요:
             return { data: awardsData, isGenerated: true };
 
         } catch (error) {
-            console.error("더미 수상 데이터 생성 실패:", error);
             return {
                 data: [
                     { title: "해커톤 대상", organization: "NAVER", year: "2023", description: "AI 기반 서비스 개발" },
