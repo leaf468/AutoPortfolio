@@ -15,7 +15,7 @@ export const pptTemplates: PPTTemplate[] = [
     description: '심플하고 깔끔한 기업용 포트폴리오 템플릿',
     templatePath: '/corporate_portfolio_template.pptx',
     thumbnailUrl: '/ppt-thumbnails/corporate.svg',
-    isPremium: false,
+    isPremium: true,
     slideCount: 7,
   },
   {

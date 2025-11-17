@@ -26,6 +26,10 @@ export const tokenService = {
 // 로그인
 export const login = async (data: LoginRequest): Promise<AuthResponse> => {
   try {
+    // 기존 세션 정리 (캐시/쿠키 충돌 방지)
+    tokenService.clearTokens();
+    await supabase.auth.signOut();
+
     const { data: authData, error } = await supabase.auth.signInWithPassword({
       email: data.email,
       password: data.password,
@@ -71,6 +75,7 @@ export const login = async (data: LoginRequest): Promise<AuthResponse> => {
       pay: userData.pay,
       last_pay_date: userData.last_pay_date,
       free_pdf_used: userData.free_pdf_used,
+      subscription_cancelled: userData.subscription_cancelled,
     };
 
     tokenService.setTokens(authData.session.access_token, authData.session.refresh_token || '');
@@ -241,6 +246,7 @@ export const getCurrentUser = async (): Promise<User | null> => {
       pay: userData.pay,
       last_pay_date: userData.last_pay_date,
       free_pdf_used: userData.free_pdf_used,
+      subscription_cancelled: userData.subscription_cancelled,
     };
 
     tokenService.setUser(user);
@@ -476,6 +482,8 @@ export const getSubscriptionInfo = (user: User | null): {
     };
   }
 
+  // free_pdf_used가 명시적으로 true인 경우에만 사용한 것으로 판단
+  // undefined, null, false 모두 사용하지 않은 것으로 처리
   const hasUsedFreePdf = user.free_pdf_used === true;
   const isCancelled = user.subscription_cancelled === true;
 

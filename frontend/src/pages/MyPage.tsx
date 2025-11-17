@@ -358,8 +358,9 @@ const MyPage: React.FC = () => {
         if ((error as any).code === '42703') {
           console.warn('subscription_cancelled 컬럼이 DB에 없습니다. 로컬 상태만 업데이트합니다.');
           // 로컬 상태만 업데이트 (DB 컬럼이 추가될 때까지 임시 처리)
-          setUser({ ...user, subscription_cancelled: true });
-          await refreshUser();
+          // refreshUser를 호출하면 DB에서 다시 조회하므로 취소 상태가 사라짐
+          const updatedUser = { ...user, subscription_cancelled: true };
+          setUser(updatedUser);
           setShowCancelConfirmModal(false);
           success('구독이 취소되었습니다. 현재 구독 기간이 만료될 때까지 프리미엄 기능을 사용하실 수 있습니다.');
           return;

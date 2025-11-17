@@ -20,11 +20,17 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUserState] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [subscriptionInfo, setSubscriptionInfo] = useState<SubscriptionInfo>(
     getSubscriptionInfo(null)
   );
+
+  // setUser를 래핑하여 subscriptionInfo도 함께 업데이트
+  const setUser = (newUser: User | null) => {
+    setUserState(newUser);
+    setSubscriptionInfo(getSubscriptionInfo(newUser));
+  };
 
   useEffect(() => {
     const initAuth = async () => {
@@ -33,7 +39,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.log('🔄 localStorage pay 상태:', storedUser?.pay, 'free_pdf_used:', storedUser?.free_pdf_used);
 
       if (storedUser) {
-        setUser(storedUser);
+        setUserState(storedUser);
+        setSubscriptionInfo(getSubscriptionInfo(storedUser));
 
         // 서버에서 최신 정보 가져오기
         const currentUser = await getCurrentUser();
@@ -51,13 +58,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             console.log('🔄 최종 pay 상태:', updatedUser?.pay, 'free_pdf_used:', updatedUser?.free_pdf_used);
 
             if (updatedUser) {
-              setUser(updatedUser);
+              setUserState(updatedUser);
               const subInfo = getSubscriptionInfo(updatedUser);
               console.log('🔄 구독 정보:', subInfo);
               setSubscriptionInfo(subInfo);
             }
           } else {
-            setUser(currentUser);
+            setUserState(currentUser);
             const subInfo = getSubscriptionInfo(currentUser);
             console.log('🔄 구독 정보:', subInfo);
             setSubscriptionInfo(subInfo);
@@ -66,7 +73,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           // 토큰이 만료되었으면 로그아웃
           console.log('❌ 토큰 만료 - 로그아웃 처리');
           tokenService.clearTokens();
-          setUser(null);
+          setUserState(null);
           setSubscriptionInfo(getSubscriptionInfo(null));
         }
       }
@@ -84,11 +91,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (currentUser?.user_id) {
       await checkSubscriptionExpiry(currentUser.user_id);
       const updatedUser = await getCurrentUser();
+      // setUser가 이미 subscriptionInfo도 업데이트하므로 별도 호출 불필요
       setUser(updatedUser);
-      setSubscriptionInfo(getSubscriptionInfo(updatedUser));
     } else {
       setUser(currentUser);
-      setSubscriptionInfo(getSubscriptionInfo(currentUser));
     }
   };
 

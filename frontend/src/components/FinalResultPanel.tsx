@@ -29,6 +29,7 @@ import { PortfolioData } from "../types/portfolio";
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../contexts/AuthContext";
 import { pptTemplates, PPTTemplate, PPTTemplateId } from "../types/pptTemplate";
+import SubscribeModal from "./SubscribeModal";
 
 type TemplateType = "minimal" | "clean" | "colorful" | "elegant";
 
@@ -58,6 +59,7 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
     const [isPPTGenerating, setIsPPTGenerating] = useState(false);
     const [showPPTTemplateModal, setShowPPTTemplateModal] = useState(false);
     const [selectedPPTTemplate, setSelectedPPTTemplate] = useState<PPTTemplateId>('corporate');
+    const [showSubscribeModal, setShowSubscribeModal] = useState(false);
     const portfolioRef = useRef<HTMLDivElement>(null);
 
     // 기존 평가 불러오기
@@ -732,15 +734,7 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
 
         // 프로 플랜 체크
         if (!subscriptionInfo.isPro) {
-            confirm(
-                'PPT 다운로드는 프로 플랜 구독 시 이용 가능합니다.\n\n프로 플랜으로 업그레이드하시겠습니까?',
-                () => {
-                    navigate('/subscribe');
-                },
-                '프로 플랜 필요',
-                '구독하기',
-                '취소'
-            );
+            setShowSubscribeModal(true);
             return;
         }
 
@@ -757,15 +751,7 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
 
         // 프리미엄 템플릿 체크 (프로 플랜 사용자만)
         if (selectedTemplate.isPremium && !subscriptionInfo.isPro) {
-            confirm(
-                '이 템플릿은 프로 플랜 전용입니다.\n\n프로 플랜으로 업그레이드하시겠습니까?',
-                () => {
-                    navigate('/subscribe');
-                },
-                '프로 플랜 필요',
-                '구독하기',
-                '취소'
-            );
+            setShowSubscribeModal(true);
             return;
         }
 
@@ -1197,15 +1183,29 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                                     PDF 다운로드
                                 </button>
 
-                                <button
-                                    onClick={handleOpenPPTTemplateModal}
-                                    disabled={isPPTGenerating}
-                                    className="group flex items-center justify-center p-6 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-xl font-medium hover:from-orange-700 hover:to-red-700 shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    <DocumentArrowDownIcon className="w-6 h-6 mr-2" />
-                                    {isPPTGenerating ? 'PPT 생성 중...' : 'PPT 다운로드'}
-                                </button>
+                                <div className="relative">
+                                    <button
+                                        onClick={handleOpenPPTTemplateModal}
+                                        disabled={isPPTGenerating}
+                                        className="group flex items-center justify-center p-6 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-xl font-medium hover:from-orange-700 hover:to-red-700 shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed w-full"
+                                    >
+                                        <DocumentArrowDownIcon className="w-6 h-6 mr-2" />
+                                        {isPPTGenerating ? 'PPT 생성 중...' : 'PPT 다운로드'}
+                                    </button>
+                                    {!subscriptionInfo.isPro && (
+                                        <div className="absolute -top-2 -right-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg">
+                                            PRO
+                                        </div>
+                                    )}
+                                </div>
                             </div>
+                            {!subscriptionInfo.isPro && (
+                                <div className="mb-6 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                                    <p className="text-sm text-purple-700 text-center">
+                                        <span className="font-semibold">PPT 다운로드</span>는 프로 플랜 전용 기능입니다.
+                                    </p>
+                                </div>
+                            )}
 
                             {/* 추가 옵션 */}
                             <div className="space-y-4 mb-8">
@@ -1481,6 +1481,12 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                     type={alertState.type}
                     confirmText={alertState.confirmText}
                     cancelText={alertState.cancelText}
+                />
+
+                {/* Subscribe Modal */}
+                <SubscribeModal
+                    isOpen={showSubscribeModal}
+                    onClose={() => setShowSubscribeModal(false)}
                 />
             </div>
         </div>

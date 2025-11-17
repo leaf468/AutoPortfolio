@@ -32,9 +32,13 @@ const LoginPage: React.FC = () => {
 
       if (result.success && result.user) {
         setUser(result.user);
-        // returnTo state가 있으면 해당 경로로, 없으면 기본값 /mypage로 이동
-        const returnTo = (location.state as any)?.returnTo || '/mypage';
-        navigate(returnTo);
+        // 로그인 후 구독 정보를 포함한 최신 사용자 정보 반영을 위해 짧은 딜레이 후 이동
+        // (AuthContext의 subscriptionInfo가 업데이트될 시간을 줌)
+        setTimeout(() => {
+          // returnTo state가 있으면 해당 경로로, 없으면 기본값 /mypage로 이동
+          const returnTo = (location.state as any)?.returnTo || '/mypage';
+          navigate(returnTo);
+        }, 100);
       } else {
         setError(result.message || '로그인에 실패했습니다.');
       }

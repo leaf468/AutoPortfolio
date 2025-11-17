@@ -27,6 +27,7 @@ import Footer from '../components/Footer';
 import LandingFooter from '../components/LandingFooter';
 import { CustomAlert } from '../components/CustomAlert';
 import { useAlert } from '../hooks/useAlert';
+import SubscribeModal from '../components/SubscribeModal';
 
 const DEFAULT_QUESTIONS: Omit<CoverLetterQuestion, 'answer'>[] = [
   {
@@ -170,6 +171,8 @@ export const CoverLetterPageV3: React.FC = () => {
 
   // 로그인 확인 모달
   const [showLoginModal, setShowLoginModal] = useState(false);
+  // 구독 모달
+  const [showSubscribeModal, setShowSubscribeModal] = useState(false);
 
   // 페이지 로드 시 완료된 첨삭이 있는지 확인
   useEffect(() => {
@@ -462,16 +465,8 @@ export const CoverLetterPageV3: React.FC = () => {
     if (!subscriptionInfo.isPro) {
       // 무료 사용자: 첨삭 1회만 가능
       if (!subscriptionInfo.canUsePdfCorrection) {
-        // 이미 무료 첨삭을 사용한 경우 → 확인창 표시
-        confirm(
-          '무료 자소서 첨삭 기능을 이미 사용하셨습니다.\n\n프로 플랜 구독 시 무제한으로 이용하실 수 있습니다.',
-          () => {
-            navigate('/subscribe');
-          },
-          '프로 플랜 필요',
-          '구독하기',
-          '취소'
-        );
+        // 이미 무료 첨삭을 사용한 경우 → 구독 모달 표시
+        setShowSubscribeModal(true);
         return;
       }
       // 무료 첨삭 사용 가능한 경우 → 사용 후 기록할 예정
@@ -1088,6 +1083,12 @@ export const CoverLetterPageV3: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* 구독 모달 */}
+      <SubscribeModal
+        isOpen={showSubscribeModal}
+        onClose={() => setShowSubscribeModal(false)}
+      />
     </div>
   );
 };
