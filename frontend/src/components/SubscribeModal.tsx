@@ -149,7 +149,7 @@ const SubscribeModal: React.FC<SubscribeModalProps> = ({ isOpen, onClose }) => {
             {/* 계좌 정보 */}
             <div className="bg-white border-2 border-purple-100 rounded-xl p-4 mb-4">
               <div className="text-xs text-gray-500 mb-2 font-medium">직접 입금 계좌</div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between mb-3">
                 <div className="font-mono text-sm font-semibold text-gray-900">
                   {accountInfo}
                 </div>
@@ -160,6 +160,11 @@ const SubscribeModal: React.FC<SubscribeModalProps> = ({ isOpen, onClose }) => {
                   {copiedText === accountNumberOnly ? '✓ 복사됨' : '복사'}
                 </button>
               </div>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                <p className="text-sm text-yellow-800 font-semibold text-center">
+                  ⚠️ 입금자명을 반드시 프로필에 설정하신 성함과 동일하게 해주세요
+                </p>
+              </div>
             </div>
 
             {/* 문의 안내 */}
@@ -168,10 +173,10 @@ const SubscribeModal: React.FC<SubscribeModalProps> = ({ isOpen, onClose }) => {
                 <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
                   <EnvelopeIcon className="w-4 h-4 text-purple-600" />
                 </div>
-                <h4 className="font-bold text-gray-900 text-sm">입금 확인 및 문의</h4>
+                <h4 className="font-bold text-gray-900 text-sm">결제 문의</h4>
               </div>
               <p className="text-gray-600 text-sm mb-3 leading-relaxed">
-                결제 후 아래 메일로 문의 주시면<br />빠르게 구독 처리해드립니다.
+                결제와 관련한 문의사항은 아래 이메일로<br />연락주시면 빠르게 처리해드리겠습니다.
               </p>
               <div className="flex items-center justify-center gap-2">
                 <a
