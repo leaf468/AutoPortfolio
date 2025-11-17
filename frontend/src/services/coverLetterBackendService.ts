@@ -14,11 +14,6 @@ export async function generateFeedbackViaBackend(
   userToeic?: number
 ): Promise<CompleteFeedbackReport> {
   try {
-      url: `${BACKEND_URL}/api/cover-letter/feedback`,
-      questionsCount: questions.length,
-      position
-    });
-
     const response = await fetch(`${BACKEND_URL}/api/cover-letter/feedback`, {
       method: 'POST',
       headers: {
@@ -42,10 +37,6 @@ export async function generateFeedbackViaBackend(
     }
 
     const report: CompleteFeedbackReport = await response.json();
-
-      totalQuestions: report.totalQuestions,
-      averageScore: report.averageScore
-    });
 
     return report;
 

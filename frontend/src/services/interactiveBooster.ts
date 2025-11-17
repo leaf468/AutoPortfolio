@@ -281,10 +281,6 @@ ${JSON.stringify(session.answers, null, 2)}
                 const parsed = JSON.parse(cleanedResult);
                 return parsed as BoostResult;
             } catch (parseError) {
-                    "JSON parsing failed, using fallback:",
-                    parseError
-                );
-
                 // 기본값으로 반환 (사용자 답변은 유지)
                 return {
                     enhancedContent: originalContent,

@@ -36,9 +36,21 @@ export const login = async (data: LoginRequest): Promise<AuthResponse> => {
     });
 
     if (error) {
+      // Supabase 에러 메시지를 한국어로 변환
+      let errorMessage = '로그인에 실패했습니다.';
+      if (error.message.includes('Invalid login credentials')) {
+        errorMessage = '이메일 또는 비밀번호가 올바르지 않습니다.';
+      } else if (error.message.includes('Email not confirmed')) {
+        errorMessage = '이메일 인증이 완료되지 않았습니다.';
+      } else if (error.message.includes('User not found')) {
+        errorMessage = '등록되지 않은 이메일입니다.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
       return {
         success: false,
-        message: error.message || '로그인에 실패했습니다.',
+        message: errorMessage,
       };
     }
 

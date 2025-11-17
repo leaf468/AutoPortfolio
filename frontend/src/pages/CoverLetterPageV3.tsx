@@ -274,43 +274,28 @@ export const CoverLetterPageV3: React.FC = () => {
 
     // 질문이 수정되면 해당 질문의 분석 결과 자동 갱신
     if (userSpec.position.trim() && question.trim().length > 5) {
-      // 기존 분석 결과가 있는 경우에만 자동 갱신
-      const hasExistingAnalysis = questionAnalyses.some(a => a.questionId === questionId);
-
-        hasPosition: !!userSpec.position.trim(),
-        questionLength: question.trim().length,
-        hasExistingAnalysis,
-        currentAnalyses: questionAnalyses.length
-      });
-
-      if (hasExistingAnalysis) {
-
-        // 이전 타이머가 있으면 취소
-        if (questionAnalysisTimerRef.current[questionId]) {
-          clearTimeout(questionAnalysisTimerRef.current[questionId]);
-        }
-
-        // 새 타이머 설정 (1초 디바운스)
-        questionAnalysisTimerRef.current[questionId] = setTimeout(async () => {
-          try {
-            const { analyzeQuestion } = await import('../services/questionAnalysisService');
-            const analysis = await analyzeQuestion(question, questionId, userSpec.position);
-
-
-            setQuestionAnalyses(prev => {
-              const filtered = prev.filter(a => a.questionId !== questionId);
-              return [...filtered, analysis];
-            });
-
-            // 타이머 정리
-            delete questionAnalysisTimerRef.current[questionId];
-          } catch (error) {
-            delete questionAnalysisTimerRef.current[questionId];
-          }
-        }, 1000);
-      } else {
+      // 이전 타이머가 있으면 취소
+      if (questionAnalysisTimerRef.current[questionId]) {
+        clearTimeout(questionAnalysisTimerRef.current[questionId]);
       }
-    } else {
+
+      // 새 타이머 설정 (1초 디바운스) - 새 질문이든 기존 질문이든 모두 분석
+      questionAnalysisTimerRef.current[questionId] = setTimeout(async () => {
+        try {
+          const { analyzeQuestion } = await import('../services/questionAnalysisService');
+          const analysis = await analyzeQuestion(question, questionId, userSpec.position);
+
+          setQuestionAnalyses(prev => {
+            const filtered = prev.filter(a => a.questionId !== questionId);
+            return [...filtered, analysis];
+          });
+
+          // 타이머 정리
+          delete questionAnalysisTimerRef.current[questionId];
+        } catch (error) {
+          delete questionAnalysisTimerRef.current[questionId];
+        }
+      }, 1000);
     }
   };
 
@@ -493,12 +478,6 @@ export const CoverLetterPageV3: React.FC = () => {
         // DB에 첨삭 결과 저장 (로그인한 사용자만)
         if (user) {
           try {
-              user_id: user.user_id,
-              company: userSpec.targetCompany,
-              position: userSpec.position,
-              score: report.averageScore
-            });
-
             const feedbackData = {
               user_id: user.user_id,
               document_id: documentId || null,
@@ -540,21 +519,12 @@ export const CoverLetterPageV3: React.FC = () => {
               .select();
 
             if (feedbackError) {
-                message: feedbackError.message,
-                details: feedbackError.details,
-                hint: feedbackError.hint,
-                code: feedbackError.code
-              });
-
               // 테이블이 존재하지 않는 경우
               if (feedbackError.code === '42P01') {
               }
             } else {
             }
           } catch (dbErr: any) {
-              message: dbErr?.message,
-              stack: dbErr?.stack
-            });
           }
         } else {
         }

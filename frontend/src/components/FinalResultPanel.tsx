@@ -540,13 +540,6 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
             }
         });
 
-            name: extractedData.name,
-            title: extractedData.title,
-            projectsCount: extractedData.projects.length,
-            experienceCount: extractedData.experience.length,
-            skillCategoriesCount: extractedData.skillCategories.length
-        });
-
         return extractedData;
     };
 
@@ -655,10 +648,6 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                 .single();
 
             if (userError) {
-                    code: userError.code,
-                    message: userError.message,
-                    details: userError.details
-                });
             } else {
             }
 

@@ -144,12 +144,6 @@ export default function TemplateEditPage() {
       } else {
         docToSet = locationState.portfolioData;
       }
-
-        hasSections: !!docToSet?.sections,
-        sectionsLength: docToSet?.sections?.length,
-        firstSection: docToSet?.sections?.[0] ? 'exists' : 'missing',
-        firstBlock: docToSet?.sections?.[0]?.blocks?.[0] ? 'exists' : 'missing'
-      });
     } else if (state.initialResult) {
       // 일반 플로우 (autofill에서 생성된 데이터)
       try {
@@ -178,12 +172,6 @@ export default function TemplateEditPage() {
 
     setIsSaving(true);
     try {
-        hasSections: !!currentDocument.sections,
-        sectionsLength: currentDocument.sections?.length,
-        firstBlock: currentDocument.sections?.[0]?.blocks?.[0],
-        hasExtractedData: !!currentDocument.sections?.[0]?.blocks?.[0]?.extractedData
-      });
-
       // DB에 저장할 데이터 구조화 (currentDocument를 JSON으로 직렬화)
       const portfolioData = {
         title: `포트폴리오 - ${new Date().toLocaleDateString()}`,
@@ -197,13 +185,6 @@ export default function TemplateEditPage() {
       const locationState = location.state as any;
       const isEditMode = loadedFromDB || (state.editMode && state.portfolioId);
       const portfolioId = locationState?.portfolioData?.portfolio_id || state.portfolioId;
-
-        loadedFromDB,
-        isEditMode,
-        portfolioId,
-        locationPortfolioId: locationState?.portfolioData?.portfolio_id,
-        statePortfolioId: state.portfolioId
-      });
 
       if (isEditMode && portfolioId) {
         // 편집 모드: 업데이트

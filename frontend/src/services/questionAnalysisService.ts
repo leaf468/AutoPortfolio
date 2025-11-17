@@ -53,22 +53,29 @@ function extractKeywordsFromQuestion(question: string): string[] {
   const keywords: string[] = [];
   const lowerQuestion = question.toLowerCase();
 
-  // 질문 카테고리별 키워드 매핑
+  // 질문 카테고리별 키워드 매핑 (확장됨)
   const keywordMappings = {
-    동기: ['동기', '지원', '선택', '이유', '목표'],
-    경험: ['경험', '프로젝트', '활동', '대회', '수상', '인턴'],
-    강점: ['강점', '역량', '능력', '스킬', '장점'],
-    포부: ['포부', '목표', '계획', '기여', '입사 후'],
-    협업: ['협업', '팀', '소통', '조율', '리더십'],
-    문제해결: ['문제', '해결', '극복', '도전', '개선'],
-    성과: ['성과', '결과', '달성', '향상', '효율'],
-    열정: ['열정', '관심', '흥미', '학습'],
+    동기: ['동기', '지원', '선택', '이유', '목표', '왜', '계기'],
+    경험: ['경험', '프로젝트', '활동', '대회', '수상', '인턴', '봉사', '느낀', '깨달', '배운', '사례', '했던', '참여'],
+    강점: ['강점', '역량', '능력', '스킬', '장점', '자신', '특기'],
+    포부: ['포부', '목표', '계획', '기여', '입사 후', '비전', '꿈'],
+    협업: ['협업', '팀', '소통', '조율', '리더십', '함께', '조직', '갈등', '의견'],
+    문제해결: ['문제', '해결', '극복', '도전', '개선', '어려움', '실패', '위기'],
+    성과: ['성과', '결과', '달성', '향상', '효율', '성취', '성공'],
+    열정: ['열정', '관심', '흥미', '학습', '노력', '열심히'],
+    성장: ['성장', '발전', '변화', '느낀점', '깨달은', '배움', '교훈'],
+    가치관: ['가치', '신념', '철학', '원칙', '중요', '소중'],
   };
 
   for (const [category, words] of Object.entries(keywordMappings)) {
     if (words.some((word) => lowerQuestion.includes(word))) {
       keywords.push(category);
     }
+  }
+
+  // 키워드가 없으면 기본 카테고리 추가
+  if (keywords.length === 0) {
+    keywords.push('경험'); // 기본값으로 경험 추가
   }
 
   return keywords;
@@ -82,18 +89,46 @@ function findRelatedStats(
   stats: ComprehensiveStats
 ): { activityType: string; percentage: number; insight: string }[] {
   const relatedStats: { activityType: string; percentage: number; insight: string }[] = [];
+  const priorityStats: { activityType: string; percentage: number; insight: string }[] = [];
 
-  // 키워드에 따라 관련 활동 매핑
+  // 키워드에 따라 관련 활동 매핑 (확장됨)
   const activityMappings: Record<string, string[]> = {
-    경험: ['프로젝트', '인턴', '대외활동', '동아리'],
-    협업: ['프로젝트', '팀 활동', '동아리'],
-    문제해결: ['프로젝트', '대회', '해커톤'],
-    성과: ['대회', '수상', '프로젝트'],
-    동기: ['인턴', '대외활동', '봉사'],
-    포부: ['교육', '세미나', '학습'],
+    경험: ['프로젝트', '인턴', '대외활동', '동아리', '봉사', '교육', '연구'],
+    협업: ['프로젝트', '팀 활동', '동아리', '스터디', '그룹'],
+    문제해결: ['프로젝트', '대회', '해커톤', '연구', '개발'],
+    성과: ['대회', '수상', '프로젝트', '성과', '달성'],
+    동기: ['인턴', '대외활동', '봉사', '학습', '교육'],
+    포부: ['교육', '세미나', '학습', '자격증', '스터디'],
+    성장: ['봉사', '대외활동', '인턴', '교육', '동아리', '활동'],
+    가치관: ['봉사', '대외활동', '동아리', '멘토링', '사회'],
   };
 
-  keywords.forEach((keyword) => {
+  // 우선순위 키워드 (성장, 가치관)의 활동을 먼저 찾기
+  const priorityKeywords = ['성장', '가치관'];
+  const otherKeywords = keywords.filter(k => !priorityKeywords.includes(k));
+
+  // 우선순위 키워드 처리
+  priorityKeywords.forEach((keyword) => {
+    if (keywords.includes(keyword)) {
+      const targetActivities = activityMappings[keyword] || [];
+
+      stats.commonActivities.forEach((activity) => {
+        if (
+          targetActivities.some((target) => activity.activityType.includes(target)) ||
+          activity.activityType.includes(keyword)
+        ) {
+          priorityStats.push({
+            activityType: activity.activityType,
+            percentage: activity.percentage,
+            insight: activity.insight,
+          });
+        }
+      });
+    }
+  });
+
+  // 나머지 키워드 처리
+  otherKeywords.forEach((keyword) => {
     const targetActivities = activityMappings[keyword] || [];
 
     stats.commonActivities.forEach((activity) => {
@@ -110,12 +145,15 @@ function findRelatedStats(
     });
   });
 
+  // 우선순위 통계 먼저, 그 다음 일반 통계
+  const allStats = [...priorityStats, ...relatedStats];
+
   // 중복 제거 및 상위 5개만 반환
   const uniqueStats = Array.from(
-    new Map(relatedStats.map((item) => [item.activityType, item])).values()
+    new Map(allStats.map((item) => [item.activityType, item])).values()
   );
 
-  return uniqueStats.sort((a, b) => b.percentage - a.percentage).slice(0, 5);
+  return uniqueStats.slice(0, 5);
 }
 
 /**
@@ -123,8 +161,9 @@ function findRelatedStats(
  */
 function generateSuggestedTopics(keywords: string[], stats: ComprehensiveStats): string[] {
   const topics: string[] = [];
+  const priorityTopics: string[] = []; // 우선순위 높은 주제
 
-  // 키워드 기반 제안
+  // 키워드 기반 제안 (확장됨)
   const topicMappings: Record<string, string[]> = {
     동기: [
       '회사/산업에 대한 관심을 갖게 된 계기',
@@ -136,6 +175,7 @@ function generateSuggestedTopics(keywords: string[], stats: ComprehensiveStats):
       '기술 스택 및 구현 방법',
       '팀원들과의 협업 과정',
       '직면한 어려움과 해결 방법',
+      '봉사/활동에서 배운 교훈',
     ],
     강점: [
       '기술적 강점 (프로그래밍, 분석 등)',
@@ -158,11 +198,33 @@ function generateSuggestedTopics(keywords: string[], stats: ComprehensiveStats):
       '창의적 접근 방법',
       '실패에서 배운 점',
     ],
+    성장: [
+      '활동을 통해 얻은 깨달음',
+      '가치관이나 태도의 변화',
+      '앞으로의 성장 방향',
+      '경험이 직무에 미치는 영향',
+    ],
+    가치관: [
+      '중요하게 생각하는 가치',
+      '일에 임하는 태도와 철학',
+      '팀워크에서 중시하는 점',
+    ],
   };
 
+  // 성장, 가치관 키워드가 있으면 우선순위 높게
+  if (keywords.includes('성장')) {
+    priorityTopics.push(...(topicMappings['성장'] || []));
+  }
+  if (keywords.includes('가치관')) {
+    priorityTopics.push(...(topicMappings['가치관'] || []));
+  }
+
+  // 나머지 키워드 처리
   keywords.forEach((keyword) => {
-    const keywordTopics = topicMappings[keyword] || [];
-    topics.push(...keywordTopics);
+    if (keyword !== '성장' && keyword !== '가치관') {
+      const keywordTopics = topicMappings[keyword] || [];
+      topics.push(...keywordTopics);
+    }
   });
 
   // 데이터 기반 제안 추가
@@ -171,8 +233,11 @@ function generateSuggestedTopics(keywords: string[], stats: ComprehensiveStats):
     topics.push(`${topActivity.activityType} 경험 (합격자의 ${topActivity.percentage.toFixed(0)}%가 언급)`);
   }
 
+  // 우선순위 주제 먼저, 그 다음 일반 주제
+  const allTopics = [...priorityTopics, ...topics];
+
   // 중복 제거 및 상위 6개 반환
-  return Array.from(new Set(topics)).slice(0, 6);
+  return Array.from(new Set(allTopics)).slice(0, 6);
 }
 
 /**
@@ -196,6 +261,14 @@ function generateGeneralAdvice(
 
   if (keywords.includes('문제해결')) {
     advices.push('문제의 배경, 해결 과정, 결과를 논리적으로 서술하세요.');
+  }
+
+  if (keywords.includes('성장')) {
+    advices.push('경험을 통해 얻은 깨달음과 변화를 구체적으로 서술하세요.');
+  }
+
+  if (keywords.includes('가치관')) {
+    advices.push('본인의 가치관이 직무와 어떻게 연결되는지 설명하세요.');
   }
 
   // 데이터 기반 조언

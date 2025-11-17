@@ -25,11 +25,6 @@ export const PositionStatsDetailPage: React.FC = () => {
       setIsLoading(true);
       try {
         const data = await getComprehensiveStats(position);
-          position,
-          totalApplicants: data.totalApplicants,
-          commonActivitiesCount: data.commonActivities.length,
-          commonActivities: data.commonActivities.slice(0, 3)
-        });
         setStats(data);
       } catch (error) {
       } finally {

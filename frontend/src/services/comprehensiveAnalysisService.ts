@@ -177,12 +177,6 @@ export async function getComprehensiveStats(position: string, skipAnonymization:
     // DB에 있는 모든 직무 목록 확인
     const allPositions = Array.from(new Set(allCoverLetters?.map(cl => (cl as any).job_position).filter(Boolean))).slice(0, 20);
 
-      error,
-      dataCount: allCoverLetters?.length,
-      firstItem: allCoverLetters?.[0],
-      DB내_모든_직무_샘플: allPositions
-    });
-
     if (error || !allCoverLetters) {
       return getEmptyStats(position);
     }
@@ -199,16 +193,6 @@ export async function getComprehensiveStats(position: string, skipAnonymization:
       new Set(relevantCoverLetters.map(cl => cl.job_position))
     ).slice(0, 10);
 
-      검색한_직무: position,
-      전체_데이터: allCoverLetters.length,
-      매칭된_데이터: relevantCoverLetters.length,
-      매칭된_직무들: matchedPositions,
-      유사도_샘플: relevantCoverLetters.slice(0, 5).map(cl => ({
-        직무: cl.job_position,
-        유사도: calculatePositionSimilarity(cl.job_position, position)
-      }))
-    });
-
     if (relevantCoverLetters.length === 0) {
       return getEmptyStats(position);
     }
@@ -223,11 +207,6 @@ export async function getComprehensiveStats(position: string, skipAnonymization:
         created_at: ''
       }))
     );
-
-      매칭된_지원자수: relevantCoverLetters.length,
-      추출된_활동수: allActivities.length,
-      활동_샘플: allActivities.slice(0, 3).map(a => a.content.slice(0, 50))
-    });
 
     // 활동 패턴 분석
     const activityPatterns = analyzeActivityPatterns(allActivities, relevantCoverLetters.length);
@@ -288,22 +267,9 @@ function calculateAvgGpa(coverLetters: IntegratedCoverLetter[]): number {
     const gpaString = cl.user_spec?.gpa;
     const normalizedGpa = parseGpa(gpaString);
 
-    if (index < 5) {
-        원본: gpaString,
-        파싱결과: normalizedGpa,
-        user_spec: cl.user_spec
-      });
-    }
-
     if (normalizedGpa !== null) {
       gpas.push(normalizedGpa);
     }
-  });
-
-    전체인원: coverLetters.length,
-    유효데이터: gpas.length,
-    평균: gpas.length > 0 ? gpas.reduce((a, b) => a + b, 0) / gpas.length : 0,
-    샘플: gpas.slice(0, 5)
   });
 
   return gpas.length > 0 ? gpas.reduce((a, b) => a + b, 0) / gpas.length : 0;
@@ -390,22 +356,9 @@ function calculateAvgToeic(coverLetters: IntegratedCoverLetter[]): number {
     const toeicString = cl.user_spec?.toeic;
     const score = parseToeic(toeicString);
 
-    if (index < 5) {
-        원본: toeicString,
-        파싱결과: score,
-        user_spec: cl.user_spec
-      });
-    }
-
     if (score !== null) {
       toeics.push(score);
     }
-  });
-
-    전체인원: coverLetters.length,
-    유효데이터: toeics.length,
-    평균: toeics.length > 0 ? toeics.reduce((a, b) => a + b, 0) / toeics.length : 0,
-    샘플: toeics.slice(0, 5)
   });
 
   return toeics.length > 0 ? toeics.reduce((a, b) => a + b, 0) / toeics.length : 0;
@@ -845,13 +798,6 @@ function analyzeActivityPatterns(activities: Activity[], totalApplicants: number
     })
     .sort((a, b) => b.percentage - a.percentage)
     .slice(0, 30); // 상위 30개로 확대
-
-    totalActivities: activities.length,
-    totalApplicants,
-    uniqueActivityKeywords: activityMap.size,
-    finalResults: results.length,
-    topResults: results.slice(0, 5).map(r => `${r.activityType} ${r.percentage.toFixed(0)}%`)
-  });
 
   return results;
 }

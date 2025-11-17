@@ -1966,9 +1966,6 @@ class OneClickGenerator {
 
             // Job-focused analysis 수행 (옵션이 활성화된 경우)
             if (options.includeJobAnalysis && options.targetRole) {
-                    "Generating job-focused portfolio for role:",
-                    options.targetRole
-                );
                 // Use content as-is since jobFocusedPortfolioGenerator was removed
                 enhancedContent = content;
                 jobAnalysis = {

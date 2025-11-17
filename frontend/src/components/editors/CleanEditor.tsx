@@ -374,16 +374,6 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                     );
                     const needsEnhancement = !isFromDB && (!actualData.about || actualData.about.length < 50);
 
-                        isFromDB,
-                        hasExtractedData: !!extracted,
-                        hasSummary: !!(extracted?.summary),
-                        hasAbout: !!actualData.about,
-                        hasProjects: !!(extracted?.projects?.length),
-                        hasExperience: !!(extracted?.experience?.length || extracted?.experiences?.length),
-                        aboutLength: actualData.about?.length,
-                        needsEnhancement
-                    });
-
                     if (needsEnhancement) {
                         setIsEnhancing(true);
                         try {
