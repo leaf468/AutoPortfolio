@@ -821,6 +821,18 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
 
       const result = JSON.parse(content);
       console.log('✅ Colorful Clean LLM 파싱 결과:', result);
+
+      // AI가 예시 값을 그대로 사용하는 경우를 방지하기 위해 실제 사용자 정보로 덮어쓰기
+      if (result.cover) {
+        result.cover.name = userName;
+        result.cover.position = userPosition || result.cover.position;
+      }
+      if (result.contact) {
+        result.contact.email = userEmail;
+        result.contact.phone = userPhone;
+        result.contact.portfolio_link = data.userInfo.website || userProfile?.github_url || result.contact.portfolio_link;
+      }
+
       return result;
     } catch (error) {
       console.error('❌ Colorful Clean PPT 데이터 최적화 실패:', error);
@@ -1190,6 +1202,21 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
 
       const result = JSON.parse(content);
       console.log('✅ Impact Focused LLM 파싱 결과:', result);
+
+      // AI가 예시 값을 그대로 사용하는 경우를 방지하기 위해 실제 사용자 정보로 덮어쓰기
+      if (result.cover) {
+        result.cover.name = userName;
+        result.cover.email = userEmail;
+        result.cover.phone = userPhone;
+        result.cover.position = userPosition || result.cover.position;
+        result.cover.linkedin = data.userInfo.website || data.userInfo.github || userProfile?.github_url || result.cover.linkedin;
+      }
+      if (result.contact) {
+        result.contact.email = userEmail;
+        result.contact.phone = userPhone;
+        result.contact.portfolio_link = data.userInfo.website || userProfile?.github_url || result.contact.portfolio_link;
+      }
+
       return result;
     } catch (error) {
       console.error('❌ Impact Focused PPT 데이터 최적화 실패:', error);
@@ -1291,7 +1318,7 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
   }
 
   /**
-   * Impact Focused 템플릿 PPT 생성
+   * Impact Focused 템플릿 PPT 생성 (새 템플릿 구조)
    */
   async generateImpactFocusedPPT(data: PortfolioData, templatePath: string, userProfile?: any): Promise<Blob> {
     console.log('=== Impact Focused PPT 생성 시작 ===');
@@ -1305,174 +1332,125 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
     // Slide 1: 표지
     let slide1 = zip.file('ppt/slides/slide1.xml')?.asText() || '';
     slide1 = this.replaceTextInXML(slide1, '[이름]', this.truncateText(pptData.cover.name, 20));
-    slide1 = this.replaceTextInXML(slide1, '[직무 포지션]', this.truncateText(pptData.cover.position, 25));
-    slide1 = this.replaceTextInXML(slide1, '[핵심 가치/전문성 한 문장]', this.truncateText(pptData.cover.one_liner, 50));
-    slide1 = this.replaceTextInXML(slide1, '[email@example.com]', this.truncateText(pptData.cover.email, 35));
-    slide1 = this.replaceTextInXML(slide1, '[+82-10-XXXX-XXXX]', this.truncateText(pptData.cover.phone, 15));
-    slide1 = this.replaceTextInXML(slide1, '[linkedin.com/in/username]', this.truncateText(pptData.cover.linkedin, 40));
+    slide1 = this.replaceTextInXML(slide1, '[지원 직무/포지션]', this.truncateText(pptData.cover.position, 25));
+    slide1 = this.replaceTextInXML(slide1, '[한 줄 소개: 나를 가장 잘 드러내는 문장]', this.truncateText(pptData.cover.one_liner, 60));
+    slide1 = this.replaceTextInXML(slide1, '[이메일]', this.truncateText(pptData.cover.email, 35));
+    slide1 = this.replaceTextInXML(slide1, '[전화번호]', this.truncateText(pptData.cover.phone, 15));
+    slide1 = this.replaceTextInXML(slide1, '[GitHub / Blog / LinkedIn]', this.truncateText(pptData.cover.linkedin, 40));
     zip.file('ppt/slides/slide1.xml', slide1);
     console.log('✅ Slide 1 완료 (표지)');
 
-    // Slide 2: 프로필 & 핵심 역량
+    // Slide 2: 자기소개
     let slide2 = zip.file('ppt/slides/slide2.xml')?.asText() || '';
-    slide2 = this.replaceTextInXML(slide2, '[성과 중심 자기소개 2–3문장: 예) 사용자 문제를 데이터에 기반해 정의하고 제품 임팩트로 연결하는 [직무]입니다. 다양한 팀과 협업하여 프로젝트를 끝까지 책임지고, 수치로 검증된 결과를 만들었습니다.]', this.truncateText(pptData.profile.introduction, 150));
+    slide2 = this.replaceTextInXML(slide2, '[한 줄 소개: 나를 가장 잘 드러내는 문장]', this.truncateText(pptData.profile.introduction, 100));
     for (let i = 0; i < 3; i++) {
       if (pptData.profile.strengths[i]) {
-        slide2 = slide2.replace(`<a:t>[강점 ${i + 1}]</a:t>`, `<a:t>${this.escapeXML(this.truncateText(pptData.profile.strengths[i], 20))}</a:t>`);
+        slide2 = this.replaceTextInXML(slide2, '[강점 키워드]', this.truncateText(pptData.profile.strengths[i], 20));
+        slide2 = this.replaceTextInXML(slide2, '[간단 근거 1줄]', this.truncateText(pptData.profile.competencies[i]?.evidence || '', 40));
       }
       if (pptData.profile.domains[i]) {
-        slide2 = slide2.replace(`<a:t>[도메인 ${i + 1}]</a:t>`, `<a:t>${this.escapeXML(this.truncateText(pptData.profile.domains[i], 20))}</a:t>`);
+        slide2 = this.replaceTextInXML(slide2, `[키워드 ${i + 1}]`, this.truncateText(pptData.profile.domains[i], 15));
       }
-    }
-    for (let i = 0; i < Math.min(5, pptData.profile.competencies.length); i++) {
-      const comp = pptData.profile.competencies[i];
-      slide2 = slide2.replace(`<a:t>[역량명 ${i + 1}]</a:t>`, `<a:t>${this.escapeXML(this.truncateText(comp.name, 20))}</a:t>`);
-      slide2 = slide2.replace(/<a:t>\[근거\/사례 키워드[^<]*\]<\/a:t>/, `<a:t>${this.escapeXML(this.truncateText(comp.evidence, 35))}</a:t>`);
     }
     zip.file('ppt/slides/slide2.xml', slide2);
-    console.log('✅ Slide 2 완료 (프로필 & 핵심 역량)');
+    console.log('✅ Slide 2 완료 (자기소개)');
 
-    // Slide 3: 경력 타임라인
+    // Slide 3: 기술 스택
     let slide3 = zip.file('ppt/slides/slide3.xml')?.asText() || '';
-    for (let i = 0; i < Math.min(4, pptData.timeline.length); i++) {
-      const item = pptData.timeline[i];
-      const periodCompanyPos = `${item.period} | [회사 ${String.fromCharCode(65 + i)}] | [직무]`;
-      slide3 = slide3.replace(
-        new RegExp(`<a:t>YYYY\\.MM[–-][^<]* \\| \\[회사 ${String.fromCharCode(65 + i)}\\] \\| \\[직무\\]</a:t>`),
-        `<a:t>${this.escapeXML(this.truncateText(item.period, 20))} | ${this.escapeXML(this.truncateText(item.company, 15))} | ${this.escapeXML(this.truncateText(item.position, 15))}</a:t>`
-      );
-      slide3 = slide3.replace(
-        /<a:t>\[주요 임팩트\/수치[^<]*\]<\/a:t>/,
-        `<a:t>${this.escapeXML(this.truncateText(item.impact, 40))}</a:t>`
-      );
-    }
-    // 총괄 성과 요약
-    for (let i = 0; i < Math.min(3, pptData.summary_metrics.length); i++) {
-      const metric = pptData.summary_metrics[i];
-      slide3 = slide3.replace('<a:t>[지표명]</a:t>', `<a:t>${this.escapeXML(this.truncateText(metric.metric_name, 15))}</a:t>`);
-      slide3 = slide3.replace('<a:t>[값]</a:t>', `<a:t>${this.escapeXML(this.truncateText(metric.value, 10))}</a:t>`);
-      slide3 = slide3.replace('<a:t>[기간/비교]</a:t>', `<a:t>${this.escapeXML(this.truncateText(metric.comparison, 20))}</a:t>`);
-    }
-    if (pptData.impact_cases[0]) {
-      slide3 = slide3.replace(/<a:t>\[사례 요약 1[^<]*\]<\/a:t>/, `<a:t>${this.escapeXML(this.truncateText(pptData.impact_cases[0], 50))}</a:t>`);
-    }
-    if (pptData.impact_cases[1]) {
-      slide3 = slide3.replace(/<a:t>\[사례 요약 2[^<]*\]<\/a:t>/, `<a:t>${this.escapeXML(this.truncateText(pptData.impact_cases[1], 50))}</a:t>`);
-    }
-    for (let i = 0; i < 3; i++) {
-      if (pptData.domains[i]) {
-        slide3 = slide3.replace(`<a:t>[도메인 ${i + 1}]</a:t>`, `<a:t>${this.escapeXML(this.truncateText(pptData.domains[i], 15))}</a:t>`);
-      }
-    }
-    zip.file('ppt/slides/slide3.xml', slide3);
-    console.log('✅ Slide 3 완료 (경력 타임라인)');
-
-    // Slide 4: 주요 프로젝트 #1
-    let slide4 = zip.file('ppt/slides/slide4.xml')?.asText() || '';
-    slide4 = this.replaceTextInXML(slide4, '[프로젝트명]', this.truncateText(pptData.project_1.name, 35));
-    slide4 = this.replaceTextInXML(slide4, '[YYYY.MM–YYYY.MM]', this.truncateText(pptData.project_1.period, 25));
-    slide4 = this.replaceTextInXML(slide4, '[Role: PM/개발/디자인]', this.truncateText(pptData.project_1.role, 20));
-    slide4 = this.replaceTextInXML(slide4, '[팀 규모: N명]', this.truncateText(pptData.project_1.team_size, 15));
-    slide4 = slide4.replace(/<a:t>\[문제\] \{[^}]*\}<\/a:t>/, `<a:t>[문제] ${this.escapeXML(this.truncateText(pptData.project_1.problem, 60))}</a:t>`);
-    slide4 = slide4.replace(/<a:t>\[목표\] \{[^}]*\}<\/a:t>/, `<a:t>[목표] ${this.escapeXML(this.truncateText(pptData.project_1.goal, 60))}</a:t>`);
-    for (let i = 0; i < Math.min(3, pptData.project_1.actions.length); i++) {
-      slide4 = slide4.replace(/<a:t>\[핵심 액션 \d\] \{[^}]*\}<\/a:t>/, `<a:t>${this.escapeXML(this.truncateText(pptData.project_1.actions[i], 50))}</a:t>`);
-    }
-    for (let i = 0; i < Math.min(3, pptData.project_1.kpis.length); i++) {
-      const kpi = pptData.project_1.kpis[i];
-      slide4 = slide4.replace(/<a:t>(전환율|리드타임|매출\/활성)<\/a:t>/, `<a:t>${this.escapeXML(this.truncateText(kpi.name, 15))}</a:t>`);
-      slide4 = slide4.replace(/<a:t>\[\+?-?[XYZ]+%\]<\/a:t>/, `<a:t>${this.escapeXML(this.truncateText(kpi.value, 10))}</a:t>`);
-      slide4 = slide4.replace(/<a:t>\[\{[^}]*\}\]<\/a:t>/, `<a:t>${this.escapeXML(this.truncateText(kpi.comparison, 20))}</a:t>`);
-    }
-    if (pptData.project_1.tech_stack[0]) slide4 = this.replaceTextInXML(slide4, '[언어/프레임워크]', this.truncateText(pptData.project_1.tech_stack[0], 20));
-    if (pptData.project_1.tech_stack[1]) slide4 = this.replaceTextInXML(slide4, '[플랫폼/툴]', this.truncateText(pptData.project_1.tech_stack[1], 20));
-    if (pptData.project_1.tech_stack[2]) slide4 = this.replaceTextInXML(slide4, '[데이터/인프라]', this.truncateText(pptData.project_1.tech_stack[2], 20));
-    zip.file('ppt/slides/slide4.xml', slide4);
-    console.log('✅ Slide 4 완료 (프로젝트 #1)');
-
-    // Slide 5: 주요 프로젝트 #2
-    let slide5 = zip.file('ppt/slides/slide5.xml')?.asText() || '';
-    slide5 = this.replaceTextInXML(slide5, '[프로젝트명]', this.truncateText(pptData.project_2.name, 35));
-    slide5 = this.replaceTextInXML(slide5, '[YYYY.MM–YYYY.MM]', this.truncateText(pptData.project_2.period, 25));
-    slide5 = this.replaceTextInXML(slide5, '[역할]', this.truncateText(pptData.project_2.role, 20));
-    slide5 = this.replaceTextInXML(slide5, '[규모]명', this.truncateText(`${pptData.project_2.team_size}명`, 15));
-    slide5 = slide5.replace(/<a:t>\[핵심 문제 요약[^<]*\]<\/a:t>/, `<a:t>${this.escapeXML(this.truncateText(pptData.project_2.problem, 60))}</a:t>`);
-    slide5 = slide5.replace(/<a:t>\[목표[^<]*\]<\/a:t>/, `<a:t>${this.escapeXML(this.truncateText(pptData.project_2.goal, 60))}</a:t>`);
-    for (let i = 0; i < Math.min(3, pptData.project_2.actions.length); i++) {
-      slide5 = slide5.replace(/<a:t>\[핵심 액션 \d[^<]*\]<\/a:t>/, `<a:t>${this.escapeXML(this.truncateText(pptData.project_2.actions[i], 50))}</a:t>`);
-    }
-    for (let i = 0; i < Math.min(3, pptData.project_2.kpis.length); i++) {
-      const kpi = pptData.project_2.kpis[i];
-      slide5 = slide5.replace(/<a:t>(전환율|이탈률|리드타임)<\/a:t>/, `<a:t>${this.escapeXML(this.truncateText(kpi.name, 15))}</a:t>`);
-      slide5 = slide5.replace(/<a:t>\[\+?-?%\]<\/a:t>/, `<a:t>${this.escapeXML(this.truncateText(kpi.value, 10))}</a:t>`);
-      slide5 = slide5.replace(/<a:t>\[전\/후[^<]*\]<\/a:t>/, `<a:t>${this.escapeXML(this.truncateText(kpi.comparison, 20))}</a:t>`);
-    }
-    for (let i = 0; i < Math.min(4, pptData.project_2.tech_stack.length); i++) {
-      slide5 = slide5.replace(`<a:t>[스택 ${i + 1}]</a:t>`, `<a:t>${this.escapeXML(this.truncateText(pptData.project_2.tech_stack[i], 15))}</a:t>`);
-    }
-    zip.file('ppt/slides/slide5.xml', slide5);
-    console.log('✅ Slide 5 완료 (프로젝트 #2)');
-
-    // Slide 6: 핵심 성과 (KPI)
-    let slide6 = zip.file('ppt/slides/slide6.xml')?.asText() || '';
-    for (let i = 0; i < Math.min(4, pptData.kpi_metrics.length); i++) {
-      const metric = pptData.kpi_metrics[i];
-      slide6 = slide6.replace('<a:t>[지표명]</a:t>', `<a:t>${this.escapeXML(this.truncateText(metric.metric_name, 15))}</a:t>`);
-      slide6 = slide6.replace('<a:t>[값]</a:t>', `<a:t>${this.escapeXML(this.truncateText(metric.value, 10))}</a:t>`);
-      slide6 = slide6.replace('<a:t>[기간/비교 기준]</a:t>', `<a:t>${this.escapeXML(this.truncateText(metric.comparison, 20))}</a:t>`);
-    }
-    if (pptData.impact_summaries[0]) {
-      slide6 = slide6.replace(/<a:t>\[사례 요약 1[^<]*\]<\/a:t>/, `<a:t>${this.escapeXML(this.truncateText(pptData.impact_summaries[0], 50))}</a:t>`);
-    }
-    if (pptData.impact_summaries[1]) {
-      slide6 = slide6.replace(/<a:t>\[사례 요약 2[^<]*\]<\/a:t>/, `<a:t>${this.escapeXML(this.truncateText(pptData.impact_summaries[1], 50))}</a:t>`);
-    }
-    for (let i = 0; i < Math.min(2, pptData.certifications.length); i++) {
-      slide6 = slide6.replace('<a:t>[수상명/인증명, 연도]</a:t>', `<a:t>${this.escapeXML(this.truncateText(pptData.certifications[i], 40))}</a:t>`);
-    }
-    zip.file('ppt/slides/slide6.xml', slide6);
-    console.log('✅ Slide 6 완료 (핵심 성과)');
-
-    // Slide 7: 기술 스택 & 역량
-    let slide7 = zip.file('ppt/slides/slide7.xml')?.asText() || '';
+    slide3 = this.replaceTextInXML(slide3, '[중요 기술 위주로 간결하게 입력하고, 필요 없는 항목은 삭제하세요]', '');
     for (let i = 0; i < 3; i++) {
       if (pptData.skills.languages[i]) {
-        slide7 = slide7.replace(`<a:t>[언어 ${i + 1}]</a:t>`, `<a:t>${this.escapeXML(pptData.skills.languages[i])}</a:t>`);
+        slide3 = this.replaceTextInXML(slide3, `[언어 ${i + 1}]`, pptData.skills.languages[i]);
       }
     }
     for (let i = 0; i < 2; i++) {
       if (pptData.skills.frameworks[i]) {
-        slide7 = slide7.replace(`<a:t>[프레임워크 ${i + 1}]</a:t>`, `<a:t>${this.escapeXML(pptData.skills.frameworks[i])}</a:t>`);
+        slide3 = this.replaceTextInXML(slide3, `[프레임워크 ${i + 1}]`, pptData.skills.frameworks[i]);
       }
     }
     if (pptData.skills.frameworks[2]) {
-      slide7 = this.replaceTextInXML(slide7, '[라이브러리 1]', pptData.skills.frameworks[2]);
+      slide3 = this.replaceTextInXML(slide3, '[라이브러리 1]', pptData.skills.frameworks[2]);
+    }
+    for (let i = 0; i < 5; i++) {
+      const techIndex = i + 1;
+      if (pptData.skills.tools[i]) {
+        slide3 = this.replaceTextInXML(slide3, `[기술 ${techIndex}]`, pptData.skills.tools[i]);
+      }
     }
     for (let i = 0; i < 2; i++) {
       if (pptData.skills.tools[i]) {
-        slide7 = slide7.replace(`<a:t>[도구 ${i + 1}]</a:t>`, `<a:t>${this.escapeXML(pptData.skills.tools[i])}</a:t>`);
+        slide3 = this.replaceTextInXML(slide3, `[툴 ${i + 1}]`, pptData.skills.tools[i]);
       }
     }
     if (pptData.skills.tools[2]) {
-      slide7 = this.replaceTextInXML(slide7, '[플랫폼 1]', pptData.skills.tools[2]);
+      slide3 = this.replaceTextInXML(slide3, '[플랫폼 1]', pptData.skills.tools[2]);
+    }
+    zip.file('ppt/slides/slide3.xml', slide3);
+    console.log('✅ Slide 3 완료 (기술 스택)');
+
+    // Slide 4-6: 프로젝트 1, 2, 3
+    const projects = [pptData.project_1, pptData.project_2];
+    for (let projIdx = 0; projIdx < 3; projIdx++) {
+      const slideNum = projIdx + 4;
+      let slideContent = zip.file(`ppt/slides/slide${slideNum}.xml`)?.asText() || '';
+      const project = projects[projIdx] || projects[0]; // fallback to first project
+
+      slideContent = this.replaceTextInXML(slideContent, '[프로젝트명]', this.truncateText(project.name, 35));
+      slideContent = this.replaceTextInXML(slideContent, '[한 줄 요약]', this.truncateText(project.problem, 60));
+      slideContent = this.replaceTextInXML(slideContent, '[기간: YYYY.MM ~ YYYY.MM]', this.truncateText(project.period, 25));
+      slideContent = this.replaceTextInXML(slideContent, '[담당 역할]', this.truncateText(project.role, 20));
+
+      // 성과
+      for (let i = 0; i < 3; i++) {
+        if (project.actions[i]) {
+          slideContent = this.replaceTextInXML(slideContent, `[성과 ${i + 1}: 수치/결과 중심]`, this.truncateText(project.actions[i], 50));
+        }
+      }
+
+      // 기술
+      for (let i = 0; i < 3; i++) {
+        if (project.tech_stack[i]) {
+          slideContent = this.replaceTextInXML(slideContent, `[Tech ${i + 1}]`, this.truncateText(project.tech_stack[i], 15));
+        }
+      }
+
+      // 링크
+      slideContent = this.replaceTextInXML(slideContent, '[배포 링크]', pptData.contact.portfolio_link);
+      slideContent = this.replaceTextInXML(slideContent, '[코드 저장소]', pptData.cover.linkedin);
+
+      zip.file(`ppt/slides/slide${slideNum}.xml`, slideContent);
+      console.log(`✅ Slide ${slideNum} 완료 (프로젝트 ${projIdx + 1})`);
+    }
+
+    // Slide 7: 경력/수상/자격증
+    let slide7 = zip.file('ppt/slides/slide7.xml')?.asText() || '';
+    if (pptData.timeline[0]) {
+      const exp = pptData.timeline[0];
+      slide7 = this.replaceTextInXML(slide7, '[기간: YYYY.MM ~ YYYY.MM] [회사/기관] | ', `${exp.period} ${exp.company} | `);
+      slide7 = this.replaceTextInXML(slide7, '[직무] [담당 업무: 핵심 업무 1~2가지] ', `${exp.position} ${exp.impact}`);
+      slide7 = this.replaceTextInXML(slide7, '[주요 성과: 수치/결과 중심]', exp.impact);
+    }
+    if (pptData.certifications[0]) {
+      slide7 = this.replaceTextInXML(slide7, '[상 이름] — [기관] · [연도] · [성과/역할]', pptData.certifications[0]);
     }
     if (pptData.certifications_detail[0]) {
       const cert = pptData.certifications_detail[0];
-      slide7 = this.replaceTextInXML(slide7, '[자격증명] · [기관] · [연도]', `${cert.name} · ${cert.org} · ${cert.year}`);
-      slide7 = this.replaceTextInXML(slide7, '[간단 설명 또는 역량 연계 포인트]', cert.description);
+      slide7 = this.replaceTextInXML(slide7, '[자격증 명] — [발급기관] · [취득일]', `${cert.name} — ${cert.org} · ${cert.year}`);
     }
+    slide7 = this.replaceTextInXML(slide7, '[추천 코멘트/피드백를 한 문장으로 입력]', pptData.contact.value_statement);
+    slide7 = this.replaceTextInXML(slide7, '[추천인/직함]', '동료/상사');
     zip.file('ppt/slides/slide7.xml', slide7);
-    console.log('✅ Slide 7 완료 (기술 스택)');
+    console.log('✅ Slide 7 완료 (경력/수상/자격증)');
 
-    // Slide 8: 연락처 & 다음 단계
+    // Slide 8: 연락처
     let slide8 = zip.file('ppt/slides/slide8.xml')?.asText() || '';
-    slide8 = this.replaceTextInXML(slide8, 'email@example.com', pptData.contact.email);
-    slide8 = this.replaceTextInXML(slide8, '+82-10-0000-0000', pptData.contact.phone);
-    slide8 = this.replaceTextInXML(slide8, 'https://your-portfolio.link', pptData.contact.portfolio_link);
-    slide8 = slide8.replace(/<a:t>근무 형태: \{[^}]*\}<\/a:t>/, `<a:t>근무 형태: ${this.escapeXML(pptData.contact.work_type)}</a:t>`);
-    slide8 = slide8.replace(/<a:t>지역: \{[^}]*\}<\/a:t>/, `<a:t>지역: ${this.escapeXML(pptData.contact.location)}</a:t>`);
-    slide8 = slide8.replace(/<a:t>입사 가능일: \{[^}]*\}<\/a:t>/, `<a:t>입사 가능일: ${this.escapeXML(pptData.contact.available_date)}</a:t>`);
-    slide8 = slide8.replace(/<a:t>"\{[^}]*\}"<\/a:t>/, `<a:t>"${this.escapeXML(pptData.contact.value_statement)}"</a:t>`);
+    slide8 = this.replaceTextInXML(slide8, '[이름]', pptData.cover.name);
+    slide8 = this.replaceTextInXML(slide8, '[이메일]', pptData.contact.email);
+    slide8 = this.replaceTextInXML(slide8, '[전화]', pptData.contact.phone);
+    slide8 = this.replaceTextInXML(slide8, '[GitHub 링크]', pptData.cover.linkedin);
+    slide8 = this.replaceTextInXML(slide8, '[LinkedIn 링크]', pptData.cover.linkedin);
+    slide8 = this.replaceTextInXML(slide8, '[Blog 링크]', pptData.contact.portfolio_link);
+    slide8 = this.replaceTextInXML(slide8, '[감사의 말(한 문장)]', '읽어주셔서 감사합니다.');
     zip.file('ppt/slides/slide8.xml', slide8);
     console.log('✅ Slide 8 완료 (연락처)');
 
@@ -1494,7 +1472,7 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
       return this.generateColorfulCleanPPT(data, templatePath, userProfile);
     }
 
-    if (templateId === 'impact-focused' || templatePath.includes('20251116185959')) {
+    if (templateId === 'impact-focused' || templatePath.includes('20251117084121')) {
       return this.generateImpactFocusedPPT(data, templatePath, userProfile);
     }
 
