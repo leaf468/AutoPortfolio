@@ -7,24 +7,28 @@ import {
   XMarkIcon,
 } from '@heroicons/react/24/outline';
 
-export type AlertType = 'success' | 'error' | 'info' | 'warning';
+export type AlertType = 'success' | 'error' | 'info' | 'warning' | 'confirm';
 
 interface CustomAlertProps {
   isOpen: boolean;
   onClose: () => void;
+  onConfirm?: () => void;
   title?: string;
   message: string;
   type?: AlertType;
   confirmText?: string;
+  cancelText?: string;
 }
 
 export const CustomAlert: React.FC<CustomAlertProps> = ({
   isOpen,
   onClose,
+  onConfirm,
   title,
   message,
   type = 'info',
   confirmText = '확인',
+  cancelText = '취소',
 }) => {
   useEffect(() => {
     if (isOpen) {
@@ -57,6 +61,8 @@ export const CustomAlert: React.FC<CustomAlertProps> = ({
         return <XCircleIcon className="w-12 h-12 text-red-500" />;
       case 'warning':
         return <ExclamationCircleIcon className="w-12 h-12 text-yellow-500" />;
+      case 'confirm':
+        return <InformationCircleIcon className="w-12 h-12 text-indigo-500" />;
       default:
         return <InformationCircleIcon className="w-12 h-12 text-blue-500" />;
     }
@@ -71,6 +77,8 @@ export const CustomAlert: React.FC<CustomAlertProps> = ({
         return '오류';
       case 'warning':
         return '경고';
+      case 'confirm':
+        return '확인';
       default:
         return '알림';
     }
@@ -111,20 +119,40 @@ export const CustomAlert: React.FC<CustomAlertProps> = ({
 
         {/* 버튼 */}
         <div className="px-6 pb-6">
-          <button
-            onClick={onClose}
-            className={`w-full py-3 rounded-lg font-semibold transition-all duration-200 ${
-              type === 'success'
-                ? 'bg-green-500 hover:bg-green-600 text-white'
-                : type === 'error'
-                ? 'bg-red-500 hover:bg-red-600 text-white'
-                : type === 'warning'
-                ? 'bg-yellow-500 hover:bg-yellow-600 text-white'
-                : 'bg-blue-500 hover:bg-blue-600 text-white'
-            }`}
-          >
-            {confirmText}
-          </button>
+          {type === 'confirm' ? (
+            <div className="flex gap-3">
+              <button
+                onClick={onClose}
+                className="flex-1 py-3 rounded-lg font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 transition-all duration-200"
+              >
+                {cancelText}
+              </button>
+              <button
+                onClick={() => {
+                  if (onConfirm) onConfirm();
+                  onClose();
+                }}
+                className="flex-1 py-3 rounded-lg font-semibold bg-indigo-600 hover:bg-indigo-700 text-white transition-all duration-200"
+              >
+                {confirmText}
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={onClose}
+              className={`w-full py-3 rounded-lg font-semibold transition-all duration-200 ${
+                type === 'success'
+                  ? 'bg-green-500 hover:bg-green-600 text-white'
+                  : type === 'error'
+                  ? 'bg-red-500 hover:bg-red-600 text-white'
+                  : type === 'warning'
+                  ? 'bg-yellow-500 hover:bg-yellow-600 text-white'
+                  : 'bg-blue-500 hover:bg-blue-600 text-white'
+              }`}
+            >
+              {confirmText}
+            </button>
+          )}
         </div>
       </div>
     </div>

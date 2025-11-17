@@ -20,11 +20,12 @@ import { CustomAlert } from '../components/CustomAlert';
 import { useAlert } from '../hooks/useAlert';
 import { FeedbackDetailModal } from '../components/FeedbackDetailModal';
 import { generateFeedbackPDF } from '../services/pdfGenerationService';
+import SubscribeModal from '../components/SubscribeModal';
 
 const MyPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, loading, setUser } = useAuth();
+  const { user, loading, setUser, subscriptionInfo, refreshUser } = useAuth();
   const { setEditMode } = usePortfolio();
   const { alertState, hideAlert, success, error: showError, warning } = useAlert();
   const [activeTab, setActiveTab] = useState<'documents' | 'portfolios' | 'feedbacks' | 'jobs' | 'profile'>('documents');
@@ -61,6 +62,9 @@ const MyPage: React.FC = () => {
   const [isLoadingFeedbacks, setIsLoadingFeedbacks] = useState(false);
   const [isLoadingJobs, setIsLoadingJobs] = useState(false);
   const [selectedFeedback, setSelectedFeedback] = useState<any>(null);
+  const [showSubscribeModal, setShowSubscribeModal] = useState(false);
+  const [showCancelConfirmModal, setShowCancelConfirmModal] = useState(false);
+  const [isCancellingSubscription, setIsCancellingSubscription] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -81,6 +85,16 @@ const MyPage: React.FC = () => {
     if (locationState?.refresh && user) {
       console.log('🔄 Refreshing portfolios after save');
       loadPortfolios();
+    }
+  }, [location.state, user]);
+
+  // 프로 플랜 버튼을 통해 로그인/회원가입한 경우 자동으로 구독 모달 열기
+  useEffect(() => {
+    const locationState = location.state as any;
+    if (locationState?.openSubscribe && user) {
+      setShowSubscribeModal(true);
+      // state를 초기화하여 새로고침 시 재실행 방지
+      window.history.replaceState({}, document.title);
     }
   }, [location.state, user]);
 
@@ -336,6 +350,48 @@ const MyPage: React.FC = () => {
     await logout();
     setUser(null); // AuthContext의 user 상태를 null로 설정
     navigate('/login?logout=success');
+  };
+
+  const handleCancelSubscription = async () => {
+    if (!user) return;
+
+    setIsCancellingSubscription(true);
+    try {
+      // DB에서 subscription_cancelled를 true로 업데이트 (pay는 유지)
+      const { error } = await supabase
+        .from('users')
+        .update({ subscription_cancelled: true })
+        .eq('user_id', user.user_id);
+
+      if (error) {
+        // subscription_cancelled 컬럼이 없는 경우 (42703 에러)
+        if ((error as any).code === '42703') {
+          console.warn('subscription_cancelled 컬럼이 DB에 없습니다. 로컬 상태만 업데이트합니다.');
+          // 로컬 상태만 업데이트 (DB 컬럼이 추가될 때까지 임시 처리)
+          // refreshUser를 호출하면 DB에서 다시 조회하므로 취소 상태가 사라짐
+          const updatedUser = { ...user, subscription_cancelled: true };
+          setUser(updatedUser);
+          setShowCancelConfirmModal(false);
+          success('구독이 취소되었습니다. 현재 구독 기간이 만료될 때까지 프리미엄 기능을 사용하실 수 있습니다.');
+          return;
+        }
+        throw error;
+      }
+
+      // AuthContext의 user 상태 업데이트
+      setUser({ ...user, subscription_cancelled: true });
+
+      // refreshUser를 호출하여 구독 정보 갱신
+      await refreshUser();
+
+      setShowCancelConfirmModal(false);
+      success('구독이 취소되었습니다. 현재 구독 기간이 만료될 때까지 프리미엄 기능을 사용하실 수 있습니다.');
+    } catch (error) {
+      console.error('Subscription cancellation error:', error);
+      showError('구독 취소 중 오류가 발생했습니다. 다시 시도해주세요.');
+    } finally {
+      setIsCancellingSubscription(false);
+    }
   };
 
   const handleDeleteAccount = async () => {
@@ -993,6 +1049,124 @@ const MyPage: React.FC = () => {
               )}
             </div>
 
+            {/* 구독 상태 카드 */}
+            <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg shadow p-6 mb-6 border-2 border-purple-100">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <h3 className="text-lg font-bold text-gray-900 mb-2 flex items-center">
+                    {subscriptionInfo.isCancelled ? (
+                      <>
+                        <span className="mr-2">⏸️</span>
+                        구독 취소됨 (기한 내 사용 가능)
+                      </>
+                    ) : subscriptionInfo.isPro ? (
+                      <>
+                        <span className="mr-2">👑</span>
+                        프로 플랜 구독 중
+                      </>
+                    ) : subscriptionInfo.status === 'expired' ? (
+                      <>
+                        <span className="mr-2">⏰</span>
+                        구독 만료됨
+                      </>
+                    ) : (
+                      '무료 플랜'
+                    )}
+                  </h3>
+                  {subscriptionInfo.isCancelled ? (
+                    <div className="space-y-2">
+                      <p className="text-sm text-gray-600">
+                        ✅ 모든 프리미엄 기능 이용 가능 (취소 예약됨)
+                      </p>
+                      {user?.last_pay_date && (
+                        <p className="text-sm text-gray-600">
+                          결제일: {new Date(user.last_pay_date).toLocaleDateString('ko-KR')}
+                        </p>
+                      )}
+                      {subscriptionInfo.expiresAt && (
+                        <p className="text-sm text-orange-600 font-medium">
+                          만료일: {new Date(subscriptionInfo.expiresAt).toLocaleDateString('ko-KR')}
+                          {subscriptionInfo.daysRemaining !== null && (
+                            <span className="ml-2">
+                              (D-{subscriptionInfo.daysRemaining})
+                            </span>
+                          )}
+                        </p>
+                      )}
+                      <p className="text-xs text-gray-500">
+                        만료일까지 모든 프리미엄 기능을 계속 사용하실 수 있습니다.
+                      </p>
+                    </div>
+                  ) : subscriptionInfo.isPro ? (
+                    <div className="space-y-2">
+                      <p className="text-sm text-gray-600">
+                        ✅ 모든 프리미엄 기능 이용 가능
+                      </p>
+                      {user?.last_pay_date && (
+                        <p className="text-sm text-gray-600">
+                          결제일: {new Date(user.last_pay_date).toLocaleDateString('ko-KR')}
+                        </p>
+                      )}
+                      {subscriptionInfo.expiresAt && (
+                        <p className="text-sm text-gray-600">
+                          만료일: {new Date(subscriptionInfo.expiresAt).toLocaleDateString('ko-KR')}
+                          {subscriptionInfo.daysRemaining !== null && (
+                            <span className="ml-2 text-purple-600 font-medium">
+                              (D-{subscriptionInfo.daysRemaining})
+                            </span>
+                          )}
+                        </p>
+                      )}
+                    </div>
+                  ) : subscriptionInfo.status === 'expired' ? (
+                    <div className="space-y-2">
+                      <p className="text-sm text-gray-600">
+                        구독이 만료되었습니다.
+                      </p>
+                      <p className="text-sm text-orange-600 font-medium">
+                        다시 구독하시면 프리미엄 기능을 이용하실 수 있습니다.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <p className="text-sm text-gray-600">
+                        자소서 AI 작성, 기본 템플릿, PDF 다운로드
+                      </p>
+                      {!subscriptionInfo.canUsePdfCorrection && (
+                        <p className="text-sm text-orange-600 font-medium">
+                          ⚠️ 무료 첨삭 사용 완료
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-col gap-2">
+                  {subscriptionInfo.isCancelled ? (
+                    <button
+                      onClick={() => setShowSubscribeModal(true)}
+                      className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold rounded-lg hover:shadow-lg transition-all transform hover:scale-105"
+                    >
+                      다시 구독하기
+                    </button>
+                  ) : subscriptionInfo.isPro ? (
+                    <button
+                      onClick={() => setShowCancelConfirmModal(true)}
+                      className="px-6 py-3 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-all"
+                    >
+                      구독 취소
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setShowSubscribeModal(true)}
+                      className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold rounded-lg hover:shadow-lg transition-all transform hover:scale-105"
+                    >
+                      프로 플랜 구독하기
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
             {/* 기본 정보 */}
             <div className="bg-white rounded-lg shadow p-6 mb-6">
               <h3 className="text-lg font-semibold text-gray-900 mb-4">기본 정보</h3>
@@ -1374,6 +1548,98 @@ const MyPage: React.FC = () => {
         onClose={() => setSelectedFeedback(null)}
         onDownloadPDF={handleDownloadPDF}
       />
+
+      {/* Subscribe Modal */}
+      <SubscribeModal
+        isOpen={showSubscribeModal}
+        onClose={() => setShowSubscribeModal(false)}
+      />
+
+      {/* 구독 취소 확인 모달 */}
+      {showCancelConfirmModal && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fadeIn"
+          onClick={() => setShowCancelConfirmModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 animate-scaleIn"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* 헤더 */}
+            <div className="relative p-6 pb-4">
+              <button
+                onClick={() => setShowCancelConfirmModal(false)}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+
+              <div className="flex flex-col items-center text-center">
+                <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mb-4">
+                  <svg className="w-6 h-6 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">
+                  구독 취소
+                </h3>
+              </div>
+            </div>
+
+            {/* 내용 */}
+            <div className="px-6 pb-6">
+              <div className="bg-gray-50 rounded-xl p-4 mb-4">
+                <p className="text-gray-700 text-sm leading-relaxed mb-3">
+                  구독을 취소하시겠습니까?
+                </p>
+                <p className="text-gray-600 text-xs leading-relaxed">
+                  취소하시더라도 현재 구독 기간이 만료될 때까지 모든 프리미엄 기능을 계속 사용하실 수 있습니다.
+                </p>
+              </div>
+              <div className="bg-purple-50 rounded-xl p-4">
+                <p className="text-gray-700 text-sm">
+                  구독 취소 관련 문의:
+                </p>
+                <a
+                  href="mailto:careeroad2025@gmail.com"
+                  className="text-purple-600 font-semibold text-sm hover:text-purple-800 transition-colors"
+                >
+                  careeroad2025@gmail.com
+                </a>
+              </div>
+            </div>
+
+            {/* 버튼 */}
+            <div className="px-6 pb-6">
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowCancelConfirmModal(false)}
+                  disabled={isCancellingSubscription}
+                  className="flex-1 py-3 rounded-xl font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 transition-all duration-200 disabled:opacity-50"
+                >
+                  닫기
+                </button>
+                <button
+                  onClick={handleCancelSubscription}
+                  disabled={isCancellingSubscription}
+                  className="flex-1 py-3 rounded-xl font-semibold bg-red-500 hover:bg-red-600 text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isCancellingSubscription ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      취소 중...
+                    </span>
+                  ) : (
+                    '구독 취소하기'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </div>

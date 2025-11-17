@@ -1,0 +1,36 @@
+<svg width="300" height="200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="marketingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="300" height="200" fill="url(#marketingGrad)"/>
+
+  <!-- Chart bars -->
+  <rect x="30" y="120" width="25" height="50" fill="rgba(255,255,255,0.3)" rx="3"/>
+  <rect x="65" y="100" width="25" height="70" fill="rgba(255,255,255,0.4)" rx="3"/>
+  <rect x="100" y="80" width="25" height="90" fill="rgba(255,255,255,0.5)" rx="3"/>
+  <rect x="135" y="60" width="25" height="110" fill="rgba(255,255,255,0.7)" rx="3"/>
+
+  <!-- Growth arrow -->
+  <path d="M 45 115 L 150 55" stroke="white" stroke-width="3" fill="none"/>
+  <polygon points="150,55 140,58 143,65" fill="white"/>
+
+  <!-- Pie chart -->
+  <circle cx="220" cy="100" r="45" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="20"/>
+  <circle cx="220" cy="100" r="45" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="20" stroke-dasharray="70 283" stroke-dashoffset="0"/>
+  <circle cx="220" cy="100" r="45" fill="none" stroke="white" stroke-width="20" stroke-dasharray="100 283" stroke-dashoffset="-70"/>
+
+  <!-- KPI badges -->
+  <rect x="180" y="25" width="50" height="22" fill="rgba(255,255,255,0.9)" rx="11"/>
+  <text x="205" y="40" font-family="Arial" font-size="10" font-weight="bold" fill="#667eea" text-anchor="middle">+38%</text>
+
+  <rect x="235" y="25" width="50" height="22" fill="rgba(255,255,255,0.9)" rx="11"/>
+  <text x="260" y="40" font-family="Arial" font-size="10" font-weight="bold" fill="#667eea" text-anchor="middle">ROAS</text>
+
+  <!-- Title -->
+  <text x="150" y="185" font-family="Arial" font-size="14" font-weight="bold" fill="white" text-anchor="middle">Marketing &amp; Planning</text>
+</svg>

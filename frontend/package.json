@@ -27,6 +27,7 @@
     "pizzip": "^3.2.0",
     "postcss": "^8.4.32",
     "pptxgenjs": "^4.0.1",
+    "qrcode.react": "^4.2.0",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-hook-form": "^7.62.0",

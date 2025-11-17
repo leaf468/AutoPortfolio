@@ -20,6 +20,7 @@ import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import MyPage from './pages/MyPage';
 import AuthCallbackPage from './pages/AuthCallbackPage';
+import SubscribePage from './pages/SubscribePage';
 
 // GA 페이지뷰 추적 컴포넌트
 function PageViewTracker() {
@@ -48,6 +49,7 @@ function getPageTitle(pathname: string): string {
     '/signup': '회원가입',
     '/mypage': '마이페이지',
     '/auth/callback': '인증 처리',
+    '/subscribe': '프로 플랜 구독',
   };
 
   // /edit/:template 형태 처리
@@ -131,6 +133,7 @@ function App() {
             <Route path="/cover-letter" element={<CoverLetterPageV3 />} />
             <Route path="/cover-letter-v2" element={<CoverLetterPageV2 />} />
             <Route path="/position-stats" element={<PositionStatsDetailPage />} />
+            <Route path="/subscribe" element={<SubscribePage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/signup" element={<SignupPage />} />
             <Route path="/mypage" element={<MyPage />} />

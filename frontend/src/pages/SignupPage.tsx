@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { signup, loginWithGoogle } from '../services/authService';
 import { useAuth } from '../contexts/AuthContext';
 import LandingFooter from '../components/LandingFooter';
 
 const SignupPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { setUser, user } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
@@ -15,6 +16,7 @@ const SignupPage: React.FC = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showDuplicateEmailModal, setShowDuplicateEmailModal] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -49,9 +51,28 @@ const SignupPage: React.FC = () => {
 
       if (result.success && result.user) {
         setUser(result.user);
-        navigate('/mypage');
+        // location.state에서 openSubscribe를 가져와서 전달
+        const openSubscribe = (location.state as any)?.openSubscribe;
+        if (openSubscribe) {
+          navigate('/mypage', { state: { openSubscribe: true } });
+        } else {
+          navigate('/mypage');
+        }
       } else {
-        setError(result.message || '회원가입에 실패했습니다.');
+        // 이메일 중복 에러 감지
+        const errorMsg = result.message || '회원가입에 실패했습니다.';
+        if (
+          errorMsg.toLowerCase().includes('already registered') ||
+          errorMsg.toLowerCase().includes('already exists') ||
+          errorMsg.toLowerCase().includes('duplicate') ||
+          errorMsg.includes('이미 가입된') ||
+          errorMsg.includes('중복') ||
+          errorMsg.includes('User already registered')
+        ) {
+          setShowDuplicateEmailModal(true);
+        } else {
+          setError(errorMsg);
+        }
       }
     } catch (err) {
       setError('회원가입 중 오류가 발생했습니다.');
@@ -237,6 +258,45 @@ const SignupPage: React.FC = () => {
         </div>
       </div>
       <LandingFooter />
+
+      {/* 이메일 중복 모달 */}
+      {showDuplicateEmailModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 animate-fade-in">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">이미 가입된 이메일입니다</h3>
+              <p className="text-gray-600">
+                입력하신 이메일({formData.email})로 이미 가입된 계정이 있습니다.
+              </p>
+              <p className="text-gray-600 mt-2">
+                로그인하시겠습니까?
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDuplicateEmailModal(false)}
+                className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-medium"
+              >
+                다른 이메일 사용
+              </button>
+              <button
+                onClick={() => {
+                  setShowDuplicateEmailModal(false);
+                  navigate('/login', { state: { email: formData.email } });
+                }}
+                className="flex-1 px-4 py-3 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-lg hover:from-purple-700 hover:to-pink-700 transition font-medium shadow-lg"
+              >
+                로그인하기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
