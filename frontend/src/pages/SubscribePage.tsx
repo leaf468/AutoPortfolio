@@ -37,12 +37,13 @@ const SubscribePage: React.FC = () => {
     '매월 새로운 템플릿 업데이트',
   ];
 
-  // 결제 안내 정보 (실제 정보로 교체 필요)
+  // 결제 안내 정보
   const contactEmail = 'careeroad2025@gmail.com';
-  const accountInfo = '카카오뱅크 1234-56-789012 (주)오토포트폴리오';
+  const accountInfo = '토스뱅크 1002-2958-0503 커리어로드';
+  const accountNumberOnly = '토스뱅크 1002-2958-0503'; // 복사용 (계좌번호만)
 
-  // 토스 송금 링크
-  const tossPaymentLink = 'supertoss://send?amount=9900&bank=%EC%B9%B4%EC%B9%B4%EC%98%A4%EB%B1%85%ED%81%AC&accountNo=123456789012&message=%ED%94%84%EB%A1%9C%ED%94%8C%EB%9E%9C%EA%B5%AC%EB%8F%85';
+  // 토스 송금 링크 (실제 계좌 정보 포함)
+  const tossPaymentLink = 'supertoss://send?amount=3900&bank=%ED%86%A0%EC%8A%A4%EB%B1%85%ED%81%AC&accountNo=1002-2958-0503&message=%ED%94%84%EB%A1%9C%ED%94%8C%EB%9E%9C%EA%B5%AC%EB%8F%85';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50">
@@ -178,10 +179,10 @@ const SubscribePage: React.FC = () => {
                   {accountInfo}
                 </div>
                 <button
-                  onClick={() => handleCopy(accountInfo)}
+                  onClick={() => handleCopy(accountNumberOnly)}
                   className="ml-4 px-4 py-2 bg-white border-2 border-purple-200 rounded-lg hover:bg-purple-50 transition-colors text-sm font-medium text-purple-600"
                 >
-                  {copiedText === accountInfo ? '복사됨!' : '복사'}
+                  {copiedText === accountNumberOnly ? '복사됨!' : '복사'}
                 </button>
               </div>
             </div>
