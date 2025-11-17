@@ -327,19 +327,39 @@ export const loginWithGoogle = async (): Promise<{ success: boolean; message?: s
  */
 export const checkSubscriptionExpiry = async (userId: string): Promise<boolean> => {
   try {
-    const { data: userData, error } = await supabase
+    // 먼저 subscription_cancelled 컬럼이 있는지 확인
+    let userData: any;
+    let fetchError: any;
+
+    // subscription_cancelled 컬럼 포함하여 조회 시도
+    const result = await supabase
       .from('users')
-      .select('pay, last_pay_date')
+      .select('pay, last_pay_date, subscription_cancelled')
       .eq('user_id', userId)
       .single();
 
-    if (error || !userData) {
-      console.error('Check subscription error:', error);
+    if (result.error?.code === '42703') {
+      // 컬럼이 없으면 기본 필드만 조회
+      console.warn('subscription_cancelled 컬럼이 DB에 없습니다. 기본 필드만 사용합니다.');
+      const fallbackResult = await supabase
+        .from('users')
+        .select('pay, last_pay_date')
+        .eq('user_id', userId)
+        .single();
+      userData = fallbackResult.data;
+      fetchError = fallbackResult.error;
+    } else {
+      userData = result.data;
+      fetchError = result.error;
+    }
+
+    if (fetchError || !userData) {
+      console.error('Check subscription error:', fetchError);
       return false;
     }
 
-    // pay가 false이거나 last_pay_date가 없으면 이미 만료 상태
-    if (!userData.pay || !userData.last_pay_date) {
+    // last_pay_date가 없으면 구독한 적 없음
+    if (!userData.last_pay_date) {
       return false;
     }
 
@@ -350,9 +370,16 @@ export const checkSubscriptionExpiry = async (userId: string): Promise<boolean> 
 
     if (daysDiff >= 30) {
       // 30일 이상 경과 → pay를 false로 업데이트
+      const updateData: any = { pay: false };
+
+      // subscription_cancelled 컬럼이 있으면 초기화
+      if ('subscription_cancelled' in userData) {
+        updateData.subscription_cancelled = false;
+      }
+
       const { error: updateError } = await supabase
         .from('users')
-        .update({ pay: false })
+        .update(updateData)
         .eq('user_id', userId);
 
       if (updateError) {
@@ -362,7 +389,8 @@ export const checkSubscriptionExpiry = async (userId: string): Promise<boolean> 
       return false; // 만료됨
     }
 
-    return true; // 구독 활성
+    // 30일 이내 - 취소되었더라도 기한 내에는 활성
+    return true; // 구독 활성 (또는 취소되었지만 기한 내)
   } catch (error) {
     console.error('Check subscription expiry error:', error);
     return false;
@@ -431,10 +459,11 @@ export const markFreePdfUsed = async (userId: string): Promise<boolean> => {
  */
 export const getSubscriptionInfo = (user: User | null): {
   isPro: boolean;
-  status: 'active' | 'expired' | 'none';
+  status: 'active' | 'expired' | 'none' | 'cancelled';
   expiresAt: Date | null;
   daysRemaining: number | null;
   canUsePdfCorrection: boolean;
+  isCancelled: boolean;
 } => {
   if (!user) {
     return {
@@ -443,13 +472,14 @@ export const getSubscriptionInfo = (user: User | null): {
       expiresAt: null,
       daysRemaining: null,
       canUsePdfCorrection: false,
+      isCancelled: false,
     };
   }
 
-  const isPro = user.pay === true;
   const hasUsedFreePdf = user.free_pdf_used === true;
+  const isCancelled = user.subscription_cancelled === true;
 
-  if (!isPro && !user.last_pay_date) {
+  if (!user.last_pay_date) {
     // 구독한 적 없음
     return {
       isPro: false,
@@ -457,43 +487,53 @@ export const getSubscriptionInfo = (user: User | null): {
       expiresAt: null,
       daysRemaining: null,
       canUsePdfCorrection: !hasUsedFreePdf, // 무료 1회 사용 가능
+      isCancelled: false,
     };
   }
 
-  if (user.last_pay_date) {
-    const lastPayDate = new Date(user.last_pay_date);
-    const expiresAt = new Date(lastPayDate);
-    expiresAt.setDate(expiresAt.getDate() + 30); // 30일 후 만료
+  // last_pay_date가 있는 경우 만료일 계산
+  const lastPayDate = new Date(user.last_pay_date);
+  const expiresAt = new Date(lastPayDate);
+  expiresAt.setDate(expiresAt.getDate() + 30); // 30일 후 만료
 
-    const now = new Date();
-    const daysRemaining = Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  const now = new Date();
+  const daysRemaining = Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
-    if (isPro) {
-      return {
-        isPro: true,
-        status: 'active',
-        expiresAt,
-        daysRemaining,
-        canUsePdfCorrection: true, // 프로는 무제한
-      };
-    } else {
-      // pay=false이지만 last_pay_date가 있음 → 만료됨
-      return {
-        isPro: false,
-        status: 'expired',
-        expiresAt,
-        daysRemaining: 0,
-        canUsePdfCorrection: !hasUsedFreePdf,
-      };
-    }
+  // 만료일이 지났는지 확인 (날짜 기반으로 판단)
+  const isExpired = daysRemaining <= 0;
+
+  if (isExpired) {
+    // 만료됨
+    return {
+      isPro: false,
+      status: 'expired',
+      expiresAt,
+      daysRemaining: 0,
+      canUsePdfCorrection: !hasUsedFreePdf,
+      isCancelled: false,
+    };
   }
 
-  // 기본값
+  // 만료되지 않은 경우
+  if (isCancelled) {
+    // 취소되었지만 기한이 남아있음 - 계속 프로 기능 사용 가능
+    return {
+      isPro: true, // 기한 내에는 프로 기능 사용 가능
+      status: 'cancelled',
+      expiresAt,
+      daysRemaining,
+      canUsePdfCorrection: true,
+      isCancelled: true,
+    };
+  }
+
+  // 정상 구독 중
   return {
-    isPro: false,
-    status: 'none',
-    expiresAt: null,
-    daysRemaining: null,
-    canUsePdfCorrection: !hasUsedFreePdf,
+    isPro: true,
+    status: 'active',
+    expiresAt,
+    daysRemaining,
+    canUsePdfCorrection: true,
+    isCancelled: false,
   };
 };

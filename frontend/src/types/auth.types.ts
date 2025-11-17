@@ -13,6 +13,7 @@ export interface User {
   pay?: boolean; // 프로 플랜 구독 여부
   last_pay_date?: string; // 최근 결제일
   free_pdf_used?: boolean; // 무료 자소서 첨삭 사용 여부
+  subscription_cancelled?: boolean; // 구독 취소 여부 (기한은 남아있음)
 }
 
 export interface UserProfile {
@@ -82,7 +83,7 @@ export interface Portfolio {
 }
 
 // 구독 관련 타입
-export type SubscriptionStatus = 'active' | 'expired' | 'none';
+export type SubscriptionStatus = 'active' | 'expired' | 'none' | 'cancelled';
 
 export interface SubscriptionInfo {
   isPro: boolean;
@@ -90,4 +91,5 @@ export interface SubscriptionInfo {
   expiresAt: Date | null;
   daysRemaining: number | null;
   canUsePdfCorrection: boolean;
+  isCancelled: boolean;
 }

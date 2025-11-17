@@ -28,6 +28,7 @@ import { useAlert } from "../hooks/useAlert";
 import { PortfolioData } from "../types/portfolio";
 import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../contexts/AuthContext";
+import { pptTemplates, PPTTemplate, PPTTemplateId } from "../types/pptTemplate";
 
 type TemplateType = "minimal" | "clean" | "colorful" | "elegant";
 
@@ -55,6 +56,8 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
     const [ratingSubmitted, setRatingSubmitted] = useState(false);
     const [copySuccess, setCopySuccess] = useState<string>('');
     const [isPPTGenerating, setIsPPTGenerating] = useState(false);
+    const [showPPTTemplateModal, setShowPPTTemplateModal] = useState(false);
+    const [selectedPPTTemplate, setSelectedPPTTemplate] = useState<PPTTemplateId>('corporate');
     const portfolioRef = useRef<HTMLDivElement>(null);
 
     // 기존 평가 불러오기
@@ -723,8 +726,8 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
         }
     };
 
-    // PPT 다운로드
-    const handleDownloadPPT = async () => {
+    // PPT 템플릿 선택 모달 열기
+    const handleOpenPPTTemplateModal = () => {
         trackButtonClick('PPT 다운로드', 'FinalResultPanel');
 
         // 프로 플랜 체크
@@ -741,6 +744,32 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
             return;
         }
 
+        setShowPPTTemplateModal(true);
+    };
+
+    // PPT 다운로드 (선택된 템플릿으로)
+    const handleDownloadPPT = async (templateId: PPTTemplateId) => {
+        const selectedTemplate = pptTemplates.find(t => t.id === templateId);
+        if (!selectedTemplate) {
+            showError('템플릿을 찾을 수 없습니다.');
+            return;
+        }
+
+        // 프리미엄 템플릿 체크 (프로 플랜 사용자만)
+        if (selectedTemplate.isPremium && !subscriptionInfo.isPro) {
+            confirm(
+                '이 템플릿은 프로 플랜 전용입니다.\n\n프로 플랜으로 업그레이드하시겠습니까?',
+                () => {
+                    navigate('/subscribe');
+                },
+                '프로 플랜 필요',
+                '구독하기',
+                '취소'
+            );
+            return;
+        }
+
+        setShowPPTTemplateModal(false);
         setIsPPTGenerating(true);
 
         try {
@@ -800,10 +829,10 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
             console.log('🔄 포트폴리오 데이터 (프로필 fallback 적용):', portfolioData);
 
             // PPT 템플릿 경로
-            const templatePath = '/corporate_portfolio_template.pptx';
+            const templatePath = selectedTemplate.templatePath;
 
             // PPT 생성 (프로필 정보 전달)
-            const pptBlob = await pptxGenerationService.generatePPT(portfolioData, templatePath, userProfile);
+            const pptBlob = await pptxGenerationService.generatePPT(portfolioData, templatePath, userProfile, templateId);
 
             // 파일명 생성: 사용자님_직무_포트폴리오
             const userName = userProfile?.name || extractedData.name || '사용자';
@@ -1169,7 +1198,7 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                                 </button>
 
                                 <button
-                                    onClick={handleDownloadPPT}
+                                    onClick={handleOpenPPTTemplateModal}
                                     disabled={isPPTGenerating}
                                     className="group flex items-center justify-center p-6 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-xl font-medium hover:from-orange-700 hover:to-red-700 shadow-md hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
@@ -1320,6 +1349,122 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
                                     >
                                         닫기
                                     </button>
+                                </div>
+                            </motion.div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                {/* PPT 템플릿 선택 모달 */}
+                <AnimatePresence>
+                    {showPPTTemplateModal && (
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+                            onClick={() => setShowPPTTemplateModal(false)}
+                        >
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                exit={{ opacity: 0, scale: 0.9 }}
+                                className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                <div className="bg-gradient-to-r from-orange-500 to-red-500 p-6 text-white">
+                                    <h3 className="text-2xl font-bold">
+                                        PPT 템플릿 선택
+                                    </h3>
+                                    <p className="text-orange-100 mt-1">
+                                        원하는 디자인을 선택하세요. 새로운 템플릿이 지속적으로 추가됩니다!
+                                    </p>
+                                </div>
+
+                                <div className="p-6 overflow-auto max-h-[calc(90vh-200px)]">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        {pptTemplates.map((template) => (
+                                            <div
+                                                key={template.id}
+                                                className={`relative border-2 rounded-xl overflow-hidden transition-all cursor-pointer hover:shadow-lg ${
+                                                    selectedPPTTemplate === template.id
+                                                        ? 'border-orange-500 ring-2 ring-orange-200'
+                                                        : 'border-gray-200 hover:border-orange-300'
+                                                }`}
+                                                onClick={() => setSelectedPPTTemplate(template.id as PPTTemplateId)}
+                                            >
+                                                {/* 프리미엄 뱃지 */}
+                                                {template.isPremium && (
+                                                    <div className="absolute top-3 right-3 bg-gradient-to-r from-yellow-400 to-orange-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-md">
+                                                        PRO
+                                                    </div>
+                                                )}
+
+                                                {/* 썸네일 */}
+                                                <div className="bg-gray-50 flex items-center justify-center min-h-[200px] overflow-hidden">
+                                                    <img
+                                                        src={template.thumbnailUrl}
+                                                        alt={template.name}
+                                                        className="w-full h-auto"
+                                                        onError={(e) => {
+                                                            // 이미지 로드 실패 시 기본 아이콘 표시
+                                                            const target = e.currentTarget;
+                                                            target.style.display = 'none';
+                                                            const parent = target.parentElement;
+                                                            if (parent) {
+                                                                const fallback = document.createElement('div');
+                                                                fallback.className = 'text-center p-8';
+                                                                fallback.innerHTML = `
+                                                                    <svg class="w-16 h-16 text-gray-400 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                                                    </svg>
+                                                                    <p class="text-sm text-gray-500">${template.slideCount} Slides</p>
+                                                                `;
+                                                                parent.appendChild(fallback);
+                                                            }
+                                                        }}
+                                                    />
+                                                </div>
+
+                                                {/* 정보 */}
+                                                <div className="p-4">
+                                                    <h4 className="font-bold text-gray-900 text-lg mb-1">
+                                                        {template.name}
+                                                    </h4>
+                                                    <p className="text-sm text-gray-600">
+                                                        {template.description}
+                                                    </p>
+                                                </div>
+
+                                                {/* 선택 표시 */}
+                                                {selectedPPTTemplate === template.id && (
+                                                    <div className="absolute bottom-4 right-4">
+                                                        <CheckCircleIcon className="w-6 h-6 text-orange-500" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="bg-gray-50 p-4 border-t flex justify-between items-center">
+                                    <p className="text-sm text-gray-500">
+                                        선택: <strong>{pptTemplates.find(t => t.id === selectedPPTTemplate)?.name}</strong>
+                                    </p>
+                                    <div className="flex space-x-3">
+                                        <button
+                                            onClick={() => setShowPPTTemplateModal(false)}
+                                            className="px-6 py-2.5 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-all"
+                                        >
+                                            취소
+                                        </button>
+                                        <button
+                                            onClick={() => handleDownloadPPT(selectedPPTTemplate)}
+                                            className="px-6 py-2.5 bg-gradient-to-r from-orange-600 to-red-600 text-white rounded-lg font-semibold hover:from-orange-700 hover:to-red-700 shadow-md hover:shadow-lg transition-all"
+                                        >
+                                            다운로드
+                                        </button>
+                                    </div>
                                 </div>
                             </motion.div>
                         </motion.div>

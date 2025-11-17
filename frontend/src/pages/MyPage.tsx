@@ -25,7 +25,7 @@ import SubscribeModal from '../components/SubscribeModal';
 const MyPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, loading, setUser, subscriptionInfo } = useAuth();
+  const { user, loading, setUser, subscriptionInfo, refreshUser } = useAuth();
   const { setEditMode } = usePortfolio();
   const { alertState, hideAlert, success, error: showError, warning } = useAlert();
   const [activeTab, setActiveTab] = useState<'documents' | 'portfolios' | 'feedbacks' | 'jobs' | 'profile'>('documents');
@@ -347,16 +347,31 @@ const MyPage: React.FC = () => {
 
     setIsCancellingSubscription(true);
     try {
-      // DB에서 pay를 false로 업데이트
+      // DB에서 subscription_cancelled를 true로 업데이트 (pay는 유지)
       const { error } = await supabase
         .from('users')
-        .update({ pay: false })
+        .update({ subscription_cancelled: true })
         .eq('user_id', user.user_id);
 
-      if (error) throw error;
+      if (error) {
+        // subscription_cancelled 컬럼이 없는 경우 (42703 에러)
+        if ((error as any).code === '42703') {
+          console.warn('subscription_cancelled 컬럼이 DB에 없습니다. 로컬 상태만 업데이트합니다.');
+          // 로컬 상태만 업데이트 (DB 컬럼이 추가될 때까지 임시 처리)
+          setUser({ ...user, subscription_cancelled: true });
+          await refreshUser();
+          setShowCancelConfirmModal(false);
+          success('구독이 취소되었습니다. 현재 구독 기간이 만료될 때까지 프리미엄 기능을 사용하실 수 있습니다.');
+          return;
+        }
+        throw error;
+      }
 
       // AuthContext의 user 상태 업데이트
-      setUser({ ...user, pay: false });
+      setUser({ ...user, subscription_cancelled: true });
+
+      // refreshUser를 호출하여 구독 정보 갱신
+      await refreshUser();
 
       setShowCancelConfirmModal(false);
       success('구독이 취소되었습니다. 현재 구독 기간이 만료될 때까지 프리미엄 기능을 사용하실 수 있습니다.');
@@ -1028,21 +1043,50 @@ const MyPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <h3 className="text-lg font-bold text-gray-900 mb-2 flex items-center">
-                    {subscriptionInfo.isPro ? (
+                    {subscriptionInfo.isCancelled ? (
+                      <>
+                        <span className="mr-2">⏸️</span>
+                        구독 취소됨 (기한 내 사용 가능)
+                      </>
+                    ) : subscriptionInfo.isPro ? (
                       <>
                         <span className="mr-2">👑</span>
                         프로 플랜 구독 중
                       </>
-                    ) : user?.last_pay_date && !user?.pay ? (
+                    ) : subscriptionInfo.status === 'expired' ? (
                       <>
-                        <span className="mr-2">⏸️</span>
-                        구독 취소됨
+                        <span className="mr-2">⏰</span>
+                        구독 만료됨
                       </>
                     ) : (
                       '무료 플랜'
                     )}
                   </h3>
-                  {subscriptionInfo.isPro ? (
+                  {subscriptionInfo.isCancelled ? (
+                    <div className="space-y-2">
+                      <p className="text-sm text-gray-600">
+                        ✅ 모든 프리미엄 기능 이용 가능 (취소 예약됨)
+                      </p>
+                      {user?.last_pay_date && (
+                        <p className="text-sm text-gray-600">
+                          결제일: {new Date(user.last_pay_date).toLocaleDateString('ko-KR')}
+                        </p>
+                      )}
+                      {subscriptionInfo.expiresAt && (
+                        <p className="text-sm text-orange-600 font-medium">
+                          만료일: {new Date(subscriptionInfo.expiresAt).toLocaleDateString('ko-KR')}
+                          {subscriptionInfo.daysRemaining !== null && (
+                            <span className="ml-2">
+                              (D-{subscriptionInfo.daysRemaining})
+                            </span>
+                          )}
+                        </p>
+                      )}
+                      <p className="text-xs text-gray-500">
+                        만료일까지 모든 프리미엄 기능을 계속 사용하실 수 있습니다.
+                      </p>
+                    </div>
+                  ) : subscriptionInfo.isPro ? (
                     <div className="space-y-2">
                       <p className="text-sm text-gray-600">
                         ✅ 모든 프리미엄 기능 이용 가능
@@ -1063,25 +1107,14 @@ const MyPage: React.FC = () => {
                         </p>
                       )}
                     </div>
-                  ) : user?.last_pay_date && !user?.pay ? (
+                  ) : subscriptionInfo.status === 'expired' ? (
                     <div className="space-y-2">
                       <p className="text-sm text-gray-600">
-                        구독이 취소되었습니다.
+                        구독이 만료되었습니다.
                       </p>
-                      {(() => {
-                        const expiryDate = new Date(user.last_pay_date);
-                        expiryDate.setDate(expiryDate.getDate() + 30);
-                        const now = new Date();
-                        const daysLeft = Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-                        if (daysLeft > 0) {
-                          return (
-                            <p className="text-sm text-orange-600 font-medium">
-                              {expiryDate.toLocaleDateString('ko-KR')}까지 프리미엄 기능을 계속 이용하실 수 있습니다.
-                            </p>
-                          );
-                        }
-                        return null;
-                      })()}
+                      <p className="text-sm text-orange-600 font-medium">
+                        다시 구독하시면 프리미엄 기능을 이용하실 수 있습니다.
+                      </p>
                     </div>
                   ) : (
                     <div className="space-y-1">
@@ -1097,19 +1130,19 @@ const MyPage: React.FC = () => {
                   )}
                 </div>
                 <div className="flex flex-col gap-2">
-                  {subscriptionInfo.isPro ? (
-                    <button
-                      onClick={() => setShowCancelConfirmModal(true)}
-                      className="px-6 py-3 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-all"
-                    >
-                      구독 취소
-                    </button>
-                  ) : user?.last_pay_date && !user?.pay ? (
+                  {subscriptionInfo.isCancelled ? (
                     <button
                       onClick={() => setShowSubscribeModal(true)}
                       className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold rounded-lg hover:shadow-lg transition-all transform hover:scale-105"
                     >
                       다시 구독하기
+                    </button>
+                  ) : subscriptionInfo.isPro ? (
+                    <button
+                      onClick={() => setShowCancelConfirmModal(true)}
+                      className="px-6 py-3 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-all"
+                    >
+                      구독 취소
                     </button>
                   ) : (
                     <button
