@@ -88,6 +88,16 @@ const MyPage: React.FC = () => {
     }
   }, [location.state, user]);
 
+  // 프로 플랜 버튼을 통해 로그인/회원가입한 경우 자동으로 구독 모달 열기
+  useEffect(() => {
+    const locationState = location.state as any;
+    if (locationState?.openSubscribe && user) {
+      setShowSubscribeModal(true);
+      // state를 초기화하여 새로고침 시 재실행 방지
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state, user]);
+
   const loadProfile = async () => {
     if (!user) return;
 

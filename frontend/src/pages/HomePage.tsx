@@ -12,12 +12,14 @@ import {
 import { trackMainPageVisit, trackButtonClick } from '../utils/analytics';
 import LandingFooter from '../components/LandingFooter';
 import { useAuth } from '../contexts/AuthContext';
+import SubscribeModal from '../components/SubscribeModal';
 
 export default function HomePage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [currentSlide, setCurrentSlide] = useState(0);
   const [showSignupModal, setShowSignupModal] = useState(false);
+  const [showSubscribeModal, setShowSubscribeModal] = useState(false);
 
   const slides = [
     {
@@ -92,7 +94,8 @@ export default function HomePage() {
       // 비로그인 사용자는 회원가입 안내 모달 표시
       setShowSignupModal(true);
     } else {
-      navigate('/subscribe');
+      // 로그인된 사용자는 구독 모달 표시
+      setShowSubscribeModal(true);
     }
   };
 
@@ -114,7 +117,6 @@ export default function HomePage() {
           </div>
           <div className="flex items-center space-x-6">
             <a href="#features" className="text-gray-600 hover:text-gray-900 transition-colors">기능</a>
-            <a href="#process" className="text-gray-600 hover:text-gray-900 transition-colors">사용방법</a>
             <a href="#pricing" className="text-gray-600 hover:text-gray-900 transition-colors">가격</a>
             <button
               onClick={handleLogin}
@@ -381,76 +383,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* How It Works */}
-      <section id="process" className="py-24 px-6 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-              간단한 4단계로 완성
-            </h2>
-            <p className="text-xl text-gray-600">
-              복잡한 과정 없이 누구나 쉽게 만들 수 있습니다
-            </p>
-          </div>
-
-          <div className="relative">
-            {/* Connection Line */}
-            <div className="hidden lg:block absolute top-24 left-0 right-0 h-1 bg-gradient-to-r from-indigo-300 via-purple-300 to-pink-300"></div>
-
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 relative">
-              {[
-                {
-                  step: 1,
-                  title: '템플릿 선택',
-                  desc: '마음에 드는 디자인을 선택하세요',
-                  icon: DocumentTextIcon,
-                  color: 'from-indigo-500 to-indigo-600'
-                },
-                {
-                  step: 2,
-                  title: '정보 입력',
-                  desc: '간단한 정보만 입력하면 됩니다',
-                  icon: UserGroupIcon,
-                  color: 'from-purple-500 to-purple-600'
-                },
-                {
-                  step: 3,
-                  title: 'AI 생성',
-                  desc: 'AI가 자동으로 최적화합니다',
-                  icon: CpuChipIcon,
-                  color: 'from-pink-500 to-pink-600'
-                },
-                {
-                  step: 4,
-                  title: '다운로드',
-                  desc: '완성된 포트폴리오를 받으세요',
-                  icon: RocketLaunchIcon,
-                  color: 'from-orange-500 to-orange-600'
-                }
-              ].map((item) => (
-                <motion.div
-                  key={item.step}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: item.step * 0.1 }}
-                  className="relative"
-                >
-                  <div className="bg-white rounded-2xl p-8 shadow-md hover:shadow-xl transition-shadow border border-gray-100">
-                    <div className={`w-16 h-16 bg-gradient-to-br ${item.color} rounded-2xl flex items-center justify-center mb-6 relative z-10`}>
-                      <item.icon className="w-8 h-8 text-white" />
-                    </div>
-                    <div className="text-sm font-bold text-indigo-600 mb-2">STEP {item.step}</div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-3">{item.title}</h3>
-                    <p className="text-gray-600">{item.desc}</p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Pricing Section */}
       <section id="pricing" className="py-24 px-6">
         <div className="max-w-7xl mx-auto">
@@ -493,11 +425,19 @@ export default function HomePage() {
 
             <div className="p-8 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl shadow-xl relative border-4 border-indigo-400">
               <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-yellow-400 to-orange-400 text-white text-sm font-bold rounded-full">
-                인기
+                출시 특가
               </div>
               <h3 className="text-2xl font-bold text-white mb-2">프로</h3>
-              <div className="text-4xl font-bold text-white mb-6">
-                ₩9,900<span className="text-lg text-indigo-200">/월</span>
+              <div className="mb-6">
+                <div className="text-lg text-indigo-200 line-through mb-1">
+                  ₩14,900
+                </div>
+                <div className="text-4xl font-bold text-white">
+                  ₩3,900<span className="text-lg text-indigo-200">/월</span>
+                </div>
+                <div className="text-sm text-yellow-300 font-semibold mt-2">
+                  73% 할인 중!
+                </div>
               </div>
               <ul className="space-y-4 mb-8">
                 <li className="flex items-center text-white">
@@ -597,7 +537,7 @@ export default function HomePage() {
                 <button
                   onClick={() => {
                     setShowSignupModal(false);
-                    navigate('/signup');
+                    navigate('/signup', { state: { openSubscribe: true } });
                   }}
                   className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold rounded-xl hover:shadow-lg transition-all transform hover:scale-[1.02]"
                 >
@@ -606,7 +546,7 @@ export default function HomePage() {
                 <button
                   onClick={() => {
                     setShowSignupModal(false);
-                    navigate('/login');
+                    navigate('/login', { state: { returnTo: '/mypage', openSubscribe: true } });
                   }}
                   className="w-full px-6 py-3 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200 transition-colors"
                 >
@@ -622,6 +562,14 @@ export default function HomePage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* 구독 모달 */}
+      {showSubscribeModal && (
+        <SubscribeModal
+          isOpen={showSubscribeModal}
+          onClose={() => setShowSubscribeModal(false)}
+        />
       )}
     </div>
   );
