@@ -29,8 +29,8 @@ export const pptTemplates: PPTTemplate[] = [
   },
   {
     id: 'impact-focused',
-    name: '임팩트 중심 (Impact Focused)',
-    description: 'KPI와 성과 수치를 강조하는 데이터 드리븐 템플릿',
+    name: '프로젝트 중심 (Project Focused)',
+    description: '프로젝트 성과와 기술 스택을 체계적으로 보여주는 템플릿',
     templatePath: '/portfolio_template_20251117084121.pptx',
     thumbnailUrl: '/ppt-thumbnails/impact-focused.svg',
     isPremium: true,
