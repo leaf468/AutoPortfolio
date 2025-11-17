@@ -143,15 +143,9 @@ const SubscribeModal: React.FC<SubscribeModalProps> = ({ isOpen, onClose }) => {
                   />
                 </div>
               </div>
-              <p className="text-xs text-gray-500 text-center mb-2">
+              <p className="text-xs text-gray-500 text-center">
                 QR 코드를 스캔하여 토스로 송금하세요
               </p>
-              <a
-                href={tossPaymentLink}
-                className="block w-full py-2.5 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600 transition-all duration-200 text-center text-sm"
-              >
-                토스 앱으로 송금하기
-              </a>
             </div>
 
             {/* 계좌 정보 */}

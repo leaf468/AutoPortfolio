@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { signup, loginWithGoogle } from '../services/authService';
 import { useAuth } from '../contexts/AuthContext';
 import LandingFooter from '../components/LandingFooter';
 
 const SignupPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { setUser, user } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
@@ -50,7 +51,13 @@ const SignupPage: React.FC = () => {
 
       if (result.success && result.user) {
         setUser(result.user);
-        navigate('/mypage');
+        // location.state에서 openSubscribe를 가져와서 전달
+        const openSubscribe = (location.state as any)?.openSubscribe;
+        if (openSubscribe) {
+          navigate('/mypage', { state: { openSubscribe: true } });
+        } else {
+          navigate('/mypage');
+        }
       } else {
         // 이메일 중복 에러 감지
         const errorMsg = result.message || '회원가입에 실패했습니다.';

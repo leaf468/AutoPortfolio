@@ -37,7 +37,13 @@ const LoginPage: React.FC = () => {
         setTimeout(() => {
           // returnTo state가 있으면 해당 경로로, 없으면 기본값 /mypage로 이동
           const returnTo = (location.state as any)?.returnTo || '/mypage';
-          navigate(returnTo);
+          const openSubscribe = (location.state as any)?.openSubscribe;
+
+          if (openSubscribe) {
+            navigate(returnTo, { state: { openSubscribe: true } });
+          } else {
+            navigate(returnTo);
+          }
         }, 100);
       } else {
         setError(result.message || '로그인에 실패했습니다.');

@@ -134,10 +134,19 @@ const SubscribePage: React.FC = () => {
         {/* 가격 카드 */}
         <div className="bg-white rounded-3xl shadow-2xl p-8 md:p-12 mb-12 border-2 border-purple-100">
           <div className="text-center mb-8">
-            <div className="text-5xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-600 mb-2">
-              ₩9,900
+            <div className="inline-block bg-red-500 text-white text-sm font-bold px-3 py-1 rounded-full mb-3">
+              출시 특가
             </div>
-            <div className="text-gray-600 text-lg">/ 월</div>
+            <div className="text-gray-400 text-2xl line-through mb-2">
+              ₩14,900
+            </div>
+            <div className="text-5xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-600 mb-2">
+              ₩3,900
+            </div>
+            <div className="text-gray-600 text-lg mb-2">/ 월</div>
+            <div className="text-sm text-red-500 font-semibold">
+              73% 할인 중!
+            </div>
             {subscriptionInfo.isPro && (
               <div className="mt-4 inline-block bg-green-100 text-green-800 px-4 py-2 rounded-full font-semibold">
                 현재 구독 중입니다
@@ -193,15 +202,9 @@ const SubscribePage: React.FC = () => {
                   />
                 </div>
               </div>
-              <p className="text-sm text-gray-500 text-center mb-4">
+              <p className="text-sm text-gray-500 text-center">
                 QR 코드를 스캔하여 토스로 송금하세요
               </p>
-              <a
-                href={tossPaymentLink}
-                className="block w-full py-3 bg-blue-500 text-white font-semibold rounded-lg hover:bg-blue-600 transition-all duration-200 text-center"
-              >
-                토스 앱으로 송금하기
-              </a>
             </div>
 
             {/* 결제 링크 공간 (향후 토스페이먼츠/카카오페이 등 연동 시 사용) */}
