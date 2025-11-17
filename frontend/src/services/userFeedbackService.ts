@@ -240,7 +240,6 @@ ${allRequests.map((req, idx) => `${idx + 1}. ${req}`).join("\n")}
                 finalQualityScore,
             };
         } catch (error) {
-            console.error("User feedback application error:", error);
             return {
                 revisedContent: originalContent,
                 changesApplied: ["피드백 적용 중 오류가 발생했습니다."],
@@ -302,7 +301,6 @@ ${allRequests.map((req, idx) => `${idx + 1}. ${req}`).join("\n")}
             const score = parseInt(response.choices[0].message.content || "15");
             return Math.max(0, Math.min(100, score));
         } catch (error) {
-            console.error("Improvement score calculation error:", error);
             return 15;
         }
     }
@@ -336,7 +334,6 @@ ${allRequests.map((req, idx) => `${idx + 1}. ${req}`).join("\n")}
             const score = parseInt(response.choices[0].message.content || "80");
             return Math.max(0, Math.min(100, score));
         } catch (error) {
-            console.error("Final quality calculation error:", error);
             return 80;
         }
     }
@@ -409,11 +406,9 @@ ${allRequests.map((req, idx) => `${idx + 1}. ${req}`).join("\n")}
                 return result;
             } catch {
                 // JSON 파싱 실패 시 원본 반환
-                console.error("Invalid JSON response from AI");
                 return currentPortfolio;
             }
         } catch (error) {
-            console.error("Natural language improvement error:", error);
             throw error;
         }
     }

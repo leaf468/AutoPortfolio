@@ -96,7 +96,6 @@ export async function getRecommendedCompaniesByCategory(
       .sort((a, b) => b.matchScore - a.matchScore)
       .slice(0, limit);
   } catch (error) {
-    console.error('추천 회사 목록 생성 실패:', error);
     return [];
   }
 }
@@ -258,7 +257,6 @@ export async function getCompanyDetailStats(
       topCertificates,
     };
   } catch (error) {
-    console.error('회사 상세 통계 조회 실패:', error);
     return null;
   }
 }

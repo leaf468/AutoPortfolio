@@ -21,7 +21,6 @@ export const getUserDocuments = async (userId: string): Promise<UserDocument[]> 
     const result = await response.json();
     return result.documents || [];
   } catch (error) {
-    console.error('Get user documents error:', error);
     return [];
   }
 };
@@ -44,7 +43,6 @@ export const getDocument = async (documentId: string): Promise<UserDocument | nu
     const result = await response.json();
     return result.document || null;
   } catch (error) {
-    console.error('Get document error:', error);
     return null;
   }
 };
@@ -73,7 +71,6 @@ export const createDocument = async (
     const result = await response.json();
     return result.document || null;
   } catch (error) {
-    console.error('Create document error:', error);
     return null;
   }
 };
@@ -100,7 +97,6 @@ export const updateDocument = async (
     const result = await response.json();
     return result.success || false;
   } catch (error) {
-    console.error('Update document error:', error);
     return false;
   }
 };
@@ -122,7 +118,6 @@ export const deleteDocument = async (documentId: string): Promise<boolean> => {
     const result = await response.json();
     return result.success || false;
   } catch (error) {
-    console.error('Delete document error:', error);
     return false;
   }
 };

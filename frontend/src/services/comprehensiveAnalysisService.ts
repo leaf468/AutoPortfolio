@@ -76,7 +76,6 @@ async function anonymizeActivityExamples(
     // API 키 확인
     const apiKey = process.env.REACT_APP_OPENAI_API_KEY;
     if (!apiKey || apiKey.length < 20) {
-      console.warn('OpenAI API 키가 설정되지 않았습니다. 익명화를 건너뜁니다.');
       // 익명화 없이 원본 반환 (하지만 UI에서는 anonymizedExamples만 표시하므로 안전)
       return activityPatterns;
     }
@@ -133,16 +132,13 @@ ${activity.examples.slice(0, 5).map((ex, i) => `${i + 1}. ${ex}`).join('\n')}
 
     const content = response.choices[0]?.message?.content;
     if (!content) {
-      console.warn('OpenAI 응답이 비어있습니다.');
       return activityPatterns;
     }
 
-    console.log('✅ 익명화 완료:', content.slice(0, 200));
 
     const parsed = JSON.parse(content);
 
     if (!parsed.anonymized || !Array.isArray(parsed.anonymized)) {
-      console.warn('OpenAI 응답 형식이 올바르지 않습니다:', parsed);
       return activityPatterns;
     }
 
@@ -156,10 +152,8 @@ ${activity.examples.slice(0, 5).map((ex, i) => `${i + 1}. ${ex}`).join('\n')}
       anonymizedExamples: anonymizedMap.get(pattern.activityType) || []
     }));
   } catch (error: any) {
-    console.error('활동 예시 익명화 실패:', error);
 
     if (error?.status === 401) {
-      console.error('❌ OpenAI API 키가 유효하지 않습니다.');
     }
 
     // 실패 시 원본 반환 (하지만 UI에서는 anonymizedExamples만 표시)
@@ -183,7 +177,6 @@ export async function getComprehensiveStats(position: string, skipAnonymization:
     // DB에 있는 모든 직무 목록 확인
     const allPositions = Array.from(new Set(allCoverLetters?.map(cl => (cl as any).job_position).filter(Boolean))).slice(0, 20);
 
-    console.log('🔍 DB 조회 결과:', {
       error,
       dataCount: allCoverLetters?.length,
       firstItem: allCoverLetters?.[0],
@@ -191,7 +184,6 @@ export async function getComprehensiveStats(position: string, skipAnonymization:
     });
 
     if (error || !allCoverLetters) {
-      console.error('데이터 조회 실패:', error);
       return getEmptyStats(position);
     }
 
@@ -207,7 +199,6 @@ export async function getComprehensiveStats(position: string, skipAnonymization:
       new Set(relevantCoverLetters.map(cl => cl.job_position))
     ).slice(0, 10);
 
-    console.log('🔍 필터링 후:', {
       검색한_직무: position,
       전체_데이터: allCoverLetters.length,
       매칭된_데이터: relevantCoverLetters.length,
@@ -233,7 +224,6 @@ export async function getComprehensiveStats(position: string, skipAnonymization:
       }))
     );
 
-    console.log('📊 통계 계산:', {
       매칭된_지원자수: relevantCoverLetters.length,
       추출된_활동수: allActivities.length,
       활동_샘플: allActivities.slice(0, 3).map(a => a.content.slice(0, 50))
@@ -266,7 +256,6 @@ export async function getComprehensiveStats(position: string, skipAnonymization:
 
     return stats;
   } catch (error) {
-    console.error('종합 통계 분석 실패:', error);
     return getEmptyStats(position);
   }
 }
@@ -300,7 +289,6 @@ function calculateAvgGpa(coverLetters: IntegratedCoverLetter[]): number {
     const normalizedGpa = parseGpa(gpaString);
 
     if (index < 5) {
-      console.log(`📊 GPA 샘플 ${index + 1}:`, {
         원본: gpaString,
         파싱결과: normalizedGpa,
         user_spec: cl.user_spec
@@ -312,7 +300,6 @@ function calculateAvgGpa(coverLetters: IntegratedCoverLetter[]): number {
     }
   });
 
-  console.log(`✅ GPA 통계:`, {
     전체인원: coverLetters.length,
     유효데이터: gpas.length,
     평균: gpas.length > 0 ? gpas.reduce((a, b) => a + b, 0) / gpas.length : 0,
@@ -404,7 +391,6 @@ function calculateAvgToeic(coverLetters: IntegratedCoverLetter[]): number {
     const score = parseToeic(toeicString);
 
     if (index < 5) {
-      console.log(`📊 TOEIC 샘플 ${index + 1}:`, {
         원본: toeicString,
         파싱결과: score,
         user_spec: cl.user_spec
@@ -416,7 +402,6 @@ function calculateAvgToeic(coverLetters: IntegratedCoverLetter[]): number {
     }
   });
 
-  console.log(`✅ TOEIC 통계:`, {
     전체인원: coverLetters.length,
     유효데이터: toeics.length,
     평균: toeics.length > 0 ? toeics.reduce((a, b) => a + b, 0) / toeics.length : 0,
@@ -861,7 +846,6 @@ function analyzeActivityPatterns(activities: Activity[], totalApplicants: number
     .sort((a, b) => b.percentage - a.percentage)
     .slice(0, 30); // 상위 30개로 확대
 
-  console.log('🔍 Activity Patterns Analysis:', {
     totalActivities: activities.length,
     totalApplicants,
     uniqueActivityKeywords: activityMap.size,

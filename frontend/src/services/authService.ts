@@ -89,7 +89,6 @@ export const login = async (data: LoginRequest): Promise<AuthResponse> => {
       refresh_token: authData.session.refresh_token,
     };
   } catch (error) {
-    console.error('Login error:', error);
     return {
       success: false,
       message: '로그인 중 오류가 발생했습니다.',
@@ -152,7 +151,6 @@ export const signup = async (data: SignupRequest): Promise<AuthResponse> => {
       .single();
 
     if (insertError) {
-      console.error('Insert user error:', insertError);
       // 409 에러 또는 중복 키 에러는 이미 가입된 이메일
       if (insertError.code === '23505' || insertError.message?.includes('duplicate') || (insertError as any).status === 409) {
         return {
@@ -198,7 +196,6 @@ export const signup = async (data: SignupRequest): Promise<AuthResponse> => {
       refresh_token: authData.session?.refresh_token,
     };
   } catch (error) {
-    console.error('Signup error:', error);
     return {
       success: false,
       message: '회원가입 중 오류가 발생했습니다.',
@@ -211,7 +208,6 @@ export const logout = async (): Promise<void> => {
   try {
     await supabase.auth.signOut();
   } catch (error) {
-    console.error('Logout error:', error);
   }
   tokenService.clearTokens();
 };
@@ -252,7 +248,6 @@ export const getCurrentUser = async (): Promise<User | null> => {
     tokenService.setUser(user);
     return user;
   } catch (error) {
-    console.error('Get current user error:', error);
     return null;
   }
 };
@@ -270,7 +265,6 @@ export const getUserProfile = async (userId: string): Promise<UserProfile | null
 
     return data as UserProfile;
   } catch (error) {
-    console.error('Get user profile error:', error);
     return null;
   }
 };
@@ -288,7 +282,6 @@ export const updateUserProfile = async (
 
     return !error;
   } catch (error) {
-    console.error('Update user profile error:', error);
     return false;
   }
 };
@@ -317,7 +310,6 @@ export const loginWithGoogle = async (): Promise<{ success: boolean; message?: s
 
     return { success: true };
   } catch (error) {
-    console.error('Google login error:', error);
     return {
       success: false,
       message: '구글 로그인 중 오류가 발생했습니다.',
@@ -346,7 +338,6 @@ export const checkSubscriptionExpiry = async (userId: string): Promise<boolean> 
 
     if (result.error?.code === '42703') {
       // 컬럼이 없으면 기본 필드만 조회
-      console.warn('subscription_cancelled 컬럼이 DB에 없습니다. 기본 필드만 사용합니다.');
       const fallbackResult = await supabase
         .from('users')
         .select('pay, last_pay_date')
@@ -360,7 +351,6 @@ export const checkSubscriptionExpiry = async (userId: string): Promise<boolean> 
     }
 
     if (fetchError || !userData) {
-      console.error('Check subscription error:', fetchError);
       return false;
     }
 
@@ -389,7 +379,6 @@ export const checkSubscriptionExpiry = async (userId: string): Promise<boolean> 
         .eq('user_id', userId);
 
       if (updateError) {
-        console.error('Update subscription expiry error:', updateError);
       }
 
       return false; // 만료됨
@@ -398,7 +387,6 @@ export const checkSubscriptionExpiry = async (userId: string): Promise<boolean> 
     // 30일 이내 - 취소되었더라도 기한 내에는 활성
     return true; // 구독 활성 (또는 취소되었지만 기한 내)
   } catch (error) {
-    console.error('Check subscription expiry error:', error);
     return false;
   }
 };
@@ -425,13 +413,11 @@ export const updateSubscriptionStatus = async (
       .eq('user_id', userId);
 
     if (error) {
-      console.error('Update subscription status error:', error);
       return false;
     }
 
     return true;
   } catch (error) {
-    console.error('Update subscription status error:', error);
     return false;
   }
 };
@@ -448,13 +434,11 @@ export const markFreePdfUsed = async (userId: string): Promise<boolean> => {
       .eq('user_id', userId);
 
     if (error) {
-      console.error('Mark free PDF used error:', error);
       return false;
     }
 
     return true;
   } catch (error) {
-    console.error('Mark free PDF used error:', error);
     return false;
   }
 };

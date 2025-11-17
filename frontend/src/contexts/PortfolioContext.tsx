@@ -52,7 +52,6 @@ const loadFromStorage = (): PortfolioState | null => {
       };
     }
   } catch (error) {
-    console.warn('Failed to load state from localStorage:', error);
   }
   return null;
 };
@@ -61,7 +60,6 @@ const saveToStorage = (state: PortfolioState) => {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch (error) {
-    console.warn('Failed to save state to localStorage:', error);
   }
 };
 
@@ -69,7 +67,6 @@ const clearStorage = () => {
   try {
     localStorage.removeItem(STORAGE_KEY);
   } catch (error) {
-    console.warn('Failed to clear localStorage:', error);
   }
 };
 

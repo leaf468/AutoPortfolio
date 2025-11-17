@@ -52,7 +52,6 @@ const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
         setJobPosition(data.position);
       }
     } catch (error) {
-      console.error('직무 정보 로드 오류:', error);
     }
   };
 
@@ -75,7 +74,6 @@ const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
       setCoverLetters(data || []);
       setShowCoverLetterModal(true);
     } catch (error) {
-      console.error('자소서 로드 오류:', error);
       showError('자소서를 불러오는 중 오류가 발생했습니다.');
     } finally {
       setLoadingCoverLetters(false);
@@ -114,7 +112,6 @@ const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
         warning('자소서에 작성된 답변이 없습니다.');
       }
     } catch (error) {
-      console.error('자소서 파싱 오류:', error);
       showError('자소서 내용을 불러오는 중 오류가 발생했습니다.');
     }
   };
@@ -132,11 +129,6 @@ const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
     // GA 이벤트 추적
     trackButtonClick('AI 분석 시작', 'OrganizeContentPage');
 
-    console.log('=== 사용자 입력 데이터 전달 ===');
-    console.log('사용자 입력 데이터:', input);
-    console.log('입력 타입:', inputType);
-    console.log('채용공고:', jobPosting);
-    console.log('직무:', jobPosition);
 
     // AI 처리 없이 바로 원본 데이터만 전달 (필수 필드들을 빈 값으로 채움)
     const rawData = {

@@ -222,13 +222,6 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                 const firstBlock = document.sections?.[0]?.blocks?.[0];
                 if (firstBlock) {
                     const html = firstBlock.text || '';
-                    console.log('🔍 CleanEditor Initial HTML Loading:');
-                    console.log('  - HTML preview (first 200 chars):', html.substring(0, 200));
-                    console.log('  - HTML contains "colorful":', html.includes('colorful'));
-                    console.log('  - HTML contains "minimal":', html.includes('minimal'));
-                    console.log('  - HTML contains "clean":', html.includes('clean'));
-                    console.log('  - HTML contains "elegant":', html.includes('elegant'));
-                    console.log('  - Has extractedData:', !!firstBlock.extractedData);
 
                     setCurrentHtml(html);
 
@@ -236,12 +229,9 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
 
                     if (firstBlock.extractedData) {
                         const extracted = firstBlock.extractedData as any;
-                        console.log('📦 CleanEditor extractedData:', extracted);
-                        console.log('📦 extractedData keys:', Object.keys(extracted));
 
                         // DB에서 온 데이터가 summary, skills, projects 형태인지 확인
                         if (extracted.summary || extracted.projects) {
-                            console.log('🔄 Converting AI analysis data to CleanPortfolioData format');
 
                             // experiences를 experience로 변환
                             const experienceData = Array.isArray(extracted.experiences)
@@ -286,7 +276,6 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                                         github: profile?.github_url || ''
                                     };
                                 } catch (err) {
-                                    console.error('Failed to load user profile:', err);
                                 }
                             }
 
@@ -351,8 +340,7 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                         // 🔧 CRITICAL FIX: Immediately trigger HTML update after data is loaded
                         // Use requestAnimationFrame to ensure state update has completed
                         requestAnimationFrame(() => {
-                            console.log('🔧 CleanEditor: Immediately updating HTML with correct template on initialization');
-                            updateHtml().catch(console.error);
+                            updateHtml().catch(() => {});
                         });
 
                         // AI 확장된 필드 표시 (autoFillService에서 이미 확장됨)
@@ -386,7 +374,6 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                     );
                     const needsEnhancement = !isFromDB && (!actualData.about || actualData.about.length < 50);
 
-                    console.log('🔍 Enhancement check:', {
                         isFromDB,
                         hasExtractedData: !!extracted,
                         hasSummary: !!(extracted?.summary),
@@ -417,7 +404,6 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                             }
                             setInitialEnhancedFields(prev => ({ ...prev, ...generatedFields }));
                         } catch (error) {
-                            console.error('데이터 개선 실패:', error);
                             if (!dataLoaded) {
                                 setPortfolioData(actualData);
                             }
@@ -429,7 +415,6 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                     setDataLoaded(true);
                 }
             } catch (error) {
-                console.error('초기 데이터 로딩 실패:', error);
             } finally {
                 setIsInitializing(false);
             }
@@ -467,18 +452,12 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
         const checkAndGenerateDummyData = async () => {
             if (!dataLoaded || isEnhancing) return;
 
-            console.log('🔍 [수상/자격증 자동 생성] 체크 시작');
-            console.log('   - awards 존재:', portfolioData.awards ? '예' : '아니오');
-            console.log('   - awards 길이:', portfolioData.awards?.length || 0);
-            console.log('   - initialEnhancedFields[awards]:', initialEnhancedFields['awards'] ? '예' : '아니오');
 
             const hasAwards = portfolioData.awards && portfolioData.awards.length > 0;
 
             if (!hasAwards && !initialEnhancedFields['awards']) {
-                console.log('✨ [수상/자격증 자동 생성] 자동 생성 시작...');
                 try {
                     const { data: awardsData, isGenerated } = await portfolioTextEnhancer.generateDummyAwards();
-                    console.log('✅ [수상/자격증 자동 생성] 생성 완료:', awardsData.length, '개');
                     setPortfolioData(prev => ({
                         ...prev,
                         awards: awardsData
@@ -487,10 +466,8 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                         setInitialEnhancedFields(prev => ({ ...prev, awards: true }));
                     }
                 } catch (error) {
-                    console.error('❌ [수상/자격증 자동 생성] 실패:', error);
                 }
             } else {
-                console.log('⏭️  [수상/자격증 자동 생성] 건너뛰기 - 이미 존재하거나 생성됨');
             }
         };
 
@@ -503,15 +480,9 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
 
     // HTML 업데이트
     const updateHtml = useCallback(async () => {
-        console.log('🔧 CleanEditor updateHtml:');
-        console.log('  - selectedTemplate prop:', selectedTemplate);
-        console.log('  - portfolioTemplates keys:', Object.keys(portfolioTemplates));
 
         // Always use clean template for CleanEditor
         const template = portfolioTemplates['clean'];
-        console.log('  - template found:', !!template);
-        console.log('  - template.name:', template?.name);
-        console.log('  - template.id:', template?.id);
 
         if (template?.generateHTML) {
             // Clean 템플릿에 맞는 데이터 구조 생성
@@ -520,9 +491,6 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                 : 'GL';
 
             // 🔍 스킬셋 디버깅
-            console.log('🎯 [스킬셋 디버깅] portfolioData.skillCategories:', portfolioData.skillCategories);
-            console.log('🎯 [스킬셋 디버깅] skillCategories length:', portfolioData.skillCategories?.length);
-            console.log('🎯 [스킬셋 디버깅] portfolioData.skills:', portfolioData.skills);
 
             const dataForTemplate = {
                 name: portfolioData.name || '포트폴리오 작성자',
@@ -562,16 +530,12 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
             };
 
             // 🔍 템플릿에 전달되는 데이터 확인
-            console.log('🎯 [스킬셋 디버깅] dataForTemplate.skillCategories:', dataForTemplate.skillCategories);
-            console.log('🎯 [스킬셋 디버깅] dataForTemplate.skills:', dataForTemplate.skills);
 
             // Clean 템플릿에서 sectionTitles를 직접 활용
             const html = template.generateHTML(dataForTemplate);
-            console.log('  - HTML generated with template:', template.name);
-            console.log('  - HTML preview (first 100 chars):', html.substring(0, 100));
 
             // Update with scroll preservation - use async but don't await to prevent blocking
-            preserveScrollAndUpdate(html).catch(console.error);
+            preserveScrollAndUpdate(html).catch(() => {});
             setCurrentHtml(html);
             return html;
         }
@@ -581,8 +545,7 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
     // 데이터 변경시 HTML 업데이트 (실시간 업데이트)
     useEffect(() => {
         if (portfolioData.name || dataLoaded) {
-            console.log('🔄 CleanEditor data changed, updating HTML immediately');
-            updateHtml().catch(console.error);
+            updateHtml().catch(() => {});
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [portfolioData, sectionTitles, dataLoaded]);
@@ -640,7 +603,6 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                 setInitialEnhancedFields(prev => ({ ...prev, about: false }));
             }
         } catch (error) {
-            console.error('자기소개 개선 실패:', error);
             showError('AI 개선에 실패했습니다. 다시 시도해주세요.');
         } finally {
             setIsEnhancing(false);
@@ -678,7 +640,6 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                 [`experience_${index}_description`]: false
             }));
         } catch (error) {
-            console.error('경력 개선 실패:', error);
             showError('AI 개선에 실패했습니다. 다시 시도해주세요.');
         } finally {
             setIsEnhancing(false);
@@ -745,7 +706,6 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
                 setInitialEnhancedFields(prev => ({ ...prev, [`project_${index}_description`]: false }));
             }
         } catch (error) {
-            console.error('프로젝트 개선 실패:', error);
             showError('AI 개선에 실패했습니다. 다시 시도해주세요.');
         } finally {
             setIsEnhancing(false);
@@ -875,7 +835,6 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
 
         setIsTranslating(true);
         try {
-            console.log(`🌐 언어 전환 시작: ${language} → ${targetLang}`);
 
             const translatedData = await portfolioTranslator.translatePortfolio({
                 portfolioData,
@@ -885,9 +844,7 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
             setPortfolioData(translatedData);
             setLanguage(targetLang);
 
-            console.log('✅ 언어 전환 완료');
         } catch (error) {
-            console.error('❌ 언어 전환 실패:', error);
             showError('언어 전환 중 오류가 발생했습니다. 다시 시도해주세요.');
         } finally {
             setIsTranslating(false);
@@ -939,7 +896,6 @@ const CleanEditor: React.FC<BaseEditorProps> = ({
             // HTML 재생성을 위해 강제 업데이트
             await updateHtml();
         } catch (error) {
-            console.error('자연어 편집 실패:', error);
             throw error;
         }
     };

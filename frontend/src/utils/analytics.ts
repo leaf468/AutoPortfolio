@@ -17,7 +17,6 @@ export const trackPageView = (pagePath: string, pageTitle?: string) => {
       page_path: pagePath,
       page_title: pageTitle,
     });
-    console.log('GA Page View:', pagePath, pageTitle);
   }
 };
 
@@ -28,7 +27,6 @@ export const trackEvent = (
 ) => {
   if (typeof window !== 'undefined' && window.gtag) {
     window.gtag('event', eventName, eventParams);
-    console.log('GA Event:', eventName, eventParams);
   }
 };
 

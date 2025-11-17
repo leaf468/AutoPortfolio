@@ -54,7 +54,6 @@ export async function generatePortfolioRecommendations(
 
     return recommendations;
   } catch (error) {
-    console.error('포트폴리오 추천 생성 실패:', error);
     return {
       skillsSuggestions: [],
       projectIdeas: [],
@@ -262,7 +261,6 @@ ${targetCompanies && targetCompanies.length > 0 ? `=== 목표 기업 ===\n${targ
     const result = JSON.parse(content);
     return result as PortfolioRecommendation;
   } catch (error) {
-    console.error('AI 추천 생성 실패:', error);
     return {
       skillsSuggestions: ['Python', 'React', 'AWS 등 클라우드 기술'],
       projectIdeas: ['웹 애플리케이션 개발 프로젝트', 'API 서버 구축 프로젝트'],

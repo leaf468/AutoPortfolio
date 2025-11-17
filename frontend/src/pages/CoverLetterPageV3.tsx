@@ -64,8 +64,6 @@ export const CoverLetterPageV3: React.FC = () => {
   const editState = location.state as { editMode?: boolean; documentId?: number; savedData?: any } | null;
 
   // 디버깅: 구독 정보 확인
-  console.log('📋 CoverLetterPageV3 - 구독 정보:', subscriptionInfo);
-  console.log('📋 isPro:', subscriptionInfo.isPro, 'canUsePdfCorrection:', subscriptionInfo.canUsePdfCorrection);
 
   // URL 파라미터에서 guest mode 확인
   const searchParams = new URLSearchParams(location.search);
@@ -115,7 +113,6 @@ export const CoverLetterPageV3: React.FC = () => {
           .maybeSingle();
 
         if (error && error.code !== 'PGRST116') {
-          console.error('프로필 로드 실패:', error);
           return;
         }
 
@@ -134,7 +131,6 @@ export const CoverLetterPageV3: React.FC = () => {
           }));
         }
       } catch (error) {
-        console.error('프로필 로드 중 오류:', error);
       }
     };
 
@@ -219,7 +215,6 @@ export const CoverLetterPageV3: React.FC = () => {
         );
         setRecommendedCompanies(recommendations);
       } catch (error) {
-        console.error('추천 회사 로드 실패:', error);
       } finally {
         setIsLoadingRecommendations(false);
       }
@@ -248,7 +243,6 @@ export const CoverLetterPageV3: React.FC = () => {
         setComprehensiveStats(stats);
         setPositionStats(posStats);
       } catch (error) {
-        console.error('통계 로드 실패:', error);
       } finally {
         setIsLoadingStats(false);
         setIsLoadingPositionStats(false);
@@ -273,7 +267,6 @@ export const CoverLetterPageV3: React.FC = () => {
   };
 
   const handleQuestionChange = async (questionId: string, question: string) => {
-    console.log('🔄 질문 수정 감지:', { questionId, question, position: userSpec.position });
 
     setQuestions((prev) =>
       prev.map((q) => (q.id === questionId ? { ...q, question } : q))
@@ -284,7 +277,6 @@ export const CoverLetterPageV3: React.FC = () => {
       // 기존 분석 결과가 있는 경우에만 자동 갱신
       const hasExistingAnalysis = questionAnalyses.some(a => a.questionId === questionId);
 
-      console.log('📊 분석 상태 확인:', {
         hasPosition: !!userSpec.position.trim(),
         questionLength: question.trim().length,
         hasExistingAnalysis,
@@ -292,22 +284,18 @@ export const CoverLetterPageV3: React.FC = () => {
       });
 
       if (hasExistingAnalysis) {
-        console.log('✅ 자동 갱신 시작 - 1초 후 분석 예정');
 
         // 이전 타이머가 있으면 취소
         if (questionAnalysisTimerRef.current[questionId]) {
           clearTimeout(questionAnalysisTimerRef.current[questionId]);
-          console.log('⏱️ 이전 타이머 취소');
         }
 
         // 새 타이머 설정 (1초 디바운스)
         questionAnalysisTimerRef.current[questionId] = setTimeout(async () => {
           try {
-            console.log('🚀 질문 분석 API 호출 시작');
             const { analyzeQuestion } = await import('../services/questionAnalysisService');
             const analysis = await analyzeQuestion(question, questionId, userSpec.position);
 
-            console.log('✅ 질문 분석 완료:', analysis);
 
             setQuestionAnalyses(prev => {
               const filtered = prev.filter(a => a.questionId !== questionId);
@@ -317,15 +305,12 @@ export const CoverLetterPageV3: React.FC = () => {
             // 타이머 정리
             delete questionAnalysisTimerRef.current[questionId];
           } catch (error) {
-            console.error('❌ 질문 분석 자동 갱신 실패:', error);
             delete questionAnalysisTimerRef.current[questionId];
           }
         }, 1000);
       } else {
-        console.log('ℹ️ 기존 분석 결과 없음 - 자동 갱신 건너뜀');
       }
     } else {
-      console.log('⚠️ 자동 갱신 조건 미충족');
     }
   };
 
@@ -418,7 +403,6 @@ export const CoverLetterPageV3: React.FC = () => {
         element?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }, 100);
     } catch (err) {
-      console.error('질문 분석 실패:', err);
       showError('질문 분석 중 오류가 발생했습니다.');
     } finally {
       setAnalyzingQuestionId(null);
@@ -448,7 +432,6 @@ export const CoverLetterPageV3: React.FC = () => {
         document.getElementById('overall-analysis')?.scrollIntoView({ behavior: 'smooth' });
       }, 100);
     } catch (err) {
-      console.error('종합 분석 실패:', err);
       showError('분석 중 오류가 발생했습니다.');
     }
   };
@@ -510,7 +493,6 @@ export const CoverLetterPageV3: React.FC = () => {
         // DB에 첨삭 결과 저장 (로그인한 사용자만)
         if (user) {
           try {
-            console.log('📝 첨삭 결과 DB 저장 시작...', {
               user_id: user.user_id,
               company: userSpec.targetCompany,
               position: userSpec.position,
@@ -551,7 +533,6 @@ export const CoverLetterPageV3: React.FC = () => {
               is_complete: true,
             };
 
-            console.log('📊 저장할 데이터:', feedbackData);
 
             const { data, error: feedbackError } = await supabase
               .from('cover_letter_feedback')
@@ -559,8 +540,6 @@ export const CoverLetterPageV3: React.FC = () => {
               .select();
 
             if (feedbackError) {
-              console.error('❌ 첨삭 결과 DB 저장 실패:', feedbackError);
-              console.error('에러 상세:', {
                 message: feedbackError.message,
                 details: feedbackError.details,
                 hint: feedbackError.hint,
@@ -569,31 +548,24 @@ export const CoverLetterPageV3: React.FC = () => {
 
               // 테이블이 존재하지 않는 경우
               if (feedbackError.code === '42P01') {
-                console.error('⚠️ cover_letter_feedback 테이블이 존재하지 않습니다. Supabase에서 SQL을 실행해주세요.');
               }
             } else {
-              console.log('✅ 첨삭 결과가 DB에 저장되었습니다:', data);
             }
           } catch (dbErr: any) {
-            console.error('❌ DB 저장 중 예외 발생:', dbErr);
-            console.error('예외 상세:', {
               message: dbErr?.message,
               stack: dbErr?.stack
             });
           }
         } else {
-          console.log('⚠️ 로그인하지 않은 사용자 - DB 저장 건너뜀');
         }
 
         // 무료 사용자의 경우 free_pdf_used를 true로 마킹
         if (!subscriptionInfo.isPro && user?.user_id) {
           const marked = await markFreePdfUsed(user.user_id);
           if (marked) {
-            console.log('✅ 무료 첨삭 사용 기록 완료');
             // 사용자 정보 새로고침 (free_pdf_used 업데이트 반영)
             await refreshUser();
           } else {
-            console.error('❌ 무료 첨삭 사용 기록 실패');
           }
         }
 
@@ -610,7 +582,6 @@ export const CoverLetterPageV3: React.FC = () => {
           : `✅ 첨삭이 완료되었습니다!\n\nPDF 다운로드가 완료되었습니다.\n평균 점수: ${report.averageScore}점\n\n무료 첨삭을 사용하셨습니다. 추가 첨삭은 프로 플랜 구독 후 이용 가능합니다.`;
         success(successMessage);
       } catch (err) {
-        console.error('첨삭 생성 실패:', err);
         showError('첨삭 생성 중 오류가 발생했습니다. OpenAI API 키를 확인하거나 잠시 후 다시 시도해주세요.');
       } finally {
         setIsGeneratingFeedback(false);
@@ -724,7 +695,6 @@ export const CoverLetterPageV3: React.FC = () => {
                         setTimeout(() => navigate('/mypage'), 1500);
                       }
                     } catch (err) {
-                      console.error('저장 오류:', err);
                       showError('저장 중 오류가 발생했습니다.');
                     }
                   }}

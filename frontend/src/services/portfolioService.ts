@@ -21,7 +21,6 @@ export const getUserPortfolios = async (userId: string): Promise<Portfolio[]> =>
     const result = await response.json();
     return result.portfolios || [];
   } catch (error) {
-    console.error('Get user portfolios error:', error);
     return [];
   }
 };
@@ -44,7 +43,6 @@ export const getPortfolio = async (portfolioId: string): Promise<Portfolio | nul
     const result = await response.json();
     return result.portfolio || null;
   } catch (error) {
-    console.error('Get portfolio error:', error);
     return null;
   }
 };
@@ -73,7 +71,6 @@ export const createPortfolio = async (
     const result = await response.json();
     return result.portfolio || null;
   } catch (error) {
-    console.error('Create portfolio error:', error);
     return null;
   }
 };
@@ -100,7 +97,6 @@ export const updatePortfolio = async (
     const result = await response.json();
     return result.success || false;
   } catch (error) {
-    console.error('Update portfolio error:', error);
     return false;
   }
 };
@@ -122,7 +118,6 @@ export const deletePortfolio = async (portfolioId: string): Promise<boolean> => 
     const result = await response.json();
     return result.success || false;
   } catch (error) {
-    console.error('Delete portfolio error:', error);
     return false;
   }
 };
@@ -145,7 +140,6 @@ export const publishPortfolio = async (portfolioId: string): Promise<string | nu
     const result = await response.json();
     return result.published_url || null;
   } catch (error) {
-    console.error('Publish portfolio error:', error);
     return null;
   }
 };

@@ -213,13 +213,6 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                 const firstBlock = document.sections?.[0]?.blocks?.[0];
                 if (firstBlock) {
                     const html = firstBlock.text || '';
-                    console.log('🔍 MinimalEditor Initial HTML Loading:');
-                    console.log('  - HTML preview (first 200 chars):', html.substring(0, 200));
-                    console.log('  - HTML contains "colorful":', html.includes('colorful'));
-                    console.log('  - HTML contains "minimal":', html.includes('minimal'));
-                    console.log('  - HTML contains "clean":', html.includes('clean'));
-                    console.log('  - HTML contains "elegant":', html.includes('elegant'));
-                    console.log('  - Has extractedData:', !!firstBlock.extractedData);
 
                     setCurrentHtml(html);
 
@@ -227,12 +220,9 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
 
                     if (firstBlock.extractedData) {
                         const extracted = firstBlock.extractedData as any;
-                        console.log('📦 MinimalEditor extractedData:', extracted);
-                        console.log('📦 extractedData keys:', Object.keys(extracted));
 
                         // DB에서 온 데이터가 summary, skills, projects 형태인지 확인
                         if (extracted.summary || extracted.projects) {
-                            console.log('🔄 Converting AI analysis data to MinimalPortfolioData format');
 
                             // experiences를 experience로 변환
                             const experienceData = Array.isArray(extracted.experiences)
@@ -252,15 +242,6 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                                   )
                                 : [];
 
-                            console.log('📊 Data mapping details:');
-                            console.log('  - extracted.name:', extracted.name);
-                            console.log('  - extracted.email:', extracted.email);
-                            console.log('  - extracted.phone:', extracted.phone);
-                            console.log('  - extracted.github:', extracted.github);
-                            console.log('  - originalInput:', extracted.originalInput);
-                            console.log('  - skills flat:', skillsFlat);
-                            console.log('  - projects (first item):', extracted.projects?.[0]);
-                            console.log('  - experiences (first item):', extracted.experiences?.[0]);
 
                             // 마이페이지 프로필 정보 가져오기
                             let userProfileData = { name: '', email: '', phone: '', github: '' };
@@ -286,9 +267,7 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                                         phone: profile?.phone || '',
                                         github: profile?.github_url || ''
                                     };
-                                    console.log('✅ User profile loaded:', userProfileData);
                                 } catch (err) {
-                                    console.error('Failed to load user profile:', err);
                                 }
                             }
 
@@ -319,7 +298,6 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                                 })) : []
                             };
 
-                            console.log('✅ Final actualData:', actualData);
                         } else {
                             actualData = extracted as MinimalPortfolioData;
                         }
@@ -355,8 +333,7 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                     // 🔧 CRITICAL FIX: Immediately trigger HTML update after data is loaded
                     // Use requestAnimationFrame to ensure state update has completed
                     requestAnimationFrame(() => {
-                        console.log('🔧 MinimalEditor: Immediately updating HTML with correct template on initialization');
-                        updateHtml().catch(console.error);
+                        updateHtml().catch(() => {});
                     });
 
                     // AI 확장된 필드 표시 (autoFillService에서 이미 확장됨)
@@ -389,7 +366,6 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                     );
                     const needsEnhancement = !isFromDB && (!actualData.about || actualData.about.length < 50);
 
-                    console.log('🔍 Enhancement check:', {
                         isFromDB,
                         hasExtractedData: !!extracted,
                         hasSummary: !!(extracted?.summary),
@@ -410,14 +386,12 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                                 setInitialEnhancedFields(prev => ({ ...prev, about: true }));
                             }
                         } catch (error) {
-                            console.error('데이터 개선 실패:', error);
                         } finally {
                             setIsEnhancing(false);
                         }
                     }
                 }
             } catch (error) {
-                console.error('초기 데이터 로딩 실패:', error);
             } finally {
                 setIsInitializing(false);
             }
@@ -447,7 +421,6 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                         setInitialEnhancedFields(prev => ({ ...prev, education: true }));
                     }
                 } catch (error) {
-                    console.error('더미 학력 데이터 생성 실패:', error);
                 }
             }
         };
@@ -482,14 +455,9 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
 
     // HTML 업데이트 with scroll preservation
     const updateHtml = useCallback(async () => {
-        console.log('🔧 MinimalEditor updateHtml:');
-        console.log('  - selectedTemplate prop:', selectedTemplate);
-        console.log('  - portfolioTemplates keys:', Object.keys(portfolioTemplates));
 
         // Always use minimal template for MinimalEditor
         const template = portfolioTemplates['minimal'];
-        console.log('  - using minimal template:', !!template);
-        console.log('  - template.name:', template?.name);
 
         if (template?.generateHTML) {
             // Minimal 템플릿에 맞는 데이터 구조 생성
@@ -531,11 +499,9 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
 
             // Minimal 템플릿에서 sectionTitles를 직접 활용
             const html = template.generateHTML(dataForTemplate);
-            console.log('  - HTML generated with template:', template.name);
-            console.log('  - HTML preview (first 100 chars):', html.substring(0, 100));
 
             // Update with scroll preservation - use async but don't await to prevent blocking
-            preserveScrollAndUpdate(html).catch(console.error);
+            preserveScrollAndUpdate(html).catch(() => {});
             setCurrentHtml(html);
             return html;
         }
@@ -545,8 +511,7 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
     // 데이터 변경시 HTML 업데이트 (실시간 업데이트)
     useEffect(() => {
         if (isDataReady.current && !isInitializing) {
-            console.log('🔄 Data changed, updating HTML immediately');
-            updateHtml().catch(console.error);
+            updateHtml().catch(() => {});
         }
     }, [portfolioData, sectionTitles, isInitializing, updateHtml]);
 
@@ -617,7 +582,6 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                 setInitialEnhancedFields(prev => ({ ...prev, about: false }));
             }
         } catch (err) {
-            console.error('자기소개 개선 실패:', err);
             error('AI 개선에 실패했습니다. 다시 시도해주세요.');
         } finally {
             setIsEnhancing(false);
@@ -644,7 +608,6 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
             // HTML 재생성을 위해 강제 업데이트
             await updateHtml();
         } catch (error) {
-            console.error('자연어 편집 실패:', error);
             throw error;
         }
     };
@@ -679,7 +642,6 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                 [`experience_${index}_description`]: false
             }));
         } catch (err) {
-            console.error('경력 개선 실패:', err);
             error('AI 개선에 실패했습니다. 다시 시도해주세요.');
         } finally {
             setIsEnhancing(false);
@@ -711,7 +673,6 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                 setInitialEnhancedFields(prev => ({ ...prev, [`education_${index}_description`]: false }));
             }
         } catch (err) {
-            console.error('학력 개선 실패:', err);
             error('AI 개선에 실패했습니다. 다시 시도해주세요.');
         } finally {
             setIsEnhancing(false);
@@ -778,7 +739,6 @@ const MinimalEditor: React.FC<BaseEditorProps> = ({
                 setInitialEnhancedFields(prev => ({ ...prev, [`project_${index}_description`]: false }));
             }
         } catch (err) {
-            console.error('프로젝트 개선 실패:', err);
             error('AI 개선에 실패했습니다. 다시 시도해주세요.');
         } finally {
             setIsEnhancing(false);

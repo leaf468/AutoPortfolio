@@ -14,8 +14,6 @@ const processTextForDisplay = (text: string | undefined | null): string => {
 const processTextWithMarkdown = (text: string | undefined | null): string => {
     if (!text) return '';
 
-    console.log('🔍 [processTextWithMarkdown] 원본 텍스트:', text);
-    console.log('🔍 [processTextWithMarkdown] \\n 포함 여부:', text.includes('\n'));
 
     // 주황색 AI 추가 표시 제거 (실시간 미리보기용) - 여러 줄 지원
     let processed = text.replace(/<span style="color:\s*orange[^"]*"[^>]*>([\s\S]*?)<\/span>/gi, '$1');
@@ -54,7 +52,6 @@ const processTextWithMarkdown = (text: string | undefined | null): string => {
     // Line breaks (must be last to avoid interfering with other patterns)
     processed = processed.replace(/\n/g, '<br>');
 
-    console.log('🔍 [processTextWithMarkdown] 변환 후:', processed);
 
     return processed;
 };

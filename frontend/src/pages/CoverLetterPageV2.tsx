@@ -127,7 +127,6 @@ export const CoverLetterPageV2: React.FC<CoverLetterPageV2Props> = () => {
         setComparisonResult(null);
       }
     } catch (error) {
-      console.error('분석 중 오류:', error);
       showError('분석 중 오류가 발생했습니다.');
     } finally {
       setIsAnalyzing(false);

@@ -35,7 +35,6 @@ export const QuestionAIRecommendationCard: React.FC<QuestionAIRecommendationCard
           );
           setAIRecommendations(recommendations);
         } catch (error) {
-          console.error('AI 추천 생성 실패:', error);
         } finally {
           setIsLoading(false);
         }

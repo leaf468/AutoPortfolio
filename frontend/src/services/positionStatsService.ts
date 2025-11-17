@@ -142,7 +142,6 @@ export async function getPositionStats(position: string): Promise<PositionStats 
       return matchesNormalized || matchesSimilarity;
     });
 
-    console.log('📊 positionStatsService 필터링:', {
       검색_직무: position,
       정규화된_직무: normalizedPositions,
       전체_데이터: coverLetters.length,
@@ -556,7 +555,6 @@ export async function getPositionStats(position: string): Promise<PositionStats 
       yearDistribution,
     };
   } catch (error) {
-    console.error('Error fetching position stats:', error);
     return null;
   }
 }

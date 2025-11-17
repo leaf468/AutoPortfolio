@@ -140,7 +140,6 @@ JSON 배열 형식으로 반환:
                 return q;
             });
         } catch (error) {
-            console.error("Question generation 오류:", error);
             return [];
         }
     }
@@ -267,7 +266,6 @@ ${JSON.stringify(session.answers, null, 2)}
             });
 
             const result = response.choices[0].message.content || "{}";
-            console.log("Raw boost result from AI:", result);
             let cleanedResult = result;
 
             if (result.includes("```json")) {
@@ -283,11 +281,9 @@ ${JSON.stringify(session.answers, null, 2)}
                 const parsed = JSON.parse(cleanedResult);
                 return parsed as BoostResult;
             } catch (parseError) {
-                console.error(
                     "JSON parsing failed, using fallback:",
                     parseError
                 );
-                console.log("Cleaned result that failed:", cleanedResult);
 
                 // 기본값으로 반환 (사용자 답변은 유지)
                 return {
@@ -303,7 +299,6 @@ ${JSON.stringify(session.answers, null, 2)}
                 };
             }
         } catch (error) {
-            console.error("Boost result generation 오류:", error);
             return {
                 enhancedContent: originalContent,
                 improvementScore: 0,

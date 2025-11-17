@@ -110,7 +110,6 @@ export default function EnhancedEditPage() {
   try {
     parsedDocument = JSON.parse(state.initialResult.content);
   } catch (error) {
-    console.error('Failed to parse initialResult.content:', error);
     return (
       <MainLayout>
         <div className="max-w-4xl mx-auto px-6 text-center">

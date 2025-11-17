@@ -454,8 +454,6 @@ class PPTXGenerationService {
    * LLM을 사용하여 포트폴리오 데이터를 PPT 형식으로 변환
    */
   async optimizeForPPT(data: PortfolioData, userProfile?: any): Promise<PPTData> {
-    console.log('📊 LLM에 전달되는 원본 데이터:', data);
-    console.log('📊 사용자 프로필 데이터:', userProfile);
 
     const OpenAI = (await import('openai')).default;
     const openai = new OpenAI({
@@ -557,18 +555,14 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
       });
 
       let content = response.choices[0].message?.content || "{}";
-      console.log('🤖 LLM 원본 응답:', content);
 
       if (content.includes('```json')) {
         content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '');
       }
 
       const result = JSON.parse(content);
-      console.log('✅ LLM 파싱 결과:', result);
       return result;
     } catch (error) {
-      console.error('❌ PPT 데이터 최적화 실패:', error);
-      console.log('⚠️ Fallback 데이터 사용');
 
       // 기본값 반환
       const fallbackData: PPTData = {
@@ -637,7 +631,6 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
         });
       }
 
-      console.log('📦 Fallback 데이터:', fallbackData);
       return fallbackData;
     }
   }
@@ -680,7 +673,6 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
    * Colorful Clean 템플릿용 LLM 최적화
    */
   async optimizeForColorfulCleanPPT(data: PortfolioData, userProfile?: any): Promise<ColorfulCleanPPTData> {
-    console.log('📊 Colorful Clean 템플릿 LLM에 전달되는 원본 데이터:', data);
 
     const OpenAI = (await import('openai')).default;
     const openai = new OpenAI({
@@ -813,14 +805,12 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
       });
 
       let content = response.choices[0].message?.content || "{}";
-      console.log('🤖 Colorful Clean LLM 원본 응답:', content);
 
       if (content.includes('```json')) {
         content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '');
       }
 
       const result = JSON.parse(content);
-      console.log('✅ Colorful Clean LLM 파싱 결과:', result);
 
       // AI가 예시 값을 그대로 사용하는 경우를 방지하기 위해 실제 사용자 정보로 덮어쓰기
       if (result.cover) {
@@ -835,7 +825,6 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
 
       return result;
     } catch (error) {
-      console.error('❌ Colorful Clean PPT 데이터 최적화 실패:', error);
       // Fallback 데이터 반환
       return this.getColorfulCleanFallbackData(data, userProfile, userName, userEmail, userPhone, userPosition);
     }
@@ -917,7 +906,6 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
    * Colorful Clean 템플릿 PPT 생성
    */
   async generateColorfulCleanPPT(data: PortfolioData, templatePath: string, userProfile?: any): Promise<Blob> {
-    console.log('=== Colorful Clean PPT 생성 시작 ===');
 
     const response = await fetch(templatePath);
     const templateBuffer = await response.arrayBuffer();
@@ -934,7 +922,6 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
     slide1 = this.replaceTextInXML(slide1, '[010-0000-0000]', this.truncateText(pptData.cover.phone, 15));
     slide1 = this.replaceTextInXML(slide1, '[email@domain.com]', this.truncateText(pptData.cover.email, 35));
     zip.file('ppt/slides/slide1.xml', slide1);
-    console.log('✅ Slide 1 완료 (표지)');
 
     // Slide 2: 자기소개
     let slide2 = zip.file('ppt/slides/slide2.xml')?.asText() || '';
@@ -946,7 +933,6 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
     slide2 = this.replaceTextInXML(slide2, '예: 서울', this.truncateText(pptData.about.location, 10));
     slide2 = this.replaceTextInXML(slide2, '예: 하이브리드', this.truncateText(pptData.about.work_type, 15));
     zip.file('ppt/slides/slide2.xml', slide2);
-    console.log('✅ Slide 2 완료 (자기소개)');
 
     // Slide 3: 핵심 역량
     let slide3 = zip.file('ppt/slides/slide3.xml')?.asText() || '';
@@ -961,7 +947,6 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
     slide3 = this.replaceTextInXML(slide3, '[협업·커뮤니케이션 한 줄]', this.truncateText(pptData.skills.competency_3, 40));
     slide3 = this.replaceTextInXML(slide3, '[실행력·품질 관리 한 줄]', this.truncateText(pptData.skills.competency_4, 40));
     zip.file('ppt/slides/slide3.xml', slide3);
-    console.log('✅ Slide 3 완료 (핵심 역량)');
 
     // Slide 4: 프로젝트 1
     let slide4 = zip.file('ppt/slides/slide4.xml')?.asText() || '';
@@ -978,7 +963,6 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
     if (tech1[1]) slide4 = this.replaceTextInXML(slide4, '[예: Figma]', this.truncateText(tech1[1], 15));
     if (tech1[2]) slide4 = this.replaceTextInXML(slide4, '[예: GA]', this.truncateText(tech1[2], 15));
     zip.file('ppt/slides/slide4.xml', slide4);
-    console.log('✅ Slide 4 완료 (프로젝트 1)');
 
     // Slide 5: 프로젝트 2
     let slide5 = zip.file('ppt/slides/slide5.xml')?.asText() || '';
@@ -994,7 +978,6 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
     if (tech2[1]) slide5 = this.replaceTextInXML(slide5, '[예: Airflow]', this.truncateText(tech2[1], 15));
     if (tech2[2]) slide5 = this.replaceTextInXML(slide5, '[예: BigQuery]', this.truncateText(tech2[2], 15));
     zip.file('ppt/slides/slide5.xml', slide5);
-    console.log('✅ Slide 5 완료 (프로젝트 2)');
 
     // Slide 6: 경력·학력
     let slide6 = zip.file('ppt/slides/slide6.xml')?.asText() || '';
@@ -1029,7 +1012,6 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
       slide6 = this.replaceTextInXML(slide6, '예: 정보처리기사 — 한국산업인력공단/2023', pptData.certifications[1]);
     }
     zip.file('ppt/slides/slide6.xml', slide6);
-    console.log('✅ Slide 6 완료 (경력·학력)');
 
     // Slide 7: 연락처
     let slide7 = zip.file('ppt/slides/slide7.xml')?.asText() || '';
@@ -1039,14 +1021,12 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
     slide7 = this.replaceTextInXML(slide7, '[이름] · [직무]', `${pptData.contact.name} · ${pptData.contact.position}`);
     slide7 = this.replaceTextInXML(slide7, '[한 줄 인사말/핵심 가치 6~10단어]', pptData.contact.closing_message);
     zip.file('ppt/slides/slide7.xml', slide7);
-    console.log('✅ Slide 7 완료 (연락처)');
 
     const blob = zip.generate({
       type: 'blob',
       mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
     });
 
-    console.log('=== Colorful Clean PPT 생성 완료 ===');
     return blob;
   }
 
@@ -1054,7 +1034,6 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
    * Impact Focused 템플릿용 LLM 최적화
    */
   async optimizeForImpactFocusedPPT(data: PortfolioData, userProfile?: any): Promise<ImpactFocusedPPTData> {
-    console.log('📊 Impact Focused 템플릿 LLM에 전달되는 원본 데이터:', data);
 
     const OpenAI = (await import('openai')).default;
     const openai = new OpenAI({
@@ -1194,14 +1173,12 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
       });
 
       let content = response.choices[0].message?.content || "{}";
-      console.log('🤖 Impact Focused LLM 원본 응답:', content);
 
       if (content.includes('```json')) {
         content = content.replace(/```json\n?/g, '').replace(/```\n?/g, '');
       }
 
       const result = JSON.parse(content);
-      console.log('✅ Impact Focused LLM 파싱 결과:', result);
 
       // AI가 예시 값을 그대로 사용하는 경우를 방지하기 위해 실제 사용자 정보로 덮어쓰기
       if (result.cover) {
@@ -1219,7 +1196,6 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
 
       return result;
     } catch (error) {
-      console.error('❌ Impact Focused PPT 데이터 최적화 실패:', error);
       return this.getImpactFocusedFallbackData(data, userProfile, userName, userEmail, userPhone, userPosition);
     }
   }
@@ -1321,7 +1297,6 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
    * Impact Focused 템플릿 PPT 생성 (새 템플릿 구조)
    */
   async generateImpactFocusedPPT(data: PortfolioData, templatePath: string, userProfile?: any): Promise<Blob> {
-    console.log('=== Impact Focused PPT 생성 시작 ===');
 
     const response = await fetch(templatePath);
     const templateBuffer = await response.arrayBuffer();
@@ -1338,7 +1313,6 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
     slide1 = this.replaceTextInXML(slide1, '[전화번호]', this.truncateText(pptData.cover.phone, 15));
     slide1 = this.replaceTextInXML(slide1, '[GitHub / Blog / LinkedIn]', this.truncateText(pptData.cover.linkedin, 40));
     zip.file('ppt/slides/slide1.xml', slide1);
-    console.log('✅ Slide 1 완료 (표지)');
 
     // Slide 2: 자기소개
     let slide2 = zip.file('ppt/slides/slide2.xml')?.asText() || '';
@@ -1353,7 +1327,6 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
       }
     }
     zip.file('ppt/slides/slide2.xml', slide2);
-    console.log('✅ Slide 2 완료 (자기소개)');
 
     // Slide 3: 기술 스택
     let slide3 = zip.file('ppt/slides/slide3.xml')?.asText() || '';
@@ -1386,7 +1359,6 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
       slide3 = this.replaceTextInXML(slide3, '[플랫폼 1]', pptData.skills.tools[2]);
     }
     zip.file('ppt/slides/slide3.xml', slide3);
-    console.log('✅ Slide 3 완료 (기술 스택)');
 
     // Slide 4-6: 프로젝트 1, 2, 3
     const projects = [pptData.project_1, pptData.project_2];
@@ -1419,7 +1391,6 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
       slideContent = this.replaceTextInXML(slideContent, '[코드 저장소]', pptData.cover.linkedin);
 
       zip.file(`ppt/slides/slide${slideNum}.xml`, slideContent);
-      console.log(`✅ Slide ${slideNum} 완료 (프로젝트 ${projIdx + 1})`);
     }
 
     // Slide 7: 경력/수상/자격증
@@ -1440,7 +1411,6 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
     slide7 = this.replaceTextInXML(slide7, '[추천 코멘트/피드백를 한 문장으로 입력]', pptData.contact.value_statement);
     slide7 = this.replaceTextInXML(slide7, '[추천인/직함]', '동료/상사');
     zip.file('ppt/slides/slide7.xml', slide7);
-    console.log('✅ Slide 7 완료 (경력/수상/자격증)');
 
     // Slide 8: 연락처
     let slide8 = zip.file('ppt/slides/slide8.xml')?.asText() || '';
@@ -1452,14 +1422,12 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
     slide8 = this.replaceTextInXML(slide8, '[Blog 링크]', pptData.contact.portfolio_link);
     slide8 = this.replaceTextInXML(slide8, '[감사의 말(한 문장)]', '읽어주셔서 감사합니다.');
     zip.file('ppt/slides/slide8.xml', slide8);
-    console.log('✅ Slide 8 완료 (연락처)');
 
     const blob = zip.generate({
       type: 'blob',
       mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
     });
 
-    console.log('=== Impact Focused PPT 생성 완료 ===');
     return blob;
   }
 
@@ -1482,7 +1450,6 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
 
     // 기존 Corporate 템플릿 로직
     try {
-      console.log('=== PPT 생성 시작 ===');
 
       // 1. 템플릿 파일 로드
       const response = await fetch(templatePath);
@@ -1490,9 +1457,7 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
       const zip = new PizZip(templateBuffer);
 
       // 2. LLM으로 데이터 최적화
-      console.log('LLM 데이터 최적화 중...');
       const pptData = await this.optimizeForPPT(data, userProfile);
-      console.log('최적화 완료:', pptData);
 
       // 3. Slide 1: 표지 + 연락처
       let slide1 = zip.file('ppt/slides/slide1.xml')?.asText() || '';
@@ -1502,7 +1467,6 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
       slide1 = this.replaceTextInXML(slide1, '[전화번호]', this.truncateText(pptData.contact.phone, 20));
       slide1 = this.replaceTextInXML(slide1, '[포트폴리오/웹 링크]', this.truncateText(pptData.contact.portfolio_link, 50));
       zip.file('ppt/slides/slide1.xml', slide1);
-      console.log('✅ Slide 1 완료 (표지 + 연락처)');
 
       // 4. Slide 2: 자기소개
       let slide2 = zip.file('ppt/slides/slide2.xml')?.asText() || '';
@@ -1512,7 +1476,6 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
       slide2 = this.replaceTextInXML(slide2, '[핵심 강점 2]', this.truncateText(pptData.introduction.strength_2, 40));
       slide2 = this.replaceTextInXML(slide2, '[핵심 강점 3]', this.truncateText(pptData.introduction.strength_3, 40));
       zip.file('ppt/slides/slide2.xml', slide2);
-      console.log('✅ Slide 2 완료 (자기소개)');
 
       // 5. Slide 3~5: 프로젝트 3개
       for (let i = 0; i < 3 && i < pptData.projects.length; i++) {
@@ -1531,7 +1494,6 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
         slideXml = this.replaceTextInXML(slideXml, '[핵심 성과 3]', this.truncateText(project.achievement_3, 60));
 
         zip.file(`ppt/slides/slide${slideNum}.xml`, slideXml);
-        console.log(`✅ Slide ${slideNum} 완료 (프로젝트 ${i + 1})`);
       }
 
       // 6. Slide 6: 타임라인
@@ -1555,7 +1517,6 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
         );
       }
       zip.file('ppt/slides/slide6.xml', slide6);
-      console.log('✅ Slide 6 완료 (타임라인)');
 
       // 7. Slide 7: 연락처
       let slide7 = zip.file('ppt/slides/slide7.xml')?.asText() || '';
@@ -1564,7 +1525,6 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
       slide7 = this.replaceTextInXML(slide7, '[전화번호]', pptData.contact.phone);
       slide7 = this.replaceTextInXML(slide7, '[포트폴리오/웹 링크]', pptData.contact.portfolio_link);
       zip.file('ppt/slides/slide7.xml', slide7);
-      console.log('✅ Slide 7 완료 (연락처)');
 
       // 8. ZIP을 Blob으로 변환
       const blob = zip.generate({
@@ -1572,10 +1532,8 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
         mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
       });
 
-      console.log('=== PPT 생성 완료 ===');
       return blob;
     } catch (error) {
-      console.error('PPT 생성 실패:', error);
       throw error;
     }
   }
@@ -1584,7 +1542,6 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
    * 마케팅/기획 PPT 템플릿용 데이터 최적화
    */
   async optimizeForMarketingPlanningPPT(data: PortfolioData, userProfile?: any): Promise<MarketingPlanningPPTData> {
-    console.log('📊 마케팅/기획 PPT 최적화 시작');
 
     const OpenAI = (await import('openai')).default;
     const openai = new OpenAI({
@@ -1764,10 +1721,8 @@ ${data.projects.slice(0, 3).map((p, i) => `${i + 1}. ${p.name || ''}
       }
 
       const optimizedData = JSON.parse(jsonMatch[0]) as MarketingPlanningPPTData;
-      console.log('✅ 마케팅/기획 PPT 데이터 최적화 완료');
       return optimizedData;
     } catch (error) {
-      console.error('마케팅/기획 PPT 최적화 실패:', error);
       throw error;
     }
   }
@@ -1777,11 +1732,9 @@ ${data.projects.slice(0, 3).map((p, i) => `${i + 1}. ${p.name || ''}
    */
   async generateMarketingPlanningPPT(data: PortfolioData, templatePath: string, userProfile?: any): Promise<Blob> {
     try {
-      console.log('=== 마케팅/기획 PPT 생성 시작 ===');
 
       // 1. LLM을 통한 데이터 최적화
       const optimizedData = await this.optimizeForMarketingPlanningPPT(data, userProfile);
-      console.log('📊 최적화된 데이터:', optimizedData);
 
       // 2. 템플릿 파일 로드
       const response = await fetch(templatePath);
@@ -1800,7 +1753,6 @@ ${data.projects.slice(0, 3).map((p, i) => `${i + 1}. ${p.name || ''}
       slide1 = slide1.replace('[전화번호]', optimizedData.cover.phone);
       slide1 = slide1.replace('[포트폴리오/웹 링크]', optimizedData.cover.portfolio_link);
       zip.file('ppt/slides/slide1.xml', slide1);
-      console.log('✅ Slide 1 완료 (커버)');
 
       // Slide 2: 자기소개
       let slide2 = zip.file('ppt/slides/slide2.xml')?.asText() || '';
@@ -1824,7 +1776,6 @@ ${data.projects.slice(0, 3).map((p, i) => `${i + 1}. ${p.name || ''}
         slide2 = slide2.replace('3.1x', optimizedData.self_intro.key_achievements[2].value);
       }
       zip.file('ppt/slides/slide2.xml', slide2);
-      console.log('✅ Slide 2 완료 (자기소개)');
 
       // Slide 3: 핵심 역량
       let slide3 = zip.file('ppt/slides/slide3.xml')?.asText() || '';
@@ -1833,7 +1784,6 @@ ${data.projects.slice(0, 3).map((p, i) => `${i + 1}. ${p.name || ''}
         slide3 = slide3.replace(searchPattern, '●'.repeat(comp.proficiency) + '○'.repeat(5 - comp.proficiency));
       });
       zip.file('ppt/slides/slide3.xml', slide3);
-      console.log('✅ Slide 3 완료 (핵심 역량)');
 
       // Slide 4: 프로젝트 개요
       let slide4 = zip.file('ppt/slides/slide4.xml')?.asText() || '';
@@ -1844,7 +1794,6 @@ ${data.projects.slice(0, 3).map((p, i) => `${i + 1}. ${p.name || ''}
         slide4 = slide4.replace(`[기간]`, proj.period);
       });
       zip.file('ppt/slides/slide4.xml', slide4);
-      console.log('✅ Slide 4 완료 (프로젝트 개요)');
 
       // Slide 5: 프로젝트 상세 1 (전략 수립)
       let slide5 = zip.file('ppt/slides/slide5.xml')?.asText() || '';
@@ -1858,7 +1807,6 @@ ${data.projects.slice(0, 3).map((p, i) => `${i + 1}. ${p.name || ''}
       slide5 = slide5.replace('{재방문/재구매를 유도하는 가치 순간}', optimizedData.project_detail_strategy.retention_point);
       slide5 = slide5.replace('{한 문장 포지셔닝}', optimizedData.project_detail_strategy.positioning);
       zip.file('ppt/slides/slide5.xml', slide5);
-      console.log('✅ Slide 5 완료 (프로젝트 상세 - 전략)');
 
       // Slide 6: 프로젝트 상세 2 (실행 & 결과)
       let slide6 = zip.file('ppt/slides/slide6.xml')?.asText() || '';
@@ -1876,7 +1824,6 @@ ${data.projects.slice(0, 3).map((p, i) => `${i + 1}. ${p.name || ''}
         slide6 = slide6.replace('후 2.8x', `후 ${optimizedData.project_detail_execution.results[2].after}`);
       }
       zip.file('ppt/slides/slide6.xml', slide6);
-      console.log('✅ Slide 6 완료 (프로젝트 상세 - 실행)');
 
       // Slide 7: 데이터 분석
       let slide7 = zip.file('ppt/slides/slide7.xml')?.asText() || '';
@@ -1884,7 +1831,6 @@ ${data.projects.slice(0, 3).map((p, i) => `${i + 1}. ${p.name || ''}
       slide7 = slide7.replace('{ROAS 상위 채널: [채널]}', optimizedData.data_analysis.top_channel);
       slide7 = slide7.replace('{리텐션 개선: [코호트/주차] 온보딩 보강}', optimizedData.data_analysis.retention_suggestion);
       zip.file('ppt/slides/slide7.xml', slide7);
-      console.log('✅ Slide 7 완료 (데이터 분석)');
 
       // Slide 8: 성과 하이라이트
       let slide8 = zip.file('ppt/slides/slide8.xml')?.asText() || '';
@@ -1909,7 +1855,6 @@ ${data.projects.slice(0, 3).map((p, i) => `${i + 1}. ${p.name || ''}
       slide8 = slide8.replace('[직함/회사]', optimizedData.testimonial.author.split('·')[1] || '');
       slide8 = slide8.replace('[기간/관계]', optimizedData.testimonial.author.split('·')[2] || '');
       zip.file('ppt/slides/slide8.xml', slide8);
-      console.log('✅ Slide 8 완료 (성과 하이라이트)');
 
       // Slide 9: 연락처
       let slide9 = zip.file('ppt/slides/slide9.xml')?.asText() || '';
@@ -1923,7 +1868,6 @@ ${data.projects.slice(0, 3).map((p, i) => `${i + 1}. ${p.name || ''}
       slide9 = slide9.replace('[예: 2025-01-15 이후]', optimizedData.contact.available_date);
       slide9 = slide9.replace('{여기에 한 줄 메시지를 입력하세요}', optimizedData.contact.closing_message);
       zip.file('ppt/slides/slide9.xml', slide9);
-      console.log('✅ Slide 9 완료 (연락처)');
 
       // 4. ZIP을 Blob으로 변환
       const blob = zip.generate({
@@ -1931,10 +1875,8 @@ ${data.projects.slice(0, 3).map((p, i) => `${i + 1}. ${p.name || ''}
         mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
       });
 
-      console.log('=== 마케팅/기획 PPT 생성 완료 ===');
       return blob;
     } catch (error) {
-      console.error('마케팅/기획 PPT 생성 실패:', error);
       throw error;
     }
   }
@@ -1943,7 +1885,6 @@ ${data.projects.slice(0, 3).map((p, i) => `${i + 1}. ${p.name || ''}
    * PM PPT 템플릿용 데이터 최적화
    */
   async optimizeForPMPPT(data: PortfolioData, userProfile?: any): Promise<PMPPTData> {
-    console.log('📊 PM PPT 최적화 시작');
 
     const OpenAI = (await import('openai')).default;
     const openai = new OpenAI({
@@ -2113,10 +2054,8 @@ PM/PO 전문 포트폴리오에 맞게 데이터를 변환하세요. Discovery-D
       }
 
       const optimizedData = JSON.parse(jsonMatch[0]) as PMPPTData;
-      console.log('✅ PM PPT 데이터 최적화 완료');
       return optimizedData;
     } catch (error) {
-      console.error('PM PPT 최적화 실패:', error);
       throw error;
     }
   }
@@ -2126,11 +2065,9 @@ PM/PO 전문 포트폴리오에 맞게 데이터를 변환하세요. Discovery-D
    */
   async generatePMPPT(data: PortfolioData, templatePath: string, userProfile?: any): Promise<Blob> {
     try {
-      console.log('=== PM PPT 생성 시작 ===');
 
       // 1. LLM을 통한 데이터 최적화
       const optimizedData = await this.optimizeForPMPPT(data, userProfile);
-      console.log('📊 최적화된 데이터:', optimizedData);
 
       // 2. 템플릿 파일 로드
       const response = await fetch(templatePath);
@@ -2149,7 +2086,6 @@ PM/PO 전문 포트폴리오에 맞게 데이터를 변환하세요. Discovery-D
       slide1 = slide1.replace('[전화번호]', this.truncateText(optimizedData.cover.phone, 15));
       slide1 = slide1.replace('[포트폴리오/웹 링크]', this.truncateText(optimizedData.cover.portfolio_link, 40));
       zip.file('ppt/slides/slide1.xml', slide1);
-      console.log('✅ Slide 1 완료 (커버)');
 
       // Slide 2: 자기소개
       let slide2 = zip.file('ppt/slides/slide2.xml')?.asText() || '';
@@ -2188,7 +2124,6 @@ PM/PO 전문 포트폴리오에 맞게 데이터를 변환하세요. Discovery-D
         slide2 = slide2.replace('[가치관/방식: 키워드 3]', this.truncateText(optimizedData.self_intro.values[2], 20));
       }
       zip.file('ppt/slides/slide2.xml', slide2);
-      console.log('✅ Slide 2 완료 (자기소개)');
 
       // Slide 3: 프로젝트 1
       let slide3 = zip.file('ppt/slides/slide3.xml')?.asText() || '';
@@ -2211,7 +2146,6 @@ PM/PO 전문 포트폴리오에 맞게 데이터를 변환하세요. Discovery-D
         slide3 = slide3.replace('[설명/기간]', this.truncateText(kpi.description, 20));
       });
       zip.file('ppt/slides/slide3.xml', slide3);
-      console.log('✅ Slide 3 완료 (프로젝트 1)');
 
       // Slide 4: 프로젝트 2
       let slide4 = zip.file('ppt/slides/slide4.xml')?.asText() || '';
@@ -2237,7 +2171,6 @@ PM/PO 전문 포트폴리오에 맞게 데이터를 변환하세요. Discovery-D
         slide4 = slide4.replace('[설명/기간]', this.truncateText(kpi.description, 20));
       });
       zip.file('ppt/slides/slide4.xml', slide4);
-      console.log('✅ Slide 4 완료 (프로젝트 2)');
 
       // Slide 5: 프로젝트 3
       let slide5 = zip.file('ppt/slides/slide5.xml')?.asText() || '';
@@ -2260,7 +2193,6 @@ PM/PO 전문 포트폴리오에 맞게 데이터를 변환하세요. Discovery-D
         slide5 = slide5.replace('[설명/기간]', this.truncateText(kpi.description, 20));
       });
       zip.file('ppt/slides/slide5.xml', slide5);
-      console.log('✅ Slide 5 완료 (프로젝트 3)');
 
       // Slide 6: 핵심 역량 및 도구
       let slide6 = zip.file('ppt/slides/slide6.xml')?.asText() || '';
@@ -2292,7 +2224,6 @@ PM/PO 전문 포트폴리오에 맞게 데이터를 변환하세요. Discovery-D
 
       slide6 = slide6.replace('[기타 참고 사항을 여기에 기입]', this.truncateText(optimizedData.competencies.additional, 50));
       zip.file('ppt/slides/slide6.xml', slide6);
-      console.log('✅ Slide 6 완료 (핵심 역량 및 도구)');
 
       // Slide 7: 연락처
       let slide7 = zip.file('ppt/slides/slide7.xml')?.asText() || '';
@@ -2309,7 +2240,6 @@ PM/PO 전문 포트폴리오에 맞게 데이터를 변환하세요. Discovery-D
       slide7 = slide7.replace('[도시/지역]', this.truncateText(optimizedData.contact.location, 15));
       slide7 = slide7.replace('[개인정보 처리 동의 문구 등]', this.truncateText(optimizedData.contact.notes, 50));
       zip.file('ppt/slides/slide7.xml', slide7);
-      console.log('✅ Slide 7 완료 (연락처)');
 
       // 4. ZIP을 Blob으로 변환
       const blob = zip.generate({
@@ -2317,10 +2247,8 @@ PM/PO 전문 포트폴리오에 맞게 데이터를 변환하세요. Discovery-D
         mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
       });
 
-      console.log('=== PM PPT 생성 완료 ===');
       return blob;
     } catch (error) {
-      console.error('PM PPT 생성 실패:', error);
       throw error;
     }
   }

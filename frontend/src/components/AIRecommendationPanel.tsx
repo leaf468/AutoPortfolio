@@ -37,7 +37,6 @@ const loadInitialCache = (): Record<string, CachedRecommendation> => {
       return filtered;
     }
   } catch (error) {
-    console.error('캐시 로드 실패:', error);
   }
   return {};
 };
@@ -71,14 +70,12 @@ export const AIRecommendationPanel: React.FC<AIRecommendationPanelProps> = ({
       // 캐시 확인
       const cached = recommendationCacheRef.current[cacheKey];
       if (cached && cached.input === currentInput) {
-        console.log('✅ 캐시된 AI 추천 사용:', questionId);
         setRecommendations(cached.recommendations);
         setLoading(false);
         return;
       }
 
       // 캐시가 없거나 입력이 변경되었으면 새로 생성
-      console.log('🔄 새로운 AI 추천 생성:', questionId);
       setLoading(true);
       try {
         const recs = await generateRealtimeRecommendations(currentInput, position, questionText);
@@ -98,10 +95,8 @@ export const AIRecommendationPanel: React.FC<AIRecommendationPanelProps> = ({
         try {
           localStorage.setItem(CACHE_KEY, JSON.stringify(recommendationCacheRef.current));
         } catch (error) {
-          console.error('캐시 저장 실패:', error);
         }
       } catch (error) {
-        console.error('추천 생성 실패:', error);
         setRecommendations([]);
       } finally {
         setLoading(false);

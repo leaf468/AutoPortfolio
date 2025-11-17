@@ -200,7 +200,6 @@ class AIOrganizer {
                 }
             } as OrganizedContent;
         } catch (error) {
-            console.error("AI Organizer 오류:", error);
             // 기본 구조 반환
             return {
                 oneLinerPitch: "정보 정리 중 오류가 발생했습니다.",
@@ -278,7 +277,6 @@ class AIOrganizer {
                 }
             } as OrganizedContent;
         } catch (error) {
-            console.error("Job posting enhancement 오류:", error);
             return organizedContent; // 원본 반환
         }
     }
@@ -329,7 +327,6 @@ JSON 형식으로 반환:
 
             return JSON.parse(cleanedResult);
         } catch (error) {
-            console.error("Keyword generation 오류:", error);
             return {
                 technical: [],
                 soft: [],

@@ -212,21 +212,15 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
                 const firstBlock = document.sections?.[0]?.blocks?.[0];
                 if (firstBlock) {
                     const html = firstBlock.text || '';
-                    console.log('🔍 ElegantEditor Initial HTML Loading:');
-                    console.log('  - HTML preview (first 200 chars):', html.substring(0, 200));
-                    console.log('  - Has extractedData:', !!firstBlock.extractedData);
                     setCurrentHtml(html);
 
                     let actualData: ElegantPortfolioData;
 
                     if (firstBlock.extractedData) {
                         const extracted = firstBlock.extractedData as any;
-                        console.log('📦 ElegantEditor extractedData:', extracted);
-                        console.log('📦 extractedData keys:', Object.keys(extracted));
 
                         // DB에서 온 데이터가 summary, skills, projects 형태인지 확인
                         if (extracted.summary || extracted.projects) {
-                            console.log('🔄 Converting AI analysis data to ElegantPortfolioData format');
 
                             // experiences를 experience로 변환
                             const experienceData = Array.isArray(extracted.experiences)
@@ -271,7 +265,6 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
                                         github: profile?.github_url || ''
                                     };
                                 } catch (err) {
-                                    console.error('Failed to load user profile:', err);
                                 }
                             }
 
@@ -341,8 +334,7 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
                         // 🔧 CRITICAL FIX: Immediately trigger HTML update after data is loaded
                         // Use requestAnimationFrame to ensure state update has completed
                         requestAnimationFrame(() => {
-                            console.log('🔧 ElegantEditor: Immediately updating HTML with correct template on initialization');
-                            updateHtml().catch(console.error);
+                            updateHtml().catch(() => {});
                         });
 
                         // AI 확장된 필드 표시 (autoFillService에서 이미 확장됨)
@@ -376,7 +368,6 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
                     );
                     const needsEnhancement = !isFromDB && (!actualData.about || actualData.about.length < 50);
 
-                    console.log('🔍 ElegantEditor Enhancement check:', {
                         isFromDB,
                         hasExtractedData: !!extracted,
                         hasSummary: !!(extracted?.summary),
@@ -401,7 +392,6 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
                             }
                             setInitialEnhancedFields(generatedFields);
                         } catch (error) {
-                            console.error('데이터 개선 실패:', error);
                             if (!dataLoaded) {
                                 setPortfolioData(actualData);
                             }
@@ -413,7 +403,6 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
                     setDataLoaded(true);
                 }
             } catch (error) {
-                console.error('초기 데이터 로딩 실패:', error);
             } finally {
                 setIsInitializing(false);
             }
@@ -427,15 +416,9 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
 
     // HTML 업데이트
     const updateHtml = useCallback(async () => {
-        console.log('🔧 ElegantEditor updateHtml:');
-        console.log('  - selectedTemplate prop:', selectedTemplate);
-        console.log('  - portfolioTemplates keys:', Object.keys(portfolioTemplates));
 
         // Always use elegant template for ElegantEditor
         const template = portfolioTemplates['elegant'];
-        console.log('  - template found:', !!template);
-        console.log('  - template.name:', template?.name);
-        console.log('  - template.id:', template?.id);
 
         if (template?.generateHTML) {
             // Elegant 템플릿에 맞는 데이터 구조 생성
@@ -492,11 +475,9 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
                     return `<h2 class="section-title">${titleMap[originalTitle] || originalTitle}</h2>`;
                 }
             );
-            console.log('  - HTML generated with template:', template.name);
-            console.log('  - HTML preview (first 100 chars):', html.substring(0, 100));
 
             // Update with scroll preservation - use async but don't await to prevent blocking
-            preserveScrollAndUpdate(html).catch(console.error);
+            preserveScrollAndUpdate(html).catch(() => {});
             setCurrentHtml(html);
             return html;
         }
@@ -527,8 +508,7 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
     // 데이터 변경시 HTML 업데이트 (실시간 업데이트)
     useEffect(() => {
         if (portfolioData.name || dataLoaded) {
-            console.log('🔄 ElegantEditor data changed, updating HTML immediately');
-            updateHtml().catch(console.error);
+            updateHtml().catch(() => {});
         }
     }, [portfolioData, sectionTitles, dataLoaded, updateHtml]);
 
@@ -583,7 +563,6 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
                 setInitialEnhancedFields(prev => ({ ...prev, about: false }));
             }
         } catch (err) {
-            console.error('자기소개 개선 실패:', err);
             error('AI 개선에 실패했습니다. 다시 시도해주세요.');
         } finally {
             setIsEnhancing(false);
@@ -621,7 +600,6 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
                 [`experience_${index}_description`]: false
             }));
         } catch (err) {
-            console.error('경력 개선 실패:', err);
             error('AI 개선에 실패했습니다. 다시 시도해주세요.');
         } finally {
             setIsEnhancing(false);
@@ -688,7 +666,6 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
                 setInitialEnhancedFields(prev => ({ ...prev, [`project_${index}_description`]: false }));
             }
         } catch (err) {
-            console.error('프로젝트 개선 실패:', err);
             error('AI 개선에 실패했습니다. 다시 시도해주세요.');
         } finally {
             setIsEnhancing(false);
@@ -857,7 +834,6 @@ const ElegantEditor: React.FC<BaseEditorProps> = ({
             // HTML 재생성을 위해 강제 업데이트
             await updateHtml();
         } catch (error) {
-            console.error('자연어 편집 실패:', error);
             throw error;
         }
     };

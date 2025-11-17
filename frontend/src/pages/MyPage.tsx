@@ -83,7 +83,6 @@ const MyPage: React.FC = () => {
   useEffect(() => {
     const locationState = location.state as any;
     if (locationState?.refresh && user) {
-      console.log('🔄 Refreshing portfolios after save');
       loadPortfolios();
     }
   }, [location.state, user]);
@@ -99,7 +98,6 @@ const MyPage: React.FC = () => {
       .single();
 
     if (userError) {
-      console.error('Load user error:', userError);
       return;
     }
 
@@ -110,7 +108,6 @@ const MyPage: React.FC = () => {
       .maybeSingle();
 
     if (error && error.code !== 'PGRST116') {
-      console.error('Load profile error:', error);
       return;
     }
 
@@ -172,7 +169,6 @@ const MyPage: React.FC = () => {
       if (error) throw error;
       setDocuments(data || []);
     } catch (error) {
-      console.error('Load documents error:', error);
     } finally {
       setIsLoadingDocuments(false);
     }
@@ -181,7 +177,6 @@ const MyPage: React.FC = () => {
   const loadPortfolios = async () => {
     if (!user) return;
 
-    console.log('📂 Loading portfolios for user:', user.user_id);
     setIsLoadingPortfolios(true);
     try {
       const { data, error } = await supabase
@@ -191,11 +186,8 @@ const MyPage: React.FC = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      console.log('📂 Portfolios loaded:', data?.length, 'items');
-      console.log('📂 Portfolio data:', data);
       setPortfolios(data || []);
     } catch (error) {
-      console.error('❌ Load portfolios error:', error);
     } finally {
       setIsLoadingPortfolios(false);
     }
@@ -215,7 +207,6 @@ const MyPage: React.FC = () => {
       if (error) throw error;
       setFeedbacks(data || []);
     } catch (error) {
-      console.error('Load feedbacks error:', error);
     } finally {
       setIsLoadingFeedbacks(false);
     }
@@ -268,7 +259,6 @@ const MyPage: React.FC = () => {
         setRecommendedJobs([]);
       }
     } catch (error) {
-      console.error('Load recommended jobs error:', error);
       setRecommendedJobs([]);
     } finally {
       setIsLoadingJobs(false);
@@ -329,7 +319,6 @@ const MyPage: React.FC = () => {
       setIsEditing(false);
       loadProfile(); // 프로필 다시 로드
     } catch (err) {
-      console.error('Profile save error:', err);
       showError('프로필 저장 중 오류가 발생했습니다.');
     } finally {
       setIsSaving(false);
@@ -356,7 +345,6 @@ const MyPage: React.FC = () => {
       if (error) {
         // subscription_cancelled 컬럼이 없는 경우 (42703 에러)
         if ((error as any).code === '42703') {
-          console.warn('subscription_cancelled 컬럼이 DB에 없습니다. 로컬 상태만 업데이트합니다.');
           // 로컬 상태만 업데이트 (DB 컬럼이 추가될 때까지 임시 처리)
           // refreshUser를 호출하면 DB에서 다시 조회하므로 취소 상태가 사라짐
           const updatedUser = { ...user, subscription_cancelled: true };
@@ -377,7 +365,6 @@ const MyPage: React.FC = () => {
       setShowCancelConfirmModal(false);
       success('구독이 취소되었습니다. 현재 구독 기간이 만료될 때까지 프리미엄 기능을 사용하실 수 있습니다.');
     } catch (error) {
-      console.error('Subscription cancellation error:', error);
       showError('구독 취소 중 오류가 발생했습니다. 다시 시도해주세요.');
     } finally {
       setIsCancellingSubscription(false);
@@ -412,7 +399,6 @@ const MyPage: React.FC = () => {
       setUser(null); // AuthContext의 user 상태를 null로 설정
       navigate('/');
     } catch (error) {
-      console.error('Account deletion error:', error);
       showError('회원 탈퇴 중 오류가 발생했습니다.');
     }
   };
@@ -421,7 +407,6 @@ const MyPage: React.FC = () => {
     if (!selectedFeedback) return;
 
     try {
-      console.log('📥 저장된 피드백 데이터:', selectedFeedback);
 
       // DB에서 불러온 데이터를 PDF 생성 형식에 맞게 변환
       const report = {
@@ -502,14 +487,12 @@ const MyPage: React.FC = () => {
         overallRecommendations: selectedFeedback.suggestions || [],
       };
 
-      console.log('📄 PDF 생성 데이터:', report);
 
       // Generate and download PDF
       // generateFeedbackPDF(report, userName?, targetCompany?)
       await generateFeedbackPDF(report, user?.name, selectedFeedback.company_name);
       success('PDF가 다운로드되었습니다.');
     } catch (error) {
-      console.error('PDF 다운로드 실패:', error);
       showError('PDF 다운로드에 실패했습니다.');
     }
   };
@@ -890,7 +873,6 @@ const MyPage: React.FC = () => {
                           onClick={async () => {
                             // PDF 다운로드
                             try {
-                              console.log('📥 저장된 피드백 데이터:', feedback);
 
                               // DB에서 불러온 데이터를 PDF 생성 형식에 맞게 변환
                               const report = {
@@ -967,7 +949,6 @@ const MyPage: React.FC = () => {
                               await generateFeedbackPDF(report, user?.name, feedback.company_name);
                               success('PDF가 다운로드되었습니다.');
                             } catch (error) {
-                              console.error('PDF 다운로드 실패:', error);
                               showError('PDF 다운로드에 실패했습니다.');
                             }
                           }}

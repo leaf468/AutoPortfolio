@@ -610,7 +610,6 @@ export class HTMLToMarkdownConverter {
             await navigator.clipboard.writeText(markdown);
             return true;
         } catch (error) {
-            console.error('Failed to copy to clipboard:', error);
             return false;
         }
     }
