@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   FieldBasedQuestion,
   FieldType,
@@ -21,7 +21,7 @@ import { generateFeedbackViaBackend } from '../services/coverLetterBackendServic
 import { CustomAlert } from '../components/CustomAlert';
 import { useAlert } from '../hooks/useAlert';
 import Footer from '../components/Footer';
-import { saveFieldBasedCoverLetter, updateFieldBasedCoverLetter } from '../services/fieldBasedCoverLetterService';
+import { saveFieldBasedCoverLetter, updateFieldBasedCoverLetter, convertFieldBasedToRegular } from '../services/fieldBasedCoverLetterService';
 
 const createEmptyMotivationFields = (company: string, position: string): MotivationFields => ({
   companyName: company,
@@ -120,6 +120,7 @@ const createEmptyConflictFields = (): ConflictFields => ({
 export const FieldBasedCoverLetterPage: React.FC = () => {
   const { user } = useAuth();
   const { alertState, hideAlert, success, error: showError, warning } = useAlert();
+  const navigate = useNavigate();
 
   const [companyName, setCompanyName] = useState('');
   const [position, setPosition] = useState('');
@@ -336,6 +337,38 @@ export const FieldBasedCoverLetterPage: React.FC = () => {
     }
   };
 
+  const handleLoadToRegularEditor = () => {
+    if (!companyName.trim() || !position.trim()) {
+      warning('회사명과 직무를 먼저 입력해주세요.');
+      return;
+    }
+
+    if (questions.length === 0) {
+      warning('최소 하나 이상의 질문을 추가해주세요.');
+      return;
+    }
+
+    // 필드 기반 데이터를 일반 자소서 형식으로 변환
+    const regularQuestions = convertFieldBasedToRegular({
+      companyName,
+      position,
+      questions,
+      feedbacks,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    // 일반 자소서 페이지로 이동하면서 데이터 전달
+    navigate('/cover-letter', {
+      state: {
+        fromFieldBased: true,
+        companyName,
+        position,
+        questions: regularQuestions,
+      },
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex flex-col">
       {/* 헤더 */}
@@ -373,13 +406,21 @@ export const FieldBasedCoverLetterPage: React.FC = () => {
                 마이페이지
               </Link>
               {user && (
-                <button
-                  onClick={handleSave}
-                  disabled={isSaving}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isSaving ? '저장 중...' : '저장하기'}
-                </button>
+                <>
+                  <button
+                    onClick={handleLoadToRegularEditor}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium whitespace-nowrap"
+                  >
+                    일반 자소서로 편집하기
+                  </button>
+                  <button
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSaving ? '저장 중...' : '저장하기'}
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -504,86 +545,6 @@ export const FieldBasedCoverLetterPage: React.FC = () => {
               </div>
             </div>
 
-            {/* AI 피드백 버튼 */}
-            <div className="flex justify-center mb-8">
-              <button
-                onClick={handleGetAIFeedback}
-                disabled={isLoadingFeedback}
-                className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all font-medium shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                {isLoadingFeedback ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    AI 피드백 생성 중...
-                  </>
-                ) : (
-                  <>AI 피드백 받기</>
-                )}
-              </button>
-            </div>
-
-            {/* AI 피드백 결과 */}
-            {feedbacks.length > 0 && (
-              <div className="bg-white rounded-lg shadow-lg p-6">
-                <h3 className="text-xl font-bold text-gray-900 mb-6">AI 피드백</h3>
-                <div className="space-y-6">
-                  {feedbacks.map((feedback, index) => {
-                    const question = questions.find((q) => q.id === feedback.questionId);
-                    if (!question) return null;
-
-                    return (
-                      <div key={feedback.questionId} className="border border-gray-200 rounded-lg p-4">
-                        <h4 className="font-semibold text-gray-900 mb-4">
-                          {index + 1}. {question.question}
-                        </h4>
-
-                        <div className="mb-4">
-                          <div className="flex items-center gap-2 mb-2">
-                            <span className="text-sm font-medium text-gray-700">점수:</span>
-                            <div className="flex-1 bg-gray-200 rounded-full h-2">
-                              <div
-                                className="bg-blue-600 h-2 rounded-full"
-                                style={{ width: `${feedback.score}%` }}
-                              ></div>
-                            </div>
-                            <span className="text-sm font-semibold text-blue-600">{feedback.score}점</span>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div className="border border-green-200 rounded-lg p-3 bg-green-50">
-                            <h5 className="font-semibold text-green-800 mb-2 text-sm">✅ 강점</h5>
-                            <ul className="space-y-1">
-                              {feedback.strengths.map((strength, idx) => (
-                                <li key={idx} className="text-xs text-green-700">• {strength}</li>
-                              ))}
-                            </ul>
-                          </div>
-
-                          <div className="border border-orange-200 rounded-lg p-3 bg-orange-50">
-                            <h5 className="font-semibold text-orange-800 mb-2 text-sm">⚠️ 개선점</h5>
-                            <ul className="space-y-1">
-                              {feedback.improvements.map((improvement, idx) => (
-                                <li key={idx} className="text-xs text-orange-700">• {improvement}</li>
-                              ))}
-                            </ul>
-                          </div>
-
-                          <div className="border border-blue-200 rounded-lg p-3 bg-blue-50">
-                            <h5 className="font-semibold text-blue-800 mb-2 text-sm">💡 제안</h5>
-                            <ul className="space-y-1">
-                              {feedback.suggestions.map((suggestion, idx) => (
-                                <li key={idx} className="text-xs text-blue-700">• {suggestion}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
           </>
         )}
 

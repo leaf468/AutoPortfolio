@@ -10,8 +10,14 @@ import {
   ConflictFields,
 } from '../types/fieldBasedCoverLetter';
 
+// API 키 확인
+const API_KEY = process.env.REACT_APP_OPENAI_API_KEY;
+if (!API_KEY || API_KEY.length < 20) {
+  console.error('OpenAI API key is missing or invalid in .env file');
+}
+
 const openai = new OpenAI({
-  apiKey: process.env.REACT_APP_OPENAI_API_KEY,
+  apiKey: API_KEY,
   dangerouslyAllowBrowser: true,
 });
 
@@ -133,8 +139,13 @@ export async function generateTypedAnswerWithLLM(
 
   try {
     const fieldsSummary = Object.entries(fields)
-      .filter(([_, value]) => value && String(value).trim())
-      .map(([key, value]) => `- ${key}: ${value}`)
+      .filter(([_, value]) => value && (Array.isArray(value) ? value.length > 0 : String(value).trim()))
+      .map(([key, value]) => {
+        if (Array.isArray(value)) {
+          return `- ${key}: ${value.join(', ')}`;
+        }
+        return `- ${key}: ${value}`;
+      })
       .join('\n');
 
     if (!fieldsSummary.trim()) {

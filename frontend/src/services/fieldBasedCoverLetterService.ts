@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabaseClient';
 import { FieldBasedCoverLetter, FieldBasedQuestion } from '../types/fieldBasedCoverLetter';
+import { CoverLetterQuestion } from '../components/CoverLetterQuestionInput';
 
 /**
  * 필드 기반 자소서 저장
@@ -11,11 +12,18 @@ export const saveFieldBasedCoverLetter = async (
   questions: FieldBasedQuestion[]
 ): Promise<{ success: boolean; documentId?: number; message?: string }> => {
   try {
+    // 현재 인증된 사용자 가져오기
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return { success: false, message: '로그인이 필요합니다.' };
+    }
+
     // 1. 문서 생성
     const { data: docData, error: docError } = await supabase
       .from('field_based_documents')
       .insert({
-        user_id: userId,
+        user_id: user.id, // auth.uid()와 동일한 UUID 사용
         company_name: companyName,
         position: position,
       })
@@ -234,4 +242,19 @@ export const deleteFieldBasedCoverLetter = async (
     console.error('Delete field-based cover letter error:', error);
     return { success: false, message: '삭제 중 오류가 발생했습니다.' };
   }
+};
+
+/**
+ * 필드 기반 자소서를 일반 자소서 형식으로 변환
+ */
+export const convertFieldBasedToRegular = (
+  fieldBasedDoc: FieldBasedCoverLetter
+): CoverLetterQuestion[] => {
+  return fieldBasedDoc.questions.map((q) => ({
+    id: q.id,
+    question: q.question,
+    answer: q.editedAnswer || q.generatedAnswer || '', // 수정된 답변 우선, 없으면 생성된 답변
+    placeholder: `${q.question}에 대한 답변을 작성해주세요...`,
+    maxLength: q.maxLength || 1000,
+  }));
 };

@@ -61,7 +61,15 @@ export const CoverLetterPageV3: React.FC = () => {
   const { alertState, hideAlert, success, error: showError, warning, info, confirm } = useAlert();
   const location = useLocation();
   const navigate = useNavigate();
-  const editState = location.state as { editMode?: boolean; documentId?: number; savedData?: any } | null;
+  const editState = location.state as {
+    editMode?: boolean;
+    documentId?: number;
+    savedData?: any;
+    fromFieldBased?: boolean;
+    companyName?: string;
+    position?: string;
+    questions?: CoverLetterQuestion[];
+  } | null;
 
   // 디버깅: 구독 정보 확인
 
@@ -93,6 +101,21 @@ export const CoverLetterPageV3: React.FC = () => {
       if (!user) return;
 
       try {
+        // 필드 기반 자소서에서 넘어온 경우
+        if (editState?.fromFieldBased) {
+          if (editState.companyName && editState.position) {
+            setUserSpec((prev) => ({
+              ...prev,
+              targetCompany: editState.companyName!,
+              position: editState.position!,
+            }));
+          }
+          if (editState.questions) {
+            setQuestions(editState.questions);
+          }
+          return;
+        }
+
         // 편집 모드인 경우 저장된 데이터 복원
         if (editState?.editMode && editState?.savedData) {
           const { userSpec: savedUserSpec, questions: savedQuestions } = editState.savedData;
