@@ -15,6 +15,7 @@ import TemplateEditPage from './pages/TemplateEditPage';
 import CompletePage from './pages/CompletePage';
 import CoverLetterPageV2 from './pages/CoverLetterPageV2';
 import CoverLetterPageV3 from './pages/CoverLetterPageV3';
+import FieldBasedCoverLetterPage from './pages/FieldBasedCoverLetterPage';
 import { PositionStatsDetailPage } from './pages/PositionStatsDetailPage';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
@@ -45,6 +46,7 @@ function getPageTitle(pathname: string): string {
     '/edit': '포트폴리오 편집',
     '/complete': '완료',
     '/cover-letter': '자소서 작성',
+    '/cover-letter-field': '필드 기반 자소서 작성',
     '/login': '로그인',
     '/signup': '회원가입',
     '/mypage': '마이페이지',
@@ -130,6 +132,7 @@ function App() {
             <Route path="/edit/:template" element={<TemplateEditPage />} />
             <Route path="/complete" element={<CompletePage />} />
             <Route path="/cover-letter" element={<CoverLetterPageV3 />} />
+            <Route path="/cover-letter-field" element={<FieldBasedCoverLetterPage />} />
             <Route path="/cover-letter-v2" element={<CoverLetterPageV2 />} />
             <Route path="/position-stats" element={<PositionStatsDetailPage />} />
             <Route path="/subscribe" element={<SubscribePage />} />
