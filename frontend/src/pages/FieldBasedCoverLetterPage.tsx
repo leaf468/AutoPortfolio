@@ -464,13 +464,18 @@ export const FieldBasedCoverLetterPage: React.FC = () => {
               <h3 className="text-base font-semibold text-blue-900 mb-1">
                 자소서 작성 가이드
               </h3>
-              <p className="text-sm text-blue-700 leading-relaxed">
+              <p className="text-sm text-blue-700 leading-relaxed mb-3">
                 <strong>1단계:</strong> 아래에서 답변하고 싶은 자소서 문항을 선택하세요.
                 <br />
                 <strong>2단계:</strong> 각 문항을 펼쳐 핵심 내용을 입력하거나, AI 답변 생성 버튼을 클릭하세요.
                 <br />
                 <strong>3단계:</strong> 상단의 <span className="font-semibold">'자소서 편집하기'</span> 버튼으로 본격적인 작성을 시작하세요.
               </p>
+              <div className="pt-3 border-t border-blue-200">
+                <p className="text-sm text-blue-600">
+                  💬 <strong>처음부터 직접 작성하고 싶으신가요?</strong> 상단의 <span className="font-semibold">'자유 작성 모드'</span>를 클릭하면 빈 화면에서 자유롭게 작성할 수 있습니다.
+                </p>
+              </div>
             </div>
           </div>
         </div>
