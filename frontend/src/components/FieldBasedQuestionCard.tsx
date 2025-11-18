@@ -30,21 +30,12 @@ export const FieldBasedQuestionCard: React.FC<FieldBasedQuestionCardProps> = ({
   const [isEditingQuestion, setIsEditingQuestion] = useState(false);
   const [tempQuestion, setTempQuestion] = useState(question.question);
   const [isEditingAnswer, setIsEditingAnswer] = useState(false);
-  const [showFields, setShowFields] = useState(true);
+  const [showFields, setShowFields] = useState(false); // 기본값을 false로 변경 (접혀있음)
   const [isGenerating, setIsGenerating] = useState(false);
 
   // 수동으로 답변 생성 (버튼 클릭 시)
   const handleGenerateAnswer = async () => {
-    // 필드에 값이 있는지 확인
-    const hasContent = Object.values(question.fields).some(
-      (v) => v && (Array.isArray(v) ? v.length > 0 : String(v).trim())
-    );
-
-    if (!hasContent) {
-      alert('필드를 먼저 입력해주세요.');
-      return;
-    }
-
+    // 필드 입력은 선택사항이므로 체크하지 않음
     setIsGenerating(true);
 
     try {
@@ -215,13 +206,18 @@ export const FieldBasedQuestionCard: React.FC<FieldBasedQuestionCardProps> = ({
         </div>
       )}
 
-      {/* 필드 입력 섹션 */}
+      {/* AI 답변 생성 토글 */}
       <div className="mb-6">
         <button
           onClick={() => setShowFields(!showFields)}
-          className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 mb-4"
+          className="flex items-center justify-between w-full px-4 py-3 bg-gradient-to-r from-blue-50 to-purple-50 hover:from-blue-100 hover:to-purple-100 border border-blue-200 rounded-lg transition"
         >
-          {showFields ? '▼' : '▶'} 필드 입력 {showFields ? '숨기기' : '보기'}
+          <span className="font-medium text-gray-900">
+            {showFields ? '▼' : '▶'} {showFields ? 'AI 답변 생성 접기' : '✨ 간단 입력으로 AI 답변 생성하기'}
+          </span>
+          <span className="text-sm text-gray-600">
+            {showFields ? '핵심 내용만 입력하면 완성된 답변을 만들어드려요' : '몇 가지만 입력하면 AI가 완성해드려요'}
+          </span>
         </button>
 
         {showFields && (
@@ -285,9 +281,20 @@ export const FieldBasedQuestionCard: React.FC<FieldBasedQuestionCardProps> = ({
           </div>
         ) : (
           <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">
-              {finalAnswer || '필드를 입력하고 "✨ AI 답변 생성" 버튼을 클릭하세요.'}
-            </p>
+            {finalAnswer ? (
+              <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">
+                {finalAnswer}
+              </p>
+            ) : (
+              <div className="text-center py-4">
+                <p className="text-gray-600 mb-2">
+                  💡 <strong>위 버튼을 클릭</strong>하여 AI 답변 생성 기능을 활용해보세요
+                </p>
+                <p className="text-sm text-gray-500">
+                  몇 가지 핵심 내용만 입력하면, AI가 완성도 높은 자소서 답변을 자동으로 작성해드립니다.
+                </p>
+              </div>
+            )}
           </div>
         )}
       </div>

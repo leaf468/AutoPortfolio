@@ -387,7 +387,7 @@ export const FieldBasedCoverLetterPage: React.FC = () => {
     });
 
     // 일반 자소서 페이지로 이동하면서 데이터 전달
-    navigate('/cover-letter', {
+    navigate('/cover-letter-basic', {
       state: {
         fromFieldBased: true,
         companyName,
@@ -413,19 +413,19 @@ export const FieldBasedCoverLetterPage: React.FC = () => {
               </Link>
               <div className="border-l-2 border-gray-300 pl-4 py-1">
                 <h1 className="text-xl font-bold text-gray-900">
-                  필드 기반 자소서 작성
+                  자소서 작성
                 </h1>
                 <p className="text-xs text-gray-600 mt-0.5">
-                  핵심 필드만 입력하면 자동으로 답변이 완성됩니다
+                  질문을 선택하고 핵심 내용을 입력하세요
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-6">
               <Link
-                to="/cover-letter"
+                to="/cover-letter-basic"
                 className="text-sm text-gray-700 hover:text-blue-600 transition font-medium whitespace-nowrap"
               >
-                일반 자소서 작성
+                자유 작성 모드
               </Link>
               <Link
                 to="/mypage"
@@ -439,7 +439,7 @@ export const FieldBasedCoverLetterPage: React.FC = () => {
                     onClick={handleLoadToRegularEditor}
                     className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium whitespace-nowrap"
                   >
-                    일반 자소서로 편집하기
+                    자소서 편집하기
                   </button>
                   <button
                     onClick={handleSave}
@@ -456,6 +456,25 @@ export const FieldBasedCoverLetterPage: React.FC = () => {
       </div>
 
       <div className="max-w-5xl mx-auto px-4 py-8 flex-1">
+        {/* 안내 문구 */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl">💡</span>
+            <div className="flex-1">
+              <h3 className="text-base font-semibold text-blue-900 mb-1">
+                자소서 작성 가이드
+              </h3>
+              <p className="text-sm text-blue-700 leading-relaxed">
+                <strong>1단계:</strong> 아래에서 답변하고 싶은 자소서 문항을 선택하세요.
+                <br />
+                <strong>2단계:</strong> 각 문항을 펼쳐 핵심 내용을 입력하거나, AI 답변 생성 버튼을 클릭하세요.
+                <br />
+                <strong>3단계:</strong> 상단의 <span className="font-semibold">'자소서 편집하기'</span> 버튼으로 본격적인 작성을 시작하세요.
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* 기본 정보 입력 */}
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
           <h2 className="text-lg font-bold text-gray-900 mb-4">기본 정보</h2>
@@ -503,9 +522,9 @@ export const FieldBasedCoverLetterPage: React.FC = () => {
               ))}
             </div>
 
-            {/* 질문 추가 버튼 */}
+            {/* 자소서 문항 선택 */}
             <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">질문 추가하기</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">자소서 문항 선택하기</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 <button
                   onClick={() => handleAddQuestion('motivation')}
@@ -576,11 +595,11 @@ export const FieldBasedCoverLetterPage: React.FC = () => {
           </>
         )}
 
-        {/* 질문 추가 안내 */}
+        {/* 자소서 문항 선택 안내 */}
         {questions.length === 0 && (
           <div className="bg-white rounded-lg shadow-lg p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">질문 추가하기</h3>
-            <p className="text-sm text-gray-600 mb-4">원하는 질문 유형을 선택하여 자소서 작성을 시작하세요</p>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">자소서 문항 선택하기</h3>
+            <p className="text-sm text-gray-600 mb-4">답변하고 싶은 문항을 선택하세요. 여러 개 선택 가능합니다.</p>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               <button
                 onClick={() => handleAddQuestion('motivation')}

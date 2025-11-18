@@ -680,7 +680,7 @@ const MyPage: React.FC = () => {
                           onClick={() => {
                             // 자소서 편집 - 저장된 데이터를 복원하여 작성 페이지로 이동
                             const content = JSON.parse(doc.content || '{}');
-                            navigate('/cover-letter', { state: { editMode: true, documentId: doc.document_id, savedData: content } });
+                            navigate('/cover-letter-basic', { state: { editMode: true, documentId: doc.document_id, savedData: content } });
                           }}
                           className="flex-1 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 font-medium text-sm shadow-sm hover:shadow-md flex items-center justify-center"
                         >

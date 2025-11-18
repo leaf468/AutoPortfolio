@@ -131,7 +131,8 @@ function App() {
             <Route path="/edit" element={<EnhancedEditPage />} />
             <Route path="/edit/:template" element={<TemplateEditPage />} />
             <Route path="/complete" element={<CompletePage />} />
-            <Route path="/cover-letter" element={<CoverLetterPageV3 />} />
+            <Route path="/cover-letter" element={<FieldBasedCoverLetterPage />} />
+            <Route path="/cover-letter-basic" element={<CoverLetterPageV3 />} />
             <Route path="/cover-letter-field" element={<FieldBasedCoverLetterPage />} />
             <Route path="/cover-letter-v2" element={<CoverLetterPageV2 />} />
             <Route path="/position-stats" element={<PositionStatsDetailPage />} />
