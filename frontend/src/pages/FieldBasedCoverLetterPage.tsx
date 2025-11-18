@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   FieldBasedQuestion,
@@ -22,6 +22,7 @@ import { CustomAlert } from '../components/CustomAlert';
 import { useAlert } from '../hooks/useAlert';
 import Footer from '../components/Footer';
 import { saveFieldBasedCoverLetter, updateFieldBasedCoverLetter, convertFieldBasedToRegular } from '../services/fieldBasedCoverLetterService';
+import { supabase } from '../lib/supabaseClient';
 
 const createEmptyMotivationFields = (company: string, position: string): MotivationFields => ({
   companyName: company,
@@ -131,6 +132,33 @@ export const FieldBasedCoverLetterPage: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [documentId, setDocumentId] = useState<number | undefined>(undefined);
 
+  // 사용자 프로필 로드
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      if (!user) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('user_profiles')
+          .select('company, position')
+          .eq('user_id', user.user_id)
+          .maybeSingle();
+
+        if (error && error.code !== 'PGRST116') {
+          return;
+        }
+
+        if (data) {
+          if (data.company) setCompanyName(data.company);
+          if (data.position) setPosition(data.position);
+        }
+      } catch (error) {
+        // 프로필 로드 실패 시 무시
+      }
+    };
+
+    loadUserProfile();
+  }, [user]);
 
   const handleQuestionUpdate = (index: number, updatedQuestion: FieldBasedQuestion) => {
     setQuestions((prev) =>
