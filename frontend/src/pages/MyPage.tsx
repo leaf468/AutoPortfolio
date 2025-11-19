@@ -534,16 +534,16 @@ const MyPage: React.FC = () => {
               {/* 네비게이션 버튼들 */}
               <nav className="flex items-center space-x-2">
                 <button
-                  onClick={() => navigate('/template-selection')}
-                  className="px-4 py-2 text-gray-700 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors font-medium"
-                >
-                  포트폴리오 만들기
-                </button>
-                <button
                   onClick={() => navigate('/cover-letter')}
                   className="px-4 py-2 text-gray-700 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors font-medium"
                 >
                   자기소개서 작성하기
+                </button>
+                <button
+                  onClick={() => navigate('/template-selection')}
+                  className="px-4 py-2 text-gray-700 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors font-medium"
+                >
+                  포트폴리오 만들기
                 </button>
               </nav>
             </div>

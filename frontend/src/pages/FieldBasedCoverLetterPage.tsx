@@ -589,10 +589,10 @@ export const FieldBasedCoverLetterPage: React.FC = () => {
                 </button>
                 <button
                   onClick={() => handleAddQuestion('custom')}
-                  className="px-6 py-4 border-2 border-blue-500 bg-blue-50 rounded-lg text-left hover:bg-blue-100 transition"
+                  className="px-6 py-4 border border-gray-300 rounded-lg text-left hover:border-blue-500 hover:bg-blue-50 transition"
                 >
-                  <div className="font-semibold text-blue-700">직접 입력하기</div>
-                  <div className="text-sm text-blue-600 mt-1">AI가 질문을 분석하여 필드 생성</div>
+                  <div className="font-semibold text-gray-900">직접 입력하기</div>
+                  <div className="text-sm text-gray-600 mt-1">AI가 질문을 분석하여 필드 생성</div>
                 </button>
               </div>
             </div>
@@ -664,10 +664,10 @@ export const FieldBasedCoverLetterPage: React.FC = () => {
               </button>
               <button
                 onClick={() => handleAddQuestion('custom')}
-                className="px-6 py-4 border-2 border-blue-500 bg-blue-50 rounded-lg text-left hover:bg-blue-100 transition"
+                className="px-6 py-4 border border-gray-300 rounded-lg text-left hover:border-blue-500 hover:bg-blue-50 transition"
               >
-                <div className="font-semibold text-blue-700">직접 입력하기</div>
-                <div className="text-sm text-blue-600 mt-1">AI가 질문을 분석하여 필드 생성</div>
+                <div className="font-semibold text-gray-900">직접 입력하기</div>
+                <div className="text-sm text-gray-600 mt-1">AI가 질문을 분석하여 필드 생성</div>
               </button>
             </div>
           </div>
