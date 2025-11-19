@@ -534,16 +534,16 @@ const MyPage: React.FC = () => {
               {/* 네비게이션 버튼들 */}
               <nav className="flex items-center space-x-2">
                 <button
-                  onClick={() => navigate('/template-selection')}
-                  className="px-4 py-2 text-gray-700 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors font-medium"
-                >
-                  포트폴리오 만들기
-                </button>
-                <button
                   onClick={() => navigate('/cover-letter')}
                   className="px-4 py-2 text-gray-700 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors font-medium"
                 >
                   자기소개서 작성하기
+                </button>
+                <button
+                  onClick={() => navigate('/template-selection')}
+                  className="px-4 py-2 text-gray-700 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors font-medium"
+                >
+                  포트폴리오 만들기
                 </button>
               </nav>
             </div>
@@ -680,7 +680,7 @@ const MyPage: React.FC = () => {
                           onClick={() => {
                             // 자소서 편집 - 저장된 데이터를 복원하여 작성 페이지로 이동
                             const content = JSON.parse(doc.content || '{}');
-                            navigate('/cover-letter', { state: { editMode: true, documentId: doc.document_id, savedData: content } });
+                            navigate('/cover-letter-basic', { state: { editMode: true, documentId: doc.document_id, savedData: content } });
                           }}
                           className="flex-1 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all duration-200 font-medium text-sm shadow-sm hover:shadow-md flex items-center justify-center"
                         >

@@ -235,6 +235,34 @@ export function normalizeUserPosition(userPosition: string): string[] {
     }
   }
 
+  // 일반적인 직무 표현 처리 (매칭이 없을 때)
+  if (matched.length === 0) {
+    // "개발자" -> 모든 개발 직군
+    if (lower.includes('개발자') || lower === '개발') {
+      matched.push('백엔드개발', '프론트엔드개발', '풀스택개발', '앱개발', '게임개발');
+    }
+    // "엔지니어" -> 개발 + 인프라 직군
+    else if (lower.includes('엔지니어')) {
+      matched.push('백엔드개발', '프론트엔드개발', '데이터엔지니어링', 'DevOps', '인프라');
+    }
+    // "기획자" -> 모든 기획 직군
+    else if (lower.includes('기획자') || lower.includes('기획')) {
+      matched.push('서비스기획', '사업기획');
+    }
+    // "디자이너" -> 모든 디자인 직군
+    else if (lower.includes('디자이너') || lower.includes('디자인')) {
+      matched.push('UX디자인', 'UI디자인', '그래픽디자인');
+    }
+    // "매니저" -> PM/PO
+    else if (lower.includes('매니저') || lower.includes('manager')) {
+      matched.push('서비스기획');
+    }
+    // "데이터" -> 모든 데이터 직군
+    else if (lower.includes('데이터')) {
+      matched.push('데이터분석', '데이터엔지니어링', 'AI/머신러닝');
+    }
+  }
+
   // 중복 제거
   return Array.from(new Set(matched));
 }
