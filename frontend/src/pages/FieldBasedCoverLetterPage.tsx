@@ -457,26 +457,22 @@ export const FieldBasedCoverLetterPage: React.FC = () => {
 
       <div className="max-w-5xl mx-auto px-4 py-8 flex-1">
         {/* 안내 문구 */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-5 mb-6">
           <div className="flex items-start gap-3">
             <span className="text-2xl">💡</span>
             <div className="flex-1">
-              <h3 className="text-base font-semibold text-blue-900 mb-1">
-                자소서 작성 가이드
+              <h3 className="text-lg font-bold text-gray-900 mb-3">
+                작성 방법
               </h3>
-              <p className="text-sm text-blue-700 leading-relaxed mb-3">
-                <strong>1단계:</strong> 아래에서 답변하고 싶은 자소서 문항을 선택하세요.
-                <br />
-                <strong>2단계:</strong> 각 문항을 펼쳐 핵심 내용을 입력하고 AI로 답변을 생성하세요.
-                <br />
-                <span className="text-xs">✨ 문항만 선택하고 다음 단계로 넘어갈 수도 있어요.</span>
-                <br />
-                <strong>3단계:</strong> 상단의 <span className="font-semibold">'자소서 편집하기'</span> 버튼으로 본격적인 작성을 시작하세요.
-              </p>
-              <div className="pt-3 border-t border-blue-200">
-                <p className="text-sm text-blue-600">
-                  💬 <strong>처음부터 직접 작성하고 싶으신가요?</strong> 상단의 <span className="font-semibold">'자유 작성 모드'</span>를 클릭하면 빈 화면에서 자유롭게 작성할 수 있습니다.
-                </p>
+
+              <div className="space-y-2.5 text-base text-gray-700 leading-relaxed">
+                <p><strong className="text-blue-700">1.</strong> 아래에서 답변하고 싶은 질문을 선택하세요</p>
+                <p><strong className="text-blue-700">2.</strong> 질문을 펼쳐서 핵심 내용을 입력하고 AI로 답변을 생성하거나, 건너뛸 수 있어요</p>
+                <p><strong className="text-blue-700">3.</strong> 상단의 <strong className="text-green-600">'자소서 편집하기'</strong> 버튼을 눌러 본격적으로 작성하세요</p>
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-blue-200 text-sm text-gray-600">
+                💬 빈 화면에서 바로 작성하고 싶다면 상단의 <strong>'자유 작성 모드'</strong>를 클릭하세요
               </div>
             </div>
           </div>
