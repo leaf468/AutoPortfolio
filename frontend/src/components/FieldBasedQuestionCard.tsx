@@ -280,20 +280,15 @@ export const FieldBasedQuestionCard: React.FC<FieldBasedQuestionCardProps> = ({
             </p>
           </div>
         ) : (
-          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
             {finalAnswer ? (
               <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">
                 {finalAnswer}
               </p>
             ) : (
-              <div className="text-center py-4">
-                <p className="text-gray-600 mb-2">
-                  💡 <strong>위 버튼을 클릭</strong>하여 AI 답변 생성 기능을 활용해보세요
-                </p>
-                <p className="text-sm text-gray-500">
-                  몇 가지 핵심 내용만 입력하면, AI가 완성도 높은 자소서 답변을 자동으로 작성해드립니다.
-                </p>
-              </div>
+              <p className="text-gray-400 text-sm text-center py-2">
+                답변이 생성되면 여기에 표시됩니다
+              </p>
             )}
           </div>
         )}
