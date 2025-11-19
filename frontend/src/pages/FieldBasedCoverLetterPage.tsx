@@ -467,7 +467,9 @@ export const FieldBasedCoverLetterPage: React.FC = () => {
               <p className="text-sm text-blue-700 leading-relaxed mb-3">
                 <strong>1단계:</strong> 아래에서 답변하고 싶은 자소서 문항을 선택하세요.
                 <br />
-                <strong>2단계:</strong> 각 문항을 펼쳐 핵심 내용을 입력하거나, AI 답변 생성 버튼을 클릭하세요.
+                <strong>2단계:</strong> 각 문항을 펼쳐 핵심 내용을 입력하고 AI로 답변을 생성하세요.
+                <br />
+                <span className="text-xs">✨ 문항만 선택하고 다음 단계로 넘어갈 수도 있어요.</span>
                 <br />
                 <strong>3단계:</strong> 상단의 <span className="font-semibold">'자소서 편집하기'</span> 버튼으로 본격적인 작성을 시작하세요.
               </p>

@@ -30,7 +30,7 @@ export const FieldBasedQuestionCard: React.FC<FieldBasedQuestionCardProps> = ({
   const [isEditingQuestion, setIsEditingQuestion] = useState(false);
   const [tempQuestion, setTempQuestion] = useState(question.question);
   const [isEditingAnswer, setIsEditingAnswer] = useState(false);
-  const [showFields, setShowFields] = useState(false); // 기본값을 false로 변경 (접혀있음)
+  const [showFields, setShowFields] = useState(true); // 기본값을 true로 변경 (펼쳐짐)
   const [isGenerating, setIsGenerating] = useState(false);
 
   // 수동으로 답변 생성 (버튼 클릭 시)
