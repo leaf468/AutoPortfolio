@@ -17,7 +17,6 @@ import {
 } from '../services/categoryBasedRecommendationService';
 import { analyzeAllQuestions, QuestionAnalysis } from '../services/questionAnalysisService';
 import { QuestionAnalysisPanel } from '../components/QuestionAnalysisPanel';
-import { PositionStats, getPositionStats } from '../services/positionStatsService';
 import { PositionStatsPanel } from '../components/PositionStatsPanel';
 import { useAuth } from '../contexts/AuthContext';
 import { markFreePdfUsed } from '../services/authService';
@@ -91,6 +90,13 @@ export const CoverLetterPageV3: React.FC = () => {
   });
 
   const [documentId, setDocumentId] = useState<number | undefined>(editState?.documentId);
+
+  // 입력 모달 state
+  const [inputModal, setInputModal] = useState<{ isOpen: boolean; type: 'certificate' | 'other' | null; value: string }>({
+    isOpen: false,
+    type: null,
+    value: '',
+  });
 
   // 로그인한 사용자의 프로필 데이터 불러오기 + 편집 모드 데이터 복원
   useEffect(() => {
@@ -169,7 +175,7 @@ export const CoverLetterPageV3: React.FC = () => {
   const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
 
   // 직무 통계
-  const [positionStats, setPositionStats] = useState<PositionStats | null>(null);
+  const [positionStats, setPositionStats] = useState<ComprehensiveStats | null>(null);
   const [isLoadingPositionStats, setIsLoadingPositionStats] = useState(false);
 
   // 분석 상태
@@ -258,12 +264,9 @@ export const CoverLetterPageV3: React.FC = () => {
       setIsLoadingStats(true);
       setIsLoadingPositionStats(true);
       try {
-        const [stats, posStats] = await Promise.all([
-          getComprehensiveStats(userSpec.position, true), // 익명화 스킵 - 속도 향상
-          getPositionStats(userSpec.position),
-        ]);
+        const stats = await getComprehensiveStats(userSpec.position, true); // 익명화 스킵 - 속도 향상
         setComprehensiveStats(stats);
-        setPositionStats(posStats);
+        setPositionStats(stats);
       } catch (error) {
       } finally {
         setIsLoadingStats(false);
@@ -351,13 +354,7 @@ export const CoverLetterPageV3: React.FC = () => {
   };
 
   const handleCertificateAdd = () => {
-    const cert = prompt('자격증 이름을 입력하세요:');
-    if (cert) {
-      setUserSpec((prev) => ({
-        ...prev,
-        certificates: [...(prev.certificates || []), cert],
-      }));
-    }
+    setInputModal({ isOpen: true, type: 'certificate', value: '' });
   };
 
   const handleCertificateRemove = (index: number) => {
@@ -368,13 +365,26 @@ export const CoverLetterPageV3: React.FC = () => {
   };
 
   const handleOtherAdd = () => {
-    const other = prompt('기타 항목을 입력하세요:');
-    if (other) {
+    setInputModal({ isOpen: true, type: 'other', value: '' });
+  };
+
+  const handleInputModalConfirm = () => {
+    const { type, value } = inputModal;
+    if (!value.trim()) return;
+
+    if (type === 'certificate') {
       setUserSpec((prev) => ({
         ...prev,
-        others: [...(prev.others || []), other],
+        certificates: [...(prev.certificates || []), value],
+      }));
+    } else if (type === 'other') {
+      setUserSpec((prev) => ({
+        ...prev,
+        others: [...(prev.others || []), value],
       }));
     }
+
+    setInputModal({ isOpen: false, type: null, value: '' });
   };
 
   const handleOtherRemove = (index: number) => {
@@ -481,13 +491,15 @@ export const CoverLetterPageV3: React.FC = () => {
     // 백그라운드에서 실행 (비동기)
     (async () => {
       try {
+        // 첨삭 기능은 로그인 사용자 전용이므로 항상 커리어 추천 모드 사용
         // 첨삭 리포트 생성 (각 질문당 최소 1페이지)
         const report = await generateCompleteFeedbackReport(
           answeredQuestions,
           userSpec.position,
           userSpec.gpa,
           userSpec.certificates,
-          userSpec.toeic
+          userSpec.toeic,
+          true // 항상 커리어 성장 추천 (자격증, 수상, 활동, 스킬, 로드맵)
         );
 
         // PDF 생성 및 다운로드
@@ -608,7 +620,7 @@ export const CoverLetterPageV3: React.FC = () => {
                   AI 기반 자소서 작성 도우미
                 </h1>
                 <p className="text-xs text-gray-600 mt-0.5">
-                  실제 합격자 데이터를 기반으로 실시간 피드백을 받으며 자소서를 작성하세요
+                  AI가 직무와 활동을 분석해 실시간 피드백을 제공합니다
                 </p>
               </div>
             </div>
@@ -702,10 +714,10 @@ export const CoverLetterPageV3: React.FC = () => {
 
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* 정보 입력 */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6 lg:items-stretch">
           {/* 왼쪽: 기본 정보 입력 */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-lg p-6">
+          <div className="lg:col-span-2 flex">
+            <div className="bg-white rounded-lg shadow-lg p-6 w-full">
               <h2 className="text-xl font-bold text-gray-900 mb-6">정보 입력</h2>
 
               <div className="space-y-5">
@@ -837,24 +849,18 @@ export const CoverLetterPageV3: React.FC = () => {
                   </div>
                 </div>
 
-                {/* 카테고리 선택 */}
-                <div className="pt-4 border-t border-gray-200">
-                  <CompanyCategoryOnlySelector
-                    selectedCategory={userSpec.referenceCategory as CompanyCategory | undefined}
-                    onSelect={(category) => handleSpecChange('referenceCategory', category)}
-                    label="참고 카테고리 (선택)"
-                  />
-                </div>
               </div>
             </div>
           </div>
 
           {/* 오른쪽: 직무 통계 */}
-          <div className="lg:col-span-1">
-            <PositionStatsPanel
-              stats={positionStats}
-              isLoading={isLoadingPositionStats}
-            />
+          <div className="lg:col-span-1 flex">
+            <div className="w-full">
+              <PositionStatsPanel
+                stats={positionStats}
+                isLoading={isLoadingPositionStats}
+              />
+            </div>
           </div>
         </div>
 
@@ -1040,6 +1046,51 @@ export const CoverLetterPageV3: React.FC = () => {
                 className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition font-medium shadow-lg"
               >
                 로그인하기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 입력 모달 */}
+      {inputModal.isOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 animate-fade-in">
+            <div className="text-center mb-6">
+              <h3 className="text-xl font-bold text-gray-900 mb-2">
+                {inputModal.type === 'certificate' ? '자격증 추가' : '기타 항목 추가'}
+              </h3>
+              <p className="text-gray-600">
+                {inputModal.type === 'certificate'
+                  ? '자격증 이름을 입력하세요'
+                  : '기타 항목을 입력하세요'}
+              </p>
+            </div>
+            <input
+              type="text"
+              value={inputModal.value}
+              onChange={(e) => setInputModal({ ...inputModal, value: e.target.value })}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  handleInputModalConfirm();
+                }
+              }}
+              placeholder={inputModal.type === 'certificate' ? '예: 정보처리기사' : '예: 수상 경력'}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-4"
+              autoFocus
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => setInputModal({ isOpen: false, type: null, value: '' })}
+                className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition font-medium"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleInputModalConfirm}
+                className="flex-1 px-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 transition font-medium shadow-lg"
+              >
+                추가
               </button>
             </div>
           </div>

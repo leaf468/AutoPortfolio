@@ -1426,42 +1426,6 @@ const MyPage: React.FC = () => {
               </div>
             </div>
 
-            {/* 참고 카테고리 */}
-            <div className="bg-white rounded-lg shadow p-6 mb-6">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">참고 카테고리 (선택)</h3>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                {[
-                  { value: '은행원', icon: '🏦', label: '은행원' },
-                  { value: '중견/금융', icon: '💰', label: '중견/금융' },
-                  { value: '대기업', icon: '🏢', label: '대기업' },
-                  { value: 'IT 대기업', icon: '💻', label: 'IT 대기업' },
-                  { value: '공기업', icon: '🏛️', label: '공기업' },
-                  { value: '외국계', icon: '🌍', label: '외국계' },
-                ].map((category) => (
-                  <button
-                    key={category.value}
-                    onClick={() => {
-                      if (!isEditing) return;
-                      setSelectedCategories(prev =>
-                        prev.includes(category.value)
-                          ? prev.filter(c => c !== category.value)
-                          : [...prev, category.value]
-                      );
-                    }}
-                    disabled={!isEditing}
-                    className={`p-4 border-2 rounded-lg transition ${
-                      selectedCategories.includes(category.value)
-                        ? 'border-blue-600 bg-blue-50'
-                        : 'border-gray-300 bg-white'
-                    } ${isEditing ? 'hover:border-blue-400 cursor-pointer' : 'cursor-not-allowed opacity-75'}`}
-                  >
-                    <div className="text-3xl mb-2">{category.icon}</div>
-                    <div className="text-sm font-medium text-gray-900">{category.label}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* 주의 */}
             <div className="bg-red-50 border border-red-200 rounded-lg p-6">
               <h3 className="text-lg font-semibold text-red-900 mb-4">⚠️ 주의</h3>

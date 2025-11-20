@@ -111,7 +111,7 @@ export const QuestionAnalysisPanel: React.FC<QuestionAnalysisPanelProps> = ({
 
       <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
         <p className="text-sm text-blue-800">
-          💡 <strong>참고:</strong> 이 분석은 실제 합격자 데이터를 기반으로 생성되었습니다.
+          💡 <strong>참고:</strong> 이 분석은 AI가 직무와 활동을 분석해 생성한 결과입니다.
           제안된 내용을 참고하되, 본인의 실제 경험을 진실되게 작성하는 것이 가장 중요합니다.
         </p>
       </div>

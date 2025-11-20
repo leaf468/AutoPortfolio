@@ -153,7 +153,7 @@ export const CoverLetterQuestionInput: React.FC<CoverLetterQuestionInputProps> =
           {onAnalyzeQuestion && (
             <div className="mb-4 mt-4 flex items-center justify-between py-2">
               <p className="text-xs text-gray-500">
-                💡 합격자들이 많이 쓴 키워드와 경험 통계 확인
+                💡 자주 사용되는 키워드와 경험 통계 확인
               </p>
               <button
                 onClick={() => onAnalyzeQuestion(question.id)}

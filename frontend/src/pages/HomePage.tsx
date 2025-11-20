@@ -20,8 +20,27 @@ export default function HomePage() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [showSignupModal, setShowSignupModal] = useState(false);
   const [showSubscribeModal, setShowSubscribeModal] = useState(false);
+  const [autoPlay, setAutoPlay] = useState(true);
 
   const slides = [
+    {
+      img: '/page5.png',
+      title: '지원 정보를 입력하면 AI가 실시간 분석합니다',
+      subtitle: 'AI가 직무와 활동을 분석해 개인화된 통계를 제공합니다',
+      badge: '자소서 1단계'
+    },
+    {
+      img: '/page7.png',
+      title: '질문에 답하며 자소서를 체계적으로 작성하세요',
+      subtitle: '8가지 핵심 질문으로 완성도 높은 자소서 완성',
+      badge: '자소서 2단계'
+    },
+    {
+      img: '/page6.png',
+      title: '작성 중 AI가 개선점을 실시간으로 제안합니다',
+      subtitle: '문장력, 구조, 키워드 등 종합적인 피드백',
+      badge: '자소서 3단계'
+    },
     {
       img: '/page1.png',
       title: '마음에 드는 템플릿을 선택하세요',
@@ -31,7 +50,7 @@ export default function HomePage() {
     {
       img: '/page2.png',
       title: '경력과 프로젝트 정보를 입력하세요',
-      subtitle: '간단한 정보만 입력하면 AI가 자동으로 정리',
+      subtitle: '작성한 자소서에서 활동 내용을 불러올 수 있습니다',
       badge: '포트폴리오 2단계'
     },
     {
@@ -45,18 +64,6 @@ export default function HomePage() {
       title: '세부 내용을 편집하고 다운로드하세요',
       subtitle: 'PDF, HTML 등 다양한 형식으로 즉시 다운로드',
       badge: '포트폴리오 4단계'
-    },
-    {
-      img: '/page5.png',
-      title: '지원 정보를 입력하면 AI가 실시간 분석합니다',
-      subtitle: '합격자 데이터 기반으로 스펙 비교 및 통계 제공',
-      badge: '자소서 1단계'
-    },
-    {
-      img: '/page6.png',
-      title: '작성 중 AI가 개선점을 실시간으로 제안합니다',
-      subtitle: '문장력, 구조, 키워드 등 종합적인 피드백',
-      badge: '자소서 2단계'
     },
   ];
 
@@ -72,11 +79,20 @@ export default function HomePage() {
   }, [user, navigate]);
 
   useEffect(() => {
+    if (!autoPlay) return;
+
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % slides.length);
     }, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [autoPlay, slides.length]);
+
+  const handleSlideChange = (index: number) => {
+    setCurrentSlide(index);
+    setAutoPlay(false);
+    // 5초 후 자동 재생 재개
+    setTimeout(() => setAutoPlay(true), 5000);
+  };
 
   const handleGetStarted = () => {
     trackButtonClick('포트폴리오 만들기 시작', 'HomePage');
@@ -143,17 +159,16 @@ export default function HomePage() {
             transition={{ duration: 0.6 }}
           >
             <div className="inline-block mb-4 px-4 py-2 bg-indigo-50 rounded-full">
-              <span className="text-indigo-600 font-semibold text-sm">AI 기반 포트폴리오 생성</span>
+              <span className="text-indigo-600 font-semibold text-sm">✨ AI 자소서 첨삭 + 포트폴리오 생성</span>
             </div>
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 mb-6 leading-tight">
-              5분 만에 완성하는<br />
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
               <span className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-                나만의 포트폴리오
+                자소서 작성, 어디서부터 시작해야 할지 모르겠나요?
               </span>
             </h1>
             <p className="text-xl md:text-2xl text-gray-600 mb-10 max-w-3xl mx-auto">
-              AI가 당신의 경험을 분석하고, 채용 담당자의 마음을 사로잡는<br />
-              전문적인 포트폴리오를 자동으로 생성합니다.
+              8가지 질문에 답하면 AI가 전문적인 자소서로 완성해드립니다.<br />
+              포트폴리오도 자동으로 연결하여 손쉽게 완성해보세요.
             </p>
             <div className="flex items-center justify-center space-x-4">
               <motion.button
@@ -174,7 +189,7 @@ export default function HomePage() {
               </motion.button>
             </div>
             <p className="mt-4 text-sm text-gray-500">
-              ✓ 신용카드 불필요 ✓ 5분이면 완성 ✓ 무료 템플릿 제공
+              ✓ 회원가입만으로 무료 시작 ✓ 자소서 1회 무료 첨삭 ✓ 신용카드 불필요
             </p>
           </motion.div>
 
@@ -212,7 +227,7 @@ export default function HomePage() {
                   {slides.map((_, index) => (
                     <button
                       key={index}
-                      onClick={() => setCurrentSlide(index)}
+                      onClick={() => handleSlideChange(index)}
                       className={`w-3 h-3 rounded-full transition-all ${
                         index === currentSlide
                           ? 'bg-indigo-600 w-8'
@@ -224,13 +239,13 @@ export default function HomePage() {
 
                 {/* Arrow Navigation */}
                 <button
-                  onClick={() => setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length)}
+                  onClick={() => handleSlideChange((currentSlide - 1 + slides.length) % slides.length)}
                   className="absolute left-4 top-1/2 transform -translate-y-1/2 w-10 h-10 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center transition-all"
                 >
                   ‹
                 </button>
                 <button
-                  onClick={() => setCurrentSlide((prev) => (prev + 1) % slides.length)}
+                  onClick={() => handleSlideChange((currentSlide + 1) % slides.length)}
                   className="absolute right-4 top-1/2 transform -translate-y-1/2 w-10 h-10 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center transition-all"
                 >
                   ›
@@ -276,10 +291,10 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-              왜 CareeRoad를 선택해야 할까요?
+              왜 CareeRoad를 선택해야 하나요?
             </h2>
             <p className="text-xl text-gray-600">
-              AI 기술로 당신의 커리어를 더욱 빛나게 만들어드립니다
+              8가지 질문에 답하면 AI가 자소서를 완성하고, 포트폴리오까지 자동으로 만들어줍니다
             </p>
           </div>
 
@@ -292,11 +307,11 @@ export default function HomePage() {
               className="p-8 bg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow border border-gray-100"
             >
               <div className="w-14 h-14 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center mb-6">
-                <CpuChipIcon className="w-8 h-8 text-white" />
+                <DocumentTextIcon className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">AI 자동 생성</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">8가지 질문으로 쉽게 시작</h3>
               <p className="text-gray-600 leading-relaxed">
-                당신의 경력과 프로젝트를 분석하여 채용 담당자가 원하는 형태로 자동 변환합니다.
+                빈 화면이 아닌 지원동기, 경험, 강점 등 핵심 질문에 답하면 AI가 자동으로 완성합니다.
               </p>
             </motion.div>
 
@@ -308,11 +323,11 @@ export default function HomePage() {
               className="p-8 bg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow border border-gray-100"
             >
               <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center mb-6">
-                <DocumentTextIcon className="w-8 h-8 text-white" />
+                <ChartBarIcon className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">다양한 템플릿</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">AI가 100점 만점으로 첨삭</h3>
               <p className="text-gray-600 leading-relaxed">
-                개발자, 디자이너, 기획자 등 직군별로 최적화된 템플릿을 제공합니다.
+                구조, 내용, 표현력, 직무 적합성을 평가하고 개선점을 구체적으로 알려줍니다.
               </p>
             </motion.div>
 
@@ -324,11 +339,11 @@ export default function HomePage() {
               className="p-8 bg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow border border-gray-100"
             >
               <div className="w-14 h-14 bg-gradient-to-br from-pink-500 to-pink-600 rounded-xl flex items-center justify-center mb-6">
-                <RocketLaunchIcon className="w-8 h-8 text-white" />
+                <CpuChipIcon className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">즉시 다운로드</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">핵심만 입력하면 AI가 작성</h3>
               <p className="text-gray-600 leading-relaxed">
-                PDF, HTML 등 다양한 형식으로 즉시 다운로드하여 바로 사용 가능합니다.
+                키워드만 입력하면 AI가 STAR 기법을 적용한 완성도 높은 답변을 작성합니다.
               </p>
             </motion.div>
 
@@ -342,9 +357,9 @@ export default function HomePage() {
               <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mb-6">
                 <UserGroupIcon className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">맞춤형 제안</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">자소서→포트폴리오 자동 연결</h3>
               <p className="text-gray-600 leading-relaxed">
-                지원하려는 직무와 회사에 맞춰 포트폴리오 내용을 최적화합니다.
+                작성한 자소서 내용이 포트폴리오에 자동으로 연결되어 한 번에 모든 서류를 완성합니다.
               </p>
             </motion.div>
 
@@ -356,11 +371,11 @@ export default function HomePage() {
               className="p-8 bg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow border border-gray-100"
             >
               <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center mb-6">
-                <ChartBarIcon className="w-8 h-8 text-white" />
+                <RocketLaunchIcon className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">실시간 피드백</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">직무별 맞춤 통계 제공</h3>
               <p className="text-gray-600 leading-relaxed">
-                작성 중인 포트폴리오에 대한 AI의 실시간 개선 제안을 받아보세요.
+                지원 직무를 입력하면 평균 스펙, 추천 활동, 필요한 자격증을 바로 확인할 수 있습니다.
               </p>
             </motion.div>
 
@@ -374,9 +389,9 @@ export default function HomePage() {
               <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center mb-6">
                 <CheckCircleIcon className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">간편한 수정</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">월 3,900원에 모든 기능</h3>
               <p className="text-gray-600 leading-relaxed">
-                직관적인 편집기로 언제든 쉽게 내용을 수정하고 업데이트할 수 있습니다.
+                무제한 AI 첨삭, 포트폴리오 생성, 프리미엄 템플릿을 모두 이용할 수 있습니다. (출시 특가 73% 할인)
               </p>
             </motion.div>
           </div>
@@ -404,11 +419,15 @@ export default function HomePage() {
               <ul className="space-y-4 mb-8">
                 <li className="flex items-center text-gray-600">
                   <CheckCircleIcon className="w-5 h-5 text-green-500 mr-3" />
-                  자소서 AI 작성
+                  8가지 질문 기반 자소서 작성
                 </li>
                 <li className="flex items-center text-gray-600">
                   <CheckCircleIcon className="w-5 h-5 text-green-500 mr-3" />
-                  기본 템플릿
+                  AI 답변 생성
+                </li>
+                <li className="flex items-center text-gray-600">
+                  <CheckCircleIcon className="w-5 h-5 text-green-500 mr-3" />
+                  자소서 1회 무료 첨삭
                 </li>
                 <li className="flex items-center text-gray-600">
                   <CheckCircleIcon className="w-5 h-5 text-green-500 mr-3" />
@@ -442,6 +461,10 @@ export default function HomePage() {
               <ul className="space-y-4 mb-8">
                 <li className="flex items-center text-white">
                   <CheckCircleIcon className="w-5 h-5 text-yellow-300 mr-3" />
+                  무제한 자소서 AI 첨삭
+                </li>
+                <li className="flex items-center text-white">
+                  <CheckCircleIcon className="w-5 h-5 text-yellow-300 mr-3" />
                   포트폴리오 AI 생성
                 </li>
                 <li className="flex items-center text-white">
@@ -450,7 +473,7 @@ export default function HomePage() {
                 </li>
                 <li className="flex items-center text-white">
                   <CheckCircleIcon className="w-5 h-5 text-yellow-300 mr-3" />
-                  무제한 AI 생성
+                  무제한 AI 생성 및 편집
                 </li>
                 <li className="flex items-center text-white">
                   <CheckCircleIcon className="w-5 h-5 text-yellow-300 mr-3" />
@@ -500,10 +523,10 @@ export default function HomePage() {
       <section className="py-24 px-6 bg-gradient-to-r from-indigo-600 to-purple-600">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
-            지금 바로 시작하세요
+            지금 바로 무료로 시작해보세요
           </h2>
           <p className="text-xl text-indigo-100 mb-10">
-            5분이면 충분합니다. 당신의 커리어를 한 단계 업그레이드하세요.
+            회원가입만 하면 8가지 질문 기반 작성 + AI 답변 생성 + 1회 무료 첨삭이 무료입니다.
           </p>
           <motion.button
             whileHover={{ scale: 1.05 }}

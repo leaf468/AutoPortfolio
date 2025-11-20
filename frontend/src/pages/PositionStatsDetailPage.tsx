@@ -77,10 +77,10 @@ export const PositionStatsDetailPage: React.FC = () => {
               </Link>
               <div className="border-l-2 border-gray-300 pl-4 py-1">
                 <h1 className="text-xl font-bold text-gray-900">
-                  {position} 직무 합격자 상세 통계
+                  {position} 직무 AI 분석 통계
                 </h1>
                 <p className="text-xs text-gray-600 mt-0.5">
-                  실제 합격자 데이터를 기반으로 한 종합 분석 결과입니다
+                  AI가 직무 특성을 분석한 종합 결과입니다
                 </p>
               </div>
             </div>
@@ -112,9 +112,9 @@ export const PositionStatsDetailPage: React.FC = () => {
         {isLoading ? (
           <div className="text-center py-12">
             <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            <p className="text-gray-600 mt-4 font-semibold">데이터 분석 중...</p>
+            <p className="text-gray-600 mt-4 font-semibold">AI 분석 중...</p>
             <p className="text-gray-500 text-sm mt-2">
-              해당 직무의 합격자 데이터를 분석하고 있습니다.
+              해당 직무의 특성과 활동 패턴을 분석하고 있습니다.
             </p>
             <p className="text-gray-400 text-xs mt-1">
               이 작업은 약 10-20초 정도 소요될 수 있습니다.

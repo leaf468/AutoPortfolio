@@ -28,7 +28,7 @@ export const StatisticsDashboard: React.FC<StatisticsDashboardProps> = ({
   if (isLoading) {
     return (
       <div className="bg-white rounded-2xl shadow-lg p-6">
-        <h3 className="text-xl font-bold text-gray-900 mb-4">합격자 통계 분석</h3>
+        <h3 className="text-xl font-bold text-gray-900 mb-4">AI 기반 통계 분석</h3>
         <div className="text-center py-8">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           <p className="mt-4 text-gray-600">통계 분석 중...</p>
@@ -40,7 +40,7 @@ export const StatisticsDashboard: React.FC<StatisticsDashboardProps> = ({
   if (!statistics) {
     return (
       <div className="bg-white rounded-2xl shadow-lg p-6">
-        <h3 className="text-xl font-bold text-gray-900 mb-4">합격자 통계 분석</h3>
+        <h3 className="text-xl font-bold text-gray-900 mb-4">AI 기반 통계 분석</h3>
         <div className="text-center py-8 text-gray-500">
           회사와 직무를 선택하고 분석하기를 클릭하세요.
         </div>
@@ -97,7 +97,7 @@ export const StatisticsDashboard: React.FC<StatisticsDashboardProps> = ({
               height={100}
               style={{ fontSize: '12px' }}
             />
-            <YAxis label={{ value: '합격자 비율 (%)', angle: -90, position: 'insideLeft' }} />
+            <YAxis label={{ value: '비율 (%)', angle: -90, position: 'insideLeft' }} />
             <Tooltip
               content={({ active, payload }) => {
                 if (active && payload && payload.length) {

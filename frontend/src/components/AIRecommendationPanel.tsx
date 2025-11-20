@@ -242,7 +242,7 @@ export const AIRecommendationPanel: React.FC<AIRecommendationPanelProps> = ({
       {!loading && recommendations.length > 0 && (
         <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-100">
           <p className="text-xs text-blue-800">
-            💡 <strong>팁:</strong> AI 추천은 실제 합격자 데이터를 기반으로 생성됩니다.
+            💡 <strong>팁:</strong> AI 추천은 직무와 활동 분석을 기반으로 생성됩니다.
             모든 추천을 따를 필요는 없으며, 본인의 경험에 맞게 선택적으로 활용하세요.
           </p>
         </div>

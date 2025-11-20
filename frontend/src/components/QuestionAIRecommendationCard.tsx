@@ -130,7 +130,7 @@ export const QuestionAIRecommendationCard: React.FC<QuestionAIRecommendationCard
                 {/* 관련 통계 */}
                 {questionAnalysis.relatedStats.length > 0 && (
                   <div>
-                    <p className="text-xs font-medium text-gray-700 mb-1">📈 합격자 통계</p>
+                    <p className="text-xs font-medium text-gray-700 mb-1">📈 직무 통계</p>
                     <div className="space-y-2">
                       {questionAnalysis.relatedStats.slice(0, 2).map((stat, idx) => (
                         <div key={idx} className="bg-purple-50 rounded p-2">
