@@ -535,12 +535,12 @@ export const CoverLetterPageV3: React.FC = () => {
               strengths: report.questionFeedbacks.flatMap(f => f.contentAnalysis.strengths || []),
               weaknesses: report.questionFeedbacks.flatMap(f => f.contentAnalysis.weaknesses || []),
               suggestions: report.overallRecommendations || [],
-              comparison_stats: report.questionFeedbacks.length > 0 ? {
+              comparison_stats: report.questionFeedbacks.length > 0 && report.questionFeedbacks[0].competitorComparison ? {
                 specComparison: report.questionFeedbacks[0].competitorComparison.specComparison,
                 activityComparison: report.questionFeedbacks[0].competitorComparison.activityComparison,
                 summary: report.questionFeedbacks[0].competitorComparison.summary
               } : null,
-              missing_activities: report.questionFeedbacks.flatMap(f => f.competitorComparison.missingElements || []),
+              missing_activities: report.questionFeedbacks.flatMap(f => f.competitorComparison?.missingElements || []),
               pdf_url: null, // PDF는 로컬 다운로드이므로 null
               pdf_generated_at: new Date().toISOString(),
               feedback_type: 'comprehensive',
@@ -554,12 +554,10 @@ export const CoverLetterPageV3: React.FC = () => {
               .select();
 
             if (feedbackError) {
-              // 테이블이 존재하지 않는 경우
-              if (feedbackError.code === '42P01') {
-              }
-            } else {
+              console.error('Feedback save error:', feedbackError);
             }
           } catch (dbErr: any) {
+            console.error('Database error:', dbErr);
           }
         } else {
         }
