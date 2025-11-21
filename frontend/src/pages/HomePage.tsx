@@ -43,26 +43,26 @@ export default function HomePage() {
     },
     {
       img: '/page1.png',
-      title: '마음에 드는 템플릿을 선택하세요',
-      subtitle: '다양한 디자인 중 직무에 맞는 템플릿 선택',
+      title: '원하는 템플릿을 선택하세요',
+      subtitle: '직무에 맞는 다양한 디자인 제공',
       badge: '포트폴리오 1단계'
     },
     {
       img: '/page2.png',
-      title: '경력과 프로젝트 정보를 입력하세요',
-      subtitle: '작성한 자소서에서 활동 내용을 불러올 수 있습니다',
+      title: '프로젝트와 경력을 입력하세요',
+      subtitle: '자소서 내용을 바로 불러올 수 있습니다',
       badge: '포트폴리오 2단계'
     },
     {
       img: '/page3.png',
-      title: 'AI가 포트폴리오를 자동으로 생성합니다',
-      subtitle: '채용 담당자가 원하는 형태로 최적화',
+      title: 'AI가 자동으로 포트폴리오 생성',
+      subtitle: '채용 담당자가 선호하는 구조로 최적화',
       badge: '포트폴리오 3단계'
     },
     {
       img: '/page4.png',
-      title: '세부 내용을 편집하고 다운로드하세요',
-      subtitle: 'PDF, HTML 등 다양한 형식으로 즉시 다운로드',
+      title: '편집 후 바로 다운로드',
+      subtitle: 'PDF, HTML 등 다양한 형식 지원',
       badge: '포트폴리오 4단계'
     },
   ];
@@ -161,14 +161,14 @@ export default function HomePage() {
             <div className="inline-block mb-4 px-4 py-2 bg-indigo-50 rounded-full">
               <span className="text-indigo-600 font-semibold text-sm">✨ AI 자소서 첨삭 + 포트폴리오 생성</span>
             </div>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6" style={{ lineHeight: '1.5' }}>
               <span className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
-                자소서 작성, 어디서부터 시작해야 할지 모르겠나요?
+                자소서 작성,<br />어디서부터 시작할지 막막하신가요?
               </span>
             </h1>
             <p className="text-xl md:text-2xl text-gray-600 mb-10 max-w-3xl mx-auto">
-              8가지 질문에 답하면 AI가 전문적인 자소서로 완성해드립니다.<br />
-              포트폴리오도 자동으로 연결하여 손쉽게 완성해보세요.
+              8가지 질문에 답하면 AI가 전문 자소서로 완성해드립니다.<br />
+              자소서 내용으로 포트폴리오까지 자동 생성됩니다.
             </p>
             <div className="flex items-center justify-center space-x-4">
               <motion.button
