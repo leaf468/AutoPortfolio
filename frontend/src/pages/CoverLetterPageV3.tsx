@@ -101,6 +101,21 @@ export const CoverLetterPageV3: React.FC = () => {
   // 로그인한 사용자의 프로필 데이터 불러오기 + 편집 모드 데이터 복원
   useEffect(() => {
     const loadUserProfile = async () => {
+      // 필드 기반 자소서에서 넘어온 경우 (게스트 모드에서도 처리)
+      if (editState?.fromFieldBased) {
+        if (editState.companyName && editState.position) {
+          setUserSpec((prev) => ({
+            ...prev,
+            targetCompany: editState.companyName!,
+            position: editState.position!,
+          }));
+        }
+        if (editState.questions) {
+          setQuestions(editState.questions);
+        }
+        return;
+      }
+
       // 게스트 모드에서는 프로필 로드 건너뛰기
       if (isGuestMode) return;
 
@@ -131,21 +146,6 @@ export const CoverLetterPageV3: React.FC = () => {
             others: data.others && data.others.length > 0 ? data.others : prev.others,
             referenceCategory: data.categories && data.categories.length > 0 ? data.categories[0] as CompanyCategory : prev.referenceCategory,
           }));
-        }
-
-        // 필드 기반 자소서에서 넘어온 경우 회사/직무만 덮어쓰기
-        if (editState?.fromFieldBased) {
-          if (editState.companyName && editState.position) {
-            setUserSpec((prev) => ({
-              ...prev,
-              targetCompany: editState.companyName!,
-              position: editState.position!,
-            }));
-          }
-          if (editState.questions) {
-            setQuestions(editState.questions);
-          }
-          return;
         }
 
         // 편집 모드인 경우 저장된 데이터 복원
@@ -457,7 +457,8 @@ export const CoverLetterPageV3: React.FC = () => {
   const handleGenerateDetailedFeedback = async () => {
     // 비로그인 사용자(게스트 모드)는 첨삭 기능 사용 불가
     if (!user || isGuestMode) {
-      setShowLoginModal(true);
+      warning('첨삭 기능은 로그인 후 이용하실 수 있습니다.\n\n회원가입하고 무료로 첨삭을 받아보세요!');
+      navigate('/signup');
       return;
     }
 
