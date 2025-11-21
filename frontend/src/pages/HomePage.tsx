@@ -255,10 +255,10 @@ export default function HomePage() {
 
             {/* Slide Info */}
             <div className="text-center mt-12 max-w-4xl mx-auto px-4">
-              <h3 className="text-4xl md:text-5xl font-extrabold text-gray-900 mb-4 leading-tight">
+              <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4 leading-tight">
                 {slides[currentSlide].title}
               </h3>
-              <p className="text-xl md:text-2xl text-gray-600 leading-relaxed">
+              <p className="text-base md:text-lg text-gray-600 leading-relaxed">
                 {slides[currentSlide].subtitle}
               </p>
             </div>

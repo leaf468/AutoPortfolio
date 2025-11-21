@@ -426,7 +426,7 @@ export const FieldBasedCoverLetterPage: React.FC = () => {
             </div>
             <div className="flex items-center gap-6">
               <Link
-                to="/cover-letter-basic"
+                to={`/cover-letter-basic${new URLSearchParams(window.location.search).get('mode') === 'guest' ? '?mode=guest' : ''}`}
                 className="text-sm text-gray-700 hover:text-blue-600 transition font-medium whitespace-nowrap"
               >
                 자유 작성 모드
