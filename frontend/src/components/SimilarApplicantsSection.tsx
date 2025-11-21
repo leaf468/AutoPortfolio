@@ -13,7 +13,7 @@ export const SimilarApplicantsSection: React.FC<SimilarApplicantsSectionProps> =
   if (isLoading) {
     return (
       <div className="bg-white rounded-2xl shadow-lg p-6">
-        <h3 className="text-xl font-bold text-gray-900 mb-4">비슷한 스펙의 합격자</h3>
+        <h3 className="text-xl font-bold text-gray-900 mb-4">비슷한 스펙 분석</h3>
         <div className="text-center py-8">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
           <p className="mt-4 text-gray-600">분석 중...</p>
@@ -25,7 +25,7 @@ export const SimilarApplicantsSection: React.FC<SimilarApplicantsSectionProps> =
   if (applicants.length === 0) {
     return (
       <div className="bg-white rounded-2xl shadow-lg p-6">
-        <h3 className="text-xl font-bold text-gray-900 mb-4">비슷한 스펙의 합격자</h3>
+        <h3 className="text-xl font-bold text-gray-900 mb-4">비슷한 스펙 분석</h3>
         <div className="text-center py-8 text-gray-500">
           분석 결과가 없습니다. 정보를 입력하고 분석하기를 클릭하세요.
         </div>
@@ -36,7 +36,7 @@ export const SimilarApplicantsSection: React.FC<SimilarApplicantsSectionProps> =
   return (
     <div className="bg-white rounded-2xl shadow-lg p-6">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-xl font-bold text-gray-900">비슷한 스펙의 합격자</h3>
+        <h3 className="text-xl font-bold text-gray-900">비슷한 스펙 분석</h3>
         <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-medium">
           {applicants.length}명 발견
         </span>

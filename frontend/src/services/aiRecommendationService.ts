@@ -88,31 +88,44 @@ async function generateLLMRecommendations(
       관련키워드: a.commonKeywords.slice(0, 3)
     }));
 
-    // DB에서 유사한 활동 예시 찾기 (실제 데이터는 노출하지 않고 AI에게 참고용으로만 제공)
+    // DB에서 유사한 활동 예시 찾기 (synthetic_applicants.activities 사용)
     let similarActivitiesInfo = '';
     if (userKeywords.length > 0) {
       try {
-        const { data: activities } = await supabase
-          .from('activities')
-          .select('content, activity_type')
-          .limit(50);
+        const { data: applicants } = await supabase
+          .from('synthetic_applicants')
+          .select('activities, position')
+          .eq('position', position)
+          .not('activities', 'is', null)
+          .limit(30);
 
-        if (activities) {
+        if (applicants) {
+          // activities 배열을 flatten하고 키워드 매칭
+          const allActivities: Array<{type: string, content: string}> = [];
+          applicants.forEach(app => {
+            if (Array.isArray(app.activities)) {
+              allActivities.push(...app.activities);
+            }
+          });
+
           // 사용자 키워드와 매칭되는 예시 찾기
-          const matchingExamples = activities
+          const matchingExamples = allActivities
             .filter((activity) =>
-              userKeywords.some((keyword) => activity.content.includes(keyword))
+              userKeywords.some((keyword) =>
+                activity.content?.toLowerCase().includes(keyword.toLowerCase())
+              )
             )
             .slice(0, 3);
 
           if (matchingExamples.length > 0) {
             similarActivitiesInfo = `\n\n# 참고: 유사한 활동 예시 패턴 (${position} 직무 합격자)\n`;
             matchingExamples.forEach((example, idx) => {
-              similarActivitiesInfo += `${idx + 1}. [${example.activity_type}] ${example.content.slice(0, 100)}...\n`;
+              similarActivitiesInfo += `${idx + 1}. [${example.type}] ${example.content.slice(0, 100)}...\n`;
             });
           }
         }
       } catch (error) {
+        console.error('Failed to fetch synthetic activities:', error);
       }
     }
 

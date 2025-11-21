@@ -386,8 +386,12 @@ export const FieldBasedCoverLetterPage: React.FC = () => {
       updatedAt: new Date(),
     });
 
+    // 게스트 모드 확인
+    const urlParams = new URLSearchParams(window.location.search);
+    const isGuest = urlParams.get('mode') === 'guest';
+
     // 일반 자소서 페이지로 이동하면서 데이터 전달
-    navigate('/cover-letter-basic', {
+    navigate(`/cover-letter-basic${isGuest ? '?mode=guest' : ''}`, {
       state: {
         fromFieldBased: true,
         companyName,
@@ -422,7 +426,7 @@ export const FieldBasedCoverLetterPage: React.FC = () => {
             </div>
             <div className="flex items-center gap-6">
               <Link
-                to="/cover-letter-basic"
+                to={`/cover-letter-basic${new URLSearchParams(window.location.search).get('mode') === 'guest' ? '?mode=guest' : ''}`}
                 className="text-sm text-gray-700 hover:text-blue-600 transition font-medium whitespace-nowrap"
               >
                 자유 작성 모드
@@ -433,14 +437,14 @@ export const FieldBasedCoverLetterPage: React.FC = () => {
               >
                 마이페이지
               </Link>
+              <button
+                onClick={handleLoadToRegularEditor}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium whitespace-nowrap"
+              >
+                자소서 편집하기
+              </button>
               {user && (
                 <>
-                  <button
-                    onClick={handleLoadToRegularEditor}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium whitespace-nowrap"
-                  >
-                    자소서 편집하기
-                  </button>
                   <button
                     onClick={handleSave}
                     disabled={isSaving}

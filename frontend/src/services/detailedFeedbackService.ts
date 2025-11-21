@@ -52,8 +52,17 @@ export interface DetailedQuestionFeedback {
     growth: { score: number; feedback: string }; // 성장가능성
   };
 
-  // 합격자 비교 (익명화된 통계 데이터)
-  competitorComparison: {
+  // 커리어 성장 추천 (실제 데이터 사용 시)
+  careerRecommendations?: {
+    certificates: string; // 추천 자격증 (3-5개, 구체적인 이유 포함)
+    awards: string; // 추천 수상 경력 (공모전, 대회 등, 구체적인 이유 포함)
+    activities: string; // 추천 활동 (동아리, 프로젝트, 봉사 등, 구체적인 이유 포함)
+    skills: string; // 개발해야 할 스킬 (구체적인 이유 포함)
+    summary: string; // 종합 커리어 로드맵 조언
+  };
+
+  // 합격자 비교 (샘플 데이터 사용 시에만 표시)
+  competitorComparison?: {
     specComparison: {
       gpa: string; // 예: "합격자 평균 3.8 대비 귀하 3.5"
       toeic: string;
@@ -93,13 +102,15 @@ export async function generateDetailedFeedback(
   allQuestions: CoverLetterQuestion[],
   userGpa?: string,
   userCertificates?: string[],
-  userToeic?: number
+  userToeic?: number,
+  useRealData: boolean = false // 실제 데이터 사용 여부
 ): Promise<DetailedQuestionFeedback> {
   try {
     // 합격자 통계 가져오기 (익명화 스킵 - 속도 향상)
     const stats = await getComprehensiveStats(position, true);
 
-    const prompt = `당신은 글로벌 기업 ${position} 직무 채용 책임자로 15년 경력의 시니어 HR 매니저입니다.
+    // 실제 데이터 사용 시와 샘플 데이터 사용 시 프롬프트 분기
+    const feedbackPrompt = `당신은 글로벌 기업 ${position} 직무 채용 책임자로 15년 경력의 시니어 HR 매니저입니다.
 매년 1,000명 이상 평가, 300명 이상의 합격자를 직접 선발한 채용 전문가로서 평가합니다.
 
 # 평가자 프로필
@@ -289,7 +300,13 @@ ${userCertificates && userCertificates.length > 0 ? `- 자격증: ${userCertific
     }
   },
 
-  "competitorComparison": {
+  ${useRealData ? `"careerRecommendations": {
+    "certificates": "지원자의 현재 스펙, 자소서 내용, ${position} 직무를 분석하여 추천 자격증 3-5개를 제시. 각 자격증이 왜 중요한지, 취득 난이도와 준비 방법을 구체적으로 설명 (예: 'AWS Solutions Architect: 클라우드 인프라 설계 역량 입증, 난이도 중상, 2-3개월 준비 필요. Udemy 강의 + 실습 환경 구축 추천')",
+    "awards": "지원자의 경험과 ${position} 직무에 적합한 공모전, 대회, 수상 기회 3-5개를 추천. 왜 이 대회가 도움이 되는지, 난이도와 준비 방법 구체적 설명 (예: '삼성 SW 역량테스트: 알고리즘 실력 객관적 증명, 기업 인지도 높음. 백준 골드 레벨 달성 후 도전 권장')",
+    "activities": "직무 관련 활동, 동아리, 프로젝트, 봉사 등 추천 3-5개. 각 활동이 커리어에 어떤 도움이 되는지, 참여 방법 구체적 설명 (예: '오픈소스 기여: 실무 협업 경험, 포트폴리오 강화. GitHub trending 프로젝트에서 good first issue부터 시작')",
+    "skills": "현재 부족한 스킬 또는 개발해야 할 역량 3-5개를 제시. 각 스킬이 왜 중요한지, 학습 방법과 마일스톤 구체적 제시 (예: 'Kubernetes: 컨테이너 오케스트레이션 필수 스킬. 로컬 환경 구축(minikube) → 기본 배포 → CI/CD 연동 순으로 학습. Certified Kubernetes Administrator(CKA) 자격증 도전')",
+    "summary": "지원자의 현재 수준, 목표 직무, 업계 트렌드를 종합하여 향후 6개월-1년간의 커리어 로드맵 제시. 단계별 목표와 실행 계획 구체적으로 작성 (5-8문장). 긍정적이고 동기부여하는 톤으로 작성."
+  }` : `"competitorComparison": {
     "specComparison": {
       "gpa": "${userGpa ? `합격자 평균 ${stats.avgGpa.toFixed(2)} vs 지원자 ${userGpa}` : '합격자 평균 ' + stats.avgGpa.toFixed(2) + ', 지원자 미입력'}",
       "toeic": "${userToeic ? `합격자 평균 ${Math.round(stats.avgToeic)}점 vs 지원자 ${userToeic}점` : '합격자 평균 ' + Math.round(stats.avgToeic) + '점, 지원자 미입력'}",
@@ -303,7 +320,7 @@ ${userCertificates && userCertificates.length > 0 ? `- 자격증: ${userCertific
     "summary": "이 질문은 [지원동기/경험/강점/포부] 유형입니다. 합격자는 [구체적 패턴]을 보이나, 지원자는 [부족한 점]으로 보완 필요. (3-5문장)",
     "missingElements": ["✗ 구체적 성과 수치", "✗ ${position} 핵심 스킬 일부", "✗ 차별화된 경험"],
     "recommendations": ["→ 성과를 수치로 변환 (예: '개선' → '30% 단축')", "→ ${position} 필수 스킬 추가 언급", "→ 독특한 해결 방식 추가"]
-  },
+  }`},
 
   "revisedVersion": "위의 모든 피드백을 완벽히 반영한 합격 수준 개선안${question.maxLength ? ` (반드시 ${Math.floor(question.maxLength * 0.9)}-${question.maxLength}자, 즉 90-100% 분량 채워서 작성)` : ''}",
   "keyImprovements": [
@@ -361,7 +378,31 @@ ${userCertificates && userCertificates.length > 0 ? `- 자격증: ${userCertific
       messages: [
         {
           role: 'system',
-          content: `당신은 15년 경력의 ${position} 채용 전문가입니다.
+          content: useRealData
+            ? `당신은 10년 경력의 HR 매니저이자 커리어 컨설턴트입니다.
+${position} 직무를 포함한 다양한 직무의 인재를 평가하고, 수백 명의 취업 준비생에게 커리어 컨설팅을 제공한 전문가입니다.
+
+역할:
+1. 자기소개서 첨삭 전문가 - 구조, 내용, 표현, 직무적합성 평가
+2. 커리어 컨설턴트 - 개인의 성장을 위한 구체적이고 실행 가능한 조언 제공
+
+평가 및 추천 원칙:
+1. **첨삭**: 합격자 기준으로 상대평가, 증거 기반 채점, 구체적 피드백
+2. **커리어 추천**:
+   - 현재 스펙과 목표 직무를 분석하여 맞춤형 추천
+   - 단순 나열이 아닌, "왜 필요한지", "어떻게 준비할 것인지" 구체적 가이드
+   - 긍정적이고 동기부여하는 톤으로 작성
+   - 실행 가능한 단계별 로드맵 제시
+3. **점수 다양화**: 45-85점 범위로 폭넓게 분포
+4. **수정안 분량 엄수**: 최소 90% 이상 분량 채우기
+
+커리어 추천 작성 가이드:
+- 자격증: 직무 연관성 높은 것 우선, 난이도와 준비 기간 명시
+- 수상/대회: 포트폴리오 강화에 도움되는 것, 참가 자격과 준비 방법 안내
+- 활동: 실무 경험 쌓을 수 있는 것, 구체적 참여 방법 제시
+- 스킬: 현재 부족한 역량, 학습 로드맵과 마일스톤 제시
+- 종합: 6개월-1년 커리어 로드맵, 단계별 실행 계획`
+            : `당신은 15년 경력의 ${position} 채용 전문가입니다.
 매년 1,000명 평가, 실무팀과 협업하여 합격자 선발 기준을 직접 수립합니다.
 
 평가 원칙:
@@ -385,7 +426,7 @@ ${userCertificates && userCertificates.length > 0 ? `- 자격증: ${userCertific
         },
         {
           role: 'user',
-          content: prompt
+          content: feedbackPrompt
         }
       ],
       temperature: 0.6,
@@ -430,13 +471,14 @@ ${userCertificates && userCertificates.length > 0 ? `- 자격증: ${userCertific
         passion: { score: 70, feedback: '' },
         growth: { score: 70, feedback: '' }
       },
-      competitorComparison: result.competitorComparison || {
-        specComparison: { gpa: '', toeic: '', certificates: '' },
-        activityComparison: { quantity: '', quality: '', relevance: '' },
-        summary: '',
-        missingElements: [],
-        recommendations: []
-      },
+      ...(useRealData && result.careerRecommendations
+        ? { careerRecommendations: result.careerRecommendations }
+        : {}),
+      ...(!useRealData && result.competitorComparison
+        ? {
+            competitorComparison: result.competitorComparison
+          }
+        : {}),
       revisedVersion: result.revisedVersion || '',
       keyImprovements: result.keyImprovements || [],
     };
@@ -453,13 +495,14 @@ export async function generateCompleteFeedbackReport(
   position: string,
   userGpa?: string,
   userCertificates?: string[],
-  userToeic?: number
+  userToeic?: number,
+  useRealData: boolean = false // 실제 데이터 사용 여부
 ): Promise<CompleteFeedbackReport> {
   const questionFeedbacks: DetailedQuestionFeedback[] = [];
 
   // 각 질문에 대한 상세 첨삭 생성
   for (let i = 0; i < questions.length; i++) {
-    const feedback = await generateDetailedFeedback(questions[i], i + 1, position, questions, userGpa, userCertificates, userToeic);
+    const feedback = await generateDetailedFeedback(questions[i], i + 1, position, questions, userGpa, userCertificates, userToeic, useRealData);
     questionFeedbacks.push(feedback);
   }
 

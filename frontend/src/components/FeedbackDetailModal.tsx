@@ -285,6 +285,86 @@ export const FeedbackDetailModal: React.FC<FeedbackDetailModalProps> = ({
               )}
             </div>
 
+            {/* 커리어 성장 추천 섹션 (실제 데이터 사용 시) */}
+            {questions.length > 0 && questions[0].analysis?.careerRecommendations && (
+              <div className="mt-8 p-6 bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl border-2 border-purple-200">
+                <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                  <span className="text-2xl mr-2">🚀</span>
+                  커리어 성장 추천
+                </h3>
+                <p className="text-sm text-gray-600 mb-6">
+                  귀하의 현재 스펙과 자소서 내용을 분석하여 맞춤형 커리어 성장 방안을 제시합니다.
+                </p>
+
+                <div className="space-y-6">
+                  {/* 추천 자격증 */}
+                  {questions[0].analysis.careerRecommendations.certificates && (
+                    <div className="bg-white rounded-lg p-5 border border-purple-200">
+                      <h4 className="font-bold text-gray-900 mb-3 flex items-center">
+                        <span className="text-lg mr-2">📜</span>
+                        추천 자격증
+                      </h4>
+                      <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">
+                        {questions[0].analysis.careerRecommendations.certificates}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* 추천 수상/대회 */}
+                  {questions[0].analysis.careerRecommendations.awards && (
+                    <div className="bg-white rounded-lg p-5 border border-purple-200">
+                      <h4 className="font-bold text-gray-900 mb-3 flex items-center">
+                        <span className="text-lg mr-2">🏆</span>
+                        추천 수상 및 대회
+                      </h4>
+                      <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">
+                        {questions[0].analysis.careerRecommendations.awards}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* 추천 활동 */}
+                  {questions[0].analysis.careerRecommendations.activities && (
+                    <div className="bg-white rounded-lg p-5 border border-purple-200">
+                      <h4 className="font-bold text-gray-900 mb-3 flex items-center">
+                        <span className="text-lg mr-2">🎯</span>
+                        추천 활동
+                      </h4>
+                      <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">
+                        {questions[0].analysis.careerRecommendations.activities}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* 개발해야 할 스킬 */}
+                  {questions[0].analysis.careerRecommendations.skills && (
+                    <div className="bg-white rounded-lg p-5 border border-purple-200">
+                      <h4 className="font-bold text-gray-900 mb-3 flex items-center">
+                        <span className="text-lg mr-2">💪</span>
+                        개발해야 할 스킬
+                      </h4>
+                      <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">
+                        {questions[0].analysis.careerRecommendations.skills}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* 종합 커리어 로드맵 */}
+                  {questions[0].analysis.careerRecommendations.summary && (
+                    <div className="bg-gradient-to-r from-purple-100 to-indigo-100 rounded-lg p-5 border-2 border-purple-300">
+                      <h4 className="font-bold text-gray-900 mb-3 flex items-center">
+                        <span className="text-lg mr-2">🗺️</span>
+                        종합 커리어 로드맵
+                      </h4>
+                      <p className="text-gray-800 leading-relaxed whitespace-pre-wrap font-medium">
+                        {questions[0].analysis.careerRecommendations.summary}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* 작성 일시 */}
             <div className="mt-8 text-center text-sm text-gray-500">
               작성일: {new Date(feedback.created_at).toLocaleString('ko-KR', {
