@@ -3,6 +3,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { signup } from '../services/authService';
 import { useAuth } from '../contexts/AuthContext';
 import LandingFooter from '../components/LandingFooter';
+import { trackButtonClick } from '../utils/analytics';
 
 const SignupPage: React.FC = () => {
   const navigate = useNavigate();
@@ -27,6 +28,7 @@ const SignupPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    trackButtonClick('회원가입 시도', 'SignupPage');
     setError('');
 
     // 유효성 검사
@@ -81,6 +83,23 @@ const SignupPage: React.FC = () => {
     }
   };
 
+  const handleGoogleSignup = async () => {
+    trackButtonClick('구글 회원가입', 'SignupPage');
+    setError('');
+    setLoading(true);
+
+    try {
+      const result = await loginWithGoogle();
+      if (!result.success && result.message) {
+        setError(result.message);
+        setLoading(false);
+      }
+      // 성공 시 OAuth 리다이렉트가 자동으로 발생
+    } catch (err) {
+      setError('구글 회원가입 중 오류가 발생했습니다.');
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 flex flex-col">

@@ -21,6 +21,7 @@ import { useAlert } from '../hooks/useAlert';
 import { FeedbackDetailModal } from '../components/FeedbackDetailModal';
 import { generateFeedbackPDF } from '../services/pdfGenerationService';
 import SubscribeModal from '../components/SubscribeModal';
+import { trackButtonClick } from '../utils/analytics';
 
 const MyPage: React.FC = () => {
   const navigate = useNavigate();
@@ -280,6 +281,7 @@ const MyPage: React.FC = () => {
   };
 
   const handleSaveProfile = async () => {
+    trackButtonClick('프로필 저장', 'MyPage');
     if (!user) return;
 
     setIsSaving(true);
@@ -336,12 +338,14 @@ const MyPage: React.FC = () => {
   };
 
   const handleLogout = async () => {
+    trackButtonClick('로그아웃', 'MyPage');
     await logout();
     setUser(null); // AuthContext의 user 상태를 null로 설정
     navigate('/');
   };
 
   const handleCancelSubscription = async () => {
+    trackButtonClick('구독 취소', 'MyPage');
     if (!user) return;
 
     setIsCancellingSubscription(true);
@@ -382,6 +386,7 @@ const MyPage: React.FC = () => {
   };
 
   const handleDeleteAccount = async () => {
+    trackButtonClick('계정 삭제', 'MyPage');
     if (!user) return;
 
     const confirmed = window.confirm(
@@ -414,6 +419,7 @@ const MyPage: React.FC = () => {
   };
 
   const handleDownloadPDF = async () => {
+    trackButtonClick('첨삭 PDF 다운로드', 'MyPage');
     if (!selectedFeedback) return;
 
     try {

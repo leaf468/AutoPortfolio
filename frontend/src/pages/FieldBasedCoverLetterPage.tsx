@@ -23,6 +23,7 @@ import { useAlert } from '../hooks/useAlert';
 import Footer from '../components/Footer';
 import { saveFieldBasedCoverLetter, updateFieldBasedCoverLetter, convertFieldBasedToRegular } from '../services/fieldBasedCoverLetterService';
 import { supabase } from '../lib/supabaseClient';
+import { trackButtonClick } from '../utils/analytics';
 
 const createEmptyMotivationFields = (company: string, position: string): MotivationFields => ({
   companyName: company,
@@ -171,6 +172,7 @@ export const FieldBasedCoverLetterPage: React.FC = () => {
   };
 
   const handleAddQuestion = (fieldType: FieldType) => {
+    trackButtonClick(`질문 추가: ${fieldType}`, 'FieldBasedCoverLetterPage');
     if (fieldType === 'custom') {
       setIsCustomModalOpen(true);
       return;
@@ -261,6 +263,7 @@ export const FieldBasedCoverLetterPage: React.FC = () => {
   };
 
   const handleGetAIFeedback = async () => {
+    trackButtonClick('AI 첨삭 받기', 'FieldBasedCoverLetterPage');
     if (!user) {
       warning('로그인이 필요합니다.');
       return;
@@ -310,6 +313,7 @@ export const FieldBasedCoverLetterPage: React.FC = () => {
   };
 
   const handleSave = async () => {
+    trackButtonClick('자소서 저장', 'FieldBasedCoverLetterPage');
     if (!user) {
       warning('로그인이 필요합니다.');
       return;
@@ -366,6 +370,7 @@ export const FieldBasedCoverLetterPage: React.FC = () => {
   };
 
   const handleLoadToRegularEditor = () => {
+    trackButtonClick('포트폴리오 만들기', 'FieldBasedCoverLetterPage');
     if (!companyName.trim() || !position.trim()) {
       warning('회사명과 직무를 먼저 입력해주세요.');
       return;
