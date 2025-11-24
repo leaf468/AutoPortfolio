@@ -3,6 +3,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { signup, loginWithGoogle } from '../services/authService';
 import { useAuth } from '../contexts/AuthContext';
 import LandingFooter from '../components/LandingFooter';
+import { trackButtonClick } from '../utils/analytics';
 
 const SignupPage: React.FC = () => {
   const navigate = useNavigate();
@@ -27,6 +28,7 @@ const SignupPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    trackButtonClick('회원가입 시도', 'SignupPage');
     setError('');
 
     // 유효성 검사
@@ -82,6 +84,7 @@ const SignupPage: React.FC = () => {
   };
 
   const handleGoogleSignup = async () => {
+    trackButtonClick('구글 회원가입', 'SignupPage');
     setError('');
     setLoading(true);
 

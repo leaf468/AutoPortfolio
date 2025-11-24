@@ -593,6 +593,7 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
 
     // Markdown 클립보드 복사
     const handleCopyMarkdown = async () => {
+        trackButtonClick('Markdown 복사', 'FinalResultPanel');
         try {
             const htmlContent = generateTemplatedHTML();
             const markdown = htmlToMarkdownConverter.convertToMarkdown(htmlContent);
@@ -706,6 +707,7 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
 
     // PPT 다운로드 (선택된 템플릿으로)
     const handleDownloadPPT = async (templateId: PPTTemplateId) => {
+        trackButtonClick(`PPT 템플릿 선택: ${templateId}`, 'FinalResultPanel');
         const selectedTemplate = pptTemplates.find(t => t.id === templateId);
         if (!selectedTemplate) {
             showError('템플릿을 찾을 수 없습니다.');
@@ -831,6 +833,7 @@ const FinalResultPanel: React.FC<FinalResultPanelProps> = ({
     };
 
     const handleShare = async () => {
+        trackButtonClick('공유하기', 'FinalResultPanel');
         if (navigator.share) {
             try {
                 await navigator.share({
