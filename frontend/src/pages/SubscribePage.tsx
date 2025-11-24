@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
+import { trackButtonClick } from '../utils/analytics';
 import {
   CheckCircleIcon,
   SparklesIcon,
@@ -23,6 +24,7 @@ const SubscribePage: React.FC = () => {
   }, [user, navigate]);
 
   const handleCopy = (text: string) => {
+    trackButtonClick(`복사: ${text.includes('@') ? '이메일' : '계좌번호'}`, 'SubscribePage');
     navigator.clipboard.writeText(text);
     setCopiedText(text);
     setTimeout(() => setCopiedText(''), 2000);

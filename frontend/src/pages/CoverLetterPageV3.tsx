@@ -27,6 +27,7 @@ import LandingFooter from '../components/LandingFooter';
 import { CustomAlert } from '../components/CustomAlert';
 import { useAlert } from '../hooks/useAlert';
 import SubscribeModal from '../components/SubscribeModal';
+import { trackButtonClick } from '../utils/analytics';
 
 const DEFAULT_QUESTIONS: Omit<CoverLetterQuestion, 'answer'>[] = [
   {
@@ -331,6 +332,7 @@ export const CoverLetterPageV3: React.FC = () => {
   };
 
   const handleQuestionAdd = () => {
+    trackButtonClick('질문 추가', 'CoverLetterPageV3');
     const newQuestion: CoverLetterQuestion = {
       id: `q${Date.now()}`,
       question: '새로운 질문을 입력하세요',
@@ -427,6 +429,7 @@ export const CoverLetterPageV3: React.FC = () => {
   };
 
   const handleAnalyzeComplete = async () => {
+    trackButtonClick('답변 종합 분석', 'CoverLetterPageV3');
     if (!userSpec.position.trim()) {
       warning('직무를 입력해주세요.');
       return;
@@ -455,10 +458,11 @@ export const CoverLetterPageV3: React.FC = () => {
 
   // 상세 첨삭 PDF 생성
   const handleGenerateDetailedFeedback = async () => {
+    trackButtonClick('자소서 첨삭 PDF 생성', 'CoverLetterPageV3');
     // 비로그인 사용자(게스트 모드)는 첨삭 기능 사용 불가
     if (!user || isGuestMode) {
-      warning('첨삭 기능은 로그인 후 이용하실 수 있습니다.\n\n회원가입하고 무료로 첨삭을 받아보세요!');
-      navigate('/signup');
+      warning('첨삭 기능은 로그인 후 이용하실 수 있습니다.\n\nGoogle로 로그인하고 무료로 첨삭을 받아보세요!');
+      navigate('/login');
       return;
     }
 
@@ -649,11 +653,11 @@ export const CoverLetterPageV3: React.FC = () => {
               {isGuestMode ? (
                 <button
                   onClick={() => {
-                    window.location.href = '/signup';
+                    window.location.href = '/login';
                   }}
                   className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition font-semibold whitespace-nowrap"
                 >
-                  회원가입하고 더 많은 기능 탐색하기
+                  로그인하고 더 많은 기능 탐색하기
                 </button>
               ) : (
                 <button

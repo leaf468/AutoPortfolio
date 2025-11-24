@@ -15,11 +15,8 @@ export default function AuthModal({ isOpen, onClose, initialMode = 'login' }: Au
 
   const handleAuth = (authMode: 'login' | 'signup') => {
     onClose();
-    if (authMode === 'login') {
-      navigate('/login');
-    } else {
-      navigate('/signup');
-    }
+    // 구글 소셜 로그인만 사용하므로 항상 로그인 페이지로 이동
+    navigate('/login');
   };
 
   return (

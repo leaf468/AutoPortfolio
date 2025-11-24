@@ -8,6 +8,7 @@ import { GenerationResult } from '../services/oneClickGenerator';
 import { aiOrganizer } from '../services/aiOrganizer';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabaseClient';
+import { trackButtonClick } from '../utils/analytics';
 
 export default function AutoFillPage() {
   const navigate = useNavigate();
@@ -94,6 +95,7 @@ export default function AutoFillPage() {
   };
 
   const handleAutoFillSave = (document: PortfolioDocument) => {
+    trackButtonClick('AutoFill 저장', 'AutoFillPage');
     // Convert document to GenerationResult format for compatibility
     const result: GenerationResult = {
       id: document.doc_id,
@@ -120,6 +122,7 @@ export default function AutoFillPage() {
   };
 
   const handleEnhancedEdit = (doc: PortfolioDocument) => {
+    trackButtonClick('고급 편집으로 이동', 'AutoFillPage');
     // Convert to GenerationResult and go to enhanced edit
     const result: GenerationResult = {
       id: doc.doc_id,

@@ -27,7 +27,7 @@ export default function TemplateSelectionPage() {
 
   return (
     <MainLayout>
-      <div className="max-w-7xl mx-auto px-16">
+      <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-16">
         <TemplateSelector
           onTemplateSelect={handleTemplateSelect}
           selectedTemplate={state.selectedTemplate || undefined}

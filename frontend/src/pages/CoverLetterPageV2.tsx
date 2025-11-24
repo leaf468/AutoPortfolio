@@ -14,6 +14,7 @@ import ComparisonResult from '../components/ComparisonResult';
 import CompanyCategorySelector from '../components/CompanyCategorySelector';
 import { CustomAlert } from '../components/CustomAlert';
 import { useAlert } from '../hooks/useAlert';
+import { trackButtonClick } from '../utils/analytics';
 
 interface CoverLetterPageV2Props {}
 
@@ -94,6 +95,7 @@ export const CoverLetterPageV2: React.FC<CoverLetterPageV2Props> = () => {
 
   // 분석 실행
   const handleAnalyze = async () => {
+    trackButtonClick('자소서 분석', 'CoverLetterPageV2');
     if (!userSpec.targetCompany || !userSpec.position) {
       warning('지원 회사와 직무를 입력해주세요.');
       return;

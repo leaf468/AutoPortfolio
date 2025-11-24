@@ -96,11 +96,11 @@ export default function HomePage() {
 
   const handleGetStarted = () => {
     trackButtonClick('포트폴리오 만들기 시작', 'HomePage');
-    // 로그인 상태면 템플릿 선택으로, 아니면 회원가입 페이지로 이동
+    // 로그인 상태면 템플릿 선택으로, 아니면 로그인 페이지로 이동
     if (user) {
       navigate('/template-selection');
     } else {
-      navigate('/signup');
+      navigate('/login');
     }
   };
 
@@ -131,18 +131,18 @@ export default function HomePage() {
               className="h-14 object-contain"
             />
           </div>
-          <div className="flex items-center space-x-6">
-            <a href="#features" className="text-gray-600 hover:text-gray-900 transition-colors">기능</a>
-            <a href="#pricing" className="text-gray-600 hover:text-gray-900 transition-colors">가격</a>
+          <div className="flex items-center space-x-4 sm:space-x-6">
+            <a href="#features" className="hidden sm:block text-gray-600 hover:text-gray-900 transition-colors">기능</a>
+            <a href="#pricing" className="hidden sm:block text-gray-600 hover:text-gray-900 transition-colors">가격</a>
             <button
               onClick={handleLogin}
-              className="px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors"
+              className="px-3 sm:px-4 py-2 text-gray-600 hover:text-gray-900 transition-colors text-sm sm:text-base"
             >
               로그인
             </button>
             <button
               onClick={handleGetStarted}
-              className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+              className="px-4 sm:px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors text-sm sm:text-base"
             >
               시작하기
             </button>
@@ -170,26 +170,23 @@ export default function HomePage() {
               8가지 질문에 답하면 AI가 전문 자소서로 완성해드립니다.<br />
               자소서 내용으로 포트폴리오까지 자동 생성됩니다.
             </p>
-            <div className="flex items-center justify-center space-x-4">
+            <div className="flex items-center justify-center">
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={handleGetStarted}
-                className="px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl text-lg shadow-lg hover:shadow-xl transition-all"
+                onClick={() => {
+                  const pricingSection = document.getElementById('pricing');
+                  if (pricingSection) {
+                    pricingSection.scrollIntoView({ behavior: 'smooth' });
+                  }
+                }}
+                className="px-10 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl text-lg shadow-lg hover:shadow-xl transition-all"
               >
-                무료로 시작하기
-              </motion.button>
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => navigate('/cover-letter?mode=guest')}
-                className="px-8 py-4 bg-white text-gray-900 font-semibold rounded-xl text-lg border-2 border-gray-200 hover:border-gray-300 transition-all"
-              >
-                데모 체험하기
+                첫 한 달 무료로 사용하기
               </motion.button>
             </div>
             <p className="mt-4 text-sm text-gray-500">
-              ✓ 회원가입만으로 무료 시작 ✓ 자소서 1회 무료 첨삭 ✓ 신용카드 불필요
+              ✓ 첫 한 달 무료 ✓ 모든 프로 기능 이용 ✓ 신용카드 불필요
             </p>
           </motion.div>
 
@@ -268,19 +265,19 @@ export default function HomePage() {
 
       {/* Social Proof */}
       <section className="py-12 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="grid grid-cols-3 gap-8 text-center">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8 text-center">
             <div>
-              <div className="text-4xl font-bold text-indigo-600">10,000+</div>
-              <div className="text-gray-600 mt-2">포트폴리오 생성</div>
+              <div className="text-3xl sm:text-4xl font-bold text-indigo-600">10,000+</div>
+              <div className="text-gray-600 mt-2 text-sm sm:text-base">포트폴리오 생성</div>
             </div>
             <div>
-              <div className="text-4xl font-bold text-indigo-600">95%</div>
-              <div className="text-gray-600 mt-2">사용자 만족도</div>
+              <div className="text-3xl sm:text-4xl font-bold text-indigo-600">95%</div>
+              <div className="text-gray-600 mt-2 text-sm sm:text-base">사용자 만족도</div>
             </div>
             <div>
-              <div className="text-4xl font-bold text-indigo-600">5분</div>
-              <div className="text-gray-600 mt-2">평균 완성 시간</div>
+              <div className="text-3xl sm:text-4xl font-bold text-indigo-600">5분</div>
+              <div className="text-gray-600 mt-2 text-sm sm:text-base">평균 완성 시간</div>
             </div>
           </div>
         </div>
@@ -444,7 +441,7 @@ export default function HomePage() {
 
             <div className="p-8 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl shadow-xl relative border-4 border-indigo-400">
               <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-yellow-400 to-orange-400 text-white text-sm font-bold rounded-full">
-                출시 특가
+                첫 한 달 무료
               </div>
               <h3 className="text-2xl font-bold text-white mb-2">프로</h3>
               <div className="mb-6">
@@ -452,10 +449,10 @@ export default function HomePage() {
                   ₩14,900
                 </div>
                 <div className="text-4xl font-bold text-white">
-                  ₩3,900<span className="text-lg text-indigo-200">/월</span>
+                  ₩0<span className="text-lg text-indigo-200">/첫 달</span>
                 </div>
                 <div className="text-sm text-yellow-300 font-semibold mt-2">
-                  73% 할인 중!
+                  첫 한 달 무료!
                 </div>
               </div>
               <ul className="space-y-4 mb-8">
@@ -553,18 +550,18 @@ export default function HomePage() {
                 회원가입이 필요합니다
               </h3>
               <p className="text-gray-600 mb-6">
-                프로 플랜을 구독하려면 먼저 회원가입이 필요합니다.<br />
-                가입 후 다양한 프리미엄 기능을 이용해보세요!
+                프로 플랜을 구독하려면 먼저 로그인이 필요합니다.<br />
+                Google로 간편하게 로그인하고 프리미엄 기능을 이용해보세요!
               </p>
               <div className="space-y-3">
                 <button
                   onClick={() => {
                     setShowSignupModal(false);
-                    navigate('/signup', { state: { openSubscribe: true } });
+                    navigate('/login', { state: { openSubscribe: true } });
                   }}
                   className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold rounded-xl hover:shadow-lg transition-all transform hover:scale-[1.02]"
                 >
-                  회원가입하기
+                  로그인하기
                 </button>
                 <button
                   onClick={() => {

@@ -4,6 +4,7 @@ import MainLayout from '../layouts/MainLayout';
 import AIOrganizer from '../components/AIOrganizer';
 import { usePortfolio } from '../contexts/PortfolioContext';
 import { OrganizedContent } from '../services/aiOrganizer';
+import { trackButtonClick } from '../utils/analytics';
 
 export default function OrganizeContentPage() {
   const navigate = useNavigate();
@@ -21,6 +22,7 @@ export default function OrganizeContentPage() {
 
   // AI 조직화 완료 후 AutoFill 페이지로 이동하는 함수
   const handleOrganizeComplete = useCallback(async (content: OrganizedContent) => {
+    trackButtonClick('AI 조직화 완료', 'OrganizeContentPage');
 
     // 조직화된 내용 저장
     setOrganizedContent(content);
