@@ -574,7 +574,7 @@ export default function HomePage() {
               </h3>
               <p className="text-gray-600 mb-6">
                 프로 플랜을 이용하려면 먼저 로그인이 필요합니다.<br />
-                Google로 간편하게 로그인하고 프리미엄 기능을 이용해보세요!
+                간편하게 로그인하고 프리미엄 기능을 이용해보세요!
               </p>
               <div className="space-y-3">
                 <button
