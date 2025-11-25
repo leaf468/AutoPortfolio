@@ -95,17 +95,18 @@ const SubscribeModal: React.FC<SubscribeModalProps> = ({ isOpen, onClose }) => {
           {/* 가격 */}
           <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-6 mb-6 text-center relative overflow-hidden">
             <div className="absolute top-2 right-2 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-              출시 특가
+              🎉 출시 특가
             </div>
             <div className="text-gray-400 text-lg line-through mb-1">
               ₩14,900
             </div>
-            <div className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-600 mb-1">
-              ₩3,900
+            <div className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-600 mb-1">
+              ₩0
             </div>
-            <div className="text-gray-600 text-sm">/ 월</div>
-            <div className="mt-2 text-xs text-red-500 font-medium">
-              73% 할인 중!
+            <div className="text-gray-600 text-sm font-semibold mb-2">첫 달 무료</div>
+            <div className="text-gray-500 text-sm">이후 ₩3,900 / 월</div>
+            <div className="mt-3 text-xs text-red-500 font-medium bg-red-50 inline-block px-3 py-1 rounded-full">
+              지금 시작하면 첫 달 무료!
             </div>
           </div>
 

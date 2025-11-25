@@ -18,7 +18,6 @@ import CoverLetterPageV3 from './pages/CoverLetterPageV3';
 import FieldBasedCoverLetterPage from './pages/FieldBasedCoverLetterPage';
 import { PositionStatsDetailPage } from './pages/PositionStatsDetailPage';
 import LoginPage from './pages/LoginPage';
-import SignupPage from './pages/SignupPage';
 import MyPage from './pages/MyPage';
 import AuthCallbackPage from './pages/AuthCallbackPage';
 import SubscribePage from './pages/SubscribePage';
@@ -48,7 +47,6 @@ function getPageTitle(pathname: string): string {
     '/cover-letter': '자소서 작성',
     '/cover-letter-field': '필드 기반 자소서 작성',
     '/login': '로그인',
-    '/signup': '회원가입',
     '/mypage': '마이페이지',
     '/auth/callback': '인증 처리',
     '/subscribe': '프로 플랜 구독',
@@ -138,7 +136,6 @@ function App() {
             <Route path="/position-stats" element={<PositionStatsDetailPage />} />
             <Route path="/subscribe" element={<SubscribePage />} />
             <Route path="/login" element={<LoginPage />} />
-            <Route path="/signup" element={<SignupPage />} />
             <Route path="/mypage" element={<MyPage />} />
             <Route path="/auth/callback" element={<AuthCallbackPage />} />
           </Routes>

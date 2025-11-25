@@ -1,20 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { login } from '../services/authService';
+import { loginWithGoogle } from '../services/authService';
 import { useAuth } from '../contexts/AuthContext';
 import LandingFooter from '../components/LandingFooter';
+import { trackButtonClick } from '../utils/analytics';
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { setUser, user } = useAuth();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const { user } = useAuth();
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
-  const [showErrorModal, setShowErrorModal] = useState(false);
-  const [errorModalMessage, setErrorModalMessage] = useState('');
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -24,37 +21,20 @@ const LoginPage: React.FC = () => {
     }
   }, [location]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleGoogleLogin = async () => {
+    trackButtonClick('구글 로그인', 'LoginPage');
     setError('');
     setLoading(true);
 
     try {
-      const result = await login({ email, password });
-
-      if (result.success && result.user) {
-        setUser(result.user);
-        // 로그인 후 구독 정보를 포함한 최신 사용자 정보 반영을 위해 짧은 딜레이 후 이동
-        // (AuthContext의 subscriptionInfo가 업데이트될 시간을 줌)
-        setTimeout(() => {
-          // returnTo state가 있으면 해당 경로로, 없으면 기본값 /mypage로 이동
-          const returnTo = (location.state as any)?.returnTo || '/mypage';
-          const openSubscribe = (location.state as any)?.openSubscribe;
-
-          if (openSubscribe) {
-            navigate(returnTo, { state: { openSubscribe: true } });
-          } else {
-            navigate(returnTo);
-          }
-        }, 100);
-      } else {
-        setErrorModalMessage(result.message || '로그인에 실패했습니다.');
-        setShowErrorModal(true);
+      const result = await loginWithGoogle();
+      if (!result.success && result.message) {
+        setError(result.message);
+        setLoading(false);
       }
+      // 성공 시 OAuth 리다이렉트가 자동으로 발생
     } catch (err) {
-      setErrorModalMessage('로그인 중 오류가 발생했습니다.');
-      setShowErrorModal(true);
-    } finally {
+      setError('구글 로그인 중 오류가 발생했습니다.');
       setLoading(false);
     }
   };
@@ -71,10 +51,10 @@ const LoginPage: React.FC = () => {
             <img
               src="/Careeroad_logo.png"
               alt="Careeroad"
-              className="h-20 w-auto"
+              className="h-16 sm:h-20 w-auto"
             />
             <div className="border-l-2 border-gray-300 pl-4 py-1">
-              <p className="text-xl font-bold text-gray-900">
+              <p className="text-lg sm:text-xl font-bold text-gray-900">
                 당신만의 AI 커리어 비서
               </p>
               <p className="text-xs text-gray-600 mt-0.5">
@@ -86,103 +66,58 @@ const LoginPage: React.FC = () => {
       </div>
 
       <div className="flex-1 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">로그인</h1>
-          <p className="text-gray-600">포트폴리오 생성 플랫폼에 오신 것을 환영합니다</p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {successMessage && (
-            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg">
-              {successMessage}
-            </div>
-          )}
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-              {error}
-            </div>
-          )}
-
-          <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-              이메일
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-              placeholder="your@email.com"
-            />
+        <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 w-full max-w-md">
+          <div className="text-center mb-8">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">로그인</h1>
+            <p className="text-gray-600">포트폴리오 생성 플랫폼에 오신 것을 환영합니다</p>
           </div>
 
-          <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-              비밀번호
-            </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition"
-              placeholder="••••••••"
-            />
+          <div className="space-y-6">
+            {successMessage && (
+              <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg text-sm">
+                {successMessage}
+              </div>
+            )}
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                {error}
+              </div>
+            )}
+
+            <button
+              onClick={handleGoogleLogin}
+              disabled={loading}
+              className="w-full bg-white hover:bg-gray-50 text-gray-700 font-semibold py-3 px-4 rounded-lg border border-gray-300 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24">
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              </svg>
+              {loading ? '로그인 중...' : 'Google로 로그인'}
+            </button>
+
+            <p className="text-xs text-center text-gray-500">
+              Google 계정으로 안전하게 로그인됩니다
+            </p>
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? '로그인 중...' : '로그인'}
-          </button>
-        </form>
+          <div className="mt-8 text-center">
+            <p className="text-sm text-gray-500">
+              처음 이용하시는 분도 Google로 로그인하시면<br />
+              자동으로 계정이 생성됩니다.
+            </p>
+          </div>
 
-        <div className="mt-6 text-center">
-          <p className="text-gray-600">
-            계정이 없으신가요?{' '}
-            <Link to="/signup" className="text-blue-600 hover:text-blue-700 font-semibold">
-              회원가입
+          <div className="mt-4 text-center">
+            <Link to="/" className="text-sm text-gray-500 hover:text-gray-700">
+              메인으로 돌아가기
             </Link>
-          </p>
-        </div>
-
-        <div className="mt-4 text-center">
-          <Link to="/" className="text-sm text-gray-500 hover:text-gray-700">
-            메인으로 돌아가기
-          </Link>
-        </div>
+          </div>
         </div>
       </div>
       <LandingFooter />
-
-      {/* 에러 모달 */}
-      {showErrorModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-sm w-full mx-4 shadow-2xl">
-            <div className="text-center">
-              <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
-                <svg className="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">로그인 실패</h3>
-              <p className="text-gray-600 mb-6">{errorModalMessage}</p>
-              <button
-                onClick={() => setShowErrorModal(false)}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-lg transition duration-200"
-              >
-                확인
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

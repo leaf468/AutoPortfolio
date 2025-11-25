@@ -44,7 +44,7 @@ const Footer: React.FC = () => {
                       if (user) {
                         navigate('/cover-letter');
                       } else {
-                        navigate('/signup');
+                        navigate('/login');
                       }
                     }}
                     className="text-sm hover:text-white transition text-left"
@@ -58,7 +58,7 @@ const Footer: React.FC = () => {
                       if (user) {
                         navigate('/template-selection');
                       } else {
-                        navigate('/signup');
+                        navigate('/login');
                       }
                     }}
                     className="text-sm hover:text-white transition text-left"

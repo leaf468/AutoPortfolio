@@ -12,6 +12,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabaseClient';
 import { CustomAlert } from '../components/CustomAlert';
 import { useAlert } from '../hooks/useAlert';
+import { trackButtonClick } from '../utils/analytics';
 
 type TemplateType = 'minimal' | 'clean' | 'colorful' | 'elegant';
 
@@ -160,6 +161,7 @@ export default function TemplateEditPage() {
 
   // 저장하기 - DB 저장 후 마이페이지로 이동 (완성 페이지 건너뜀)
   const handleSaveOnly = async () => {
+    trackButtonClick('포트폴리오 저장', 'TemplateEditPage');
     if (!user) {
       warning('로그인이 필요합니다.');
       return;
@@ -249,6 +251,7 @@ export default function TemplateEditPage() {
 
   // 완성하기 - DB 저장 후 완성 페이지로 이동
   const handleComplete = async (document: PortfolioDocument) => {
+    trackButtonClick('포트폴리오 완성', 'TemplateEditPage');
     if (!user) {
       warning('로그인이 필요합니다.');
       return;

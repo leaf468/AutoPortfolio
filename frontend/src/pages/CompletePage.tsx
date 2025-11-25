@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import MainLayout from '../layouts/MainLayout';
 import FinalResultPanel from '../components/FinalResultPanel';
 import { usePortfolio } from '../contexts/PortfolioContext';
+import { trackButtonClick } from '../utils/analytics';
 
 export default function CompletePage() {
   const navigate = useNavigate();
@@ -19,6 +20,7 @@ export default function CompletePage() {
   }, []);
 
   const handleReset = () => {
+    trackButtonClick('새로 만들기', 'CompletePage');
     reset();
     navigate('/');
   };

@@ -23,6 +23,7 @@ import { useAlert } from '../hooks/useAlert';
 import Footer from '../components/Footer';
 import { saveFieldBasedCoverLetter, updateFieldBasedCoverLetter, convertFieldBasedToRegular } from '../services/fieldBasedCoverLetterService';
 import { supabase } from '../lib/supabaseClient';
+import { trackButtonClick } from '../utils/analytics';
 
 const createEmptyMotivationFields = (company: string, position: string): MotivationFields => ({
   companyName: company,
@@ -171,6 +172,7 @@ export const FieldBasedCoverLetterPage: React.FC = () => {
   };
 
   const handleAddQuestion = (fieldType: FieldType) => {
+    trackButtonClick(`질문 추가: ${fieldType}`, 'FieldBasedCoverLetterPage');
     if (fieldType === 'custom') {
       setIsCustomModalOpen(true);
       return;
@@ -261,6 +263,7 @@ export const FieldBasedCoverLetterPage: React.FC = () => {
   };
 
   const handleGetAIFeedback = async () => {
+    trackButtonClick('AI 첨삭 받기', 'FieldBasedCoverLetterPage');
     if (!user) {
       warning('로그인이 필요합니다.');
       return;
@@ -309,63 +312,8 @@ export const FieldBasedCoverLetterPage: React.FC = () => {
     }
   };
 
-  const handleSave = async () => {
-    if (!user) {
-      warning('로그인이 필요합니다.');
-      return;
-    }
-
-    if (!companyName.trim() || !position.trim()) {
-      warning('회사명과 직무를 입력해주세요.');
-      return;
-    }
-
-    if (questions.length === 0) {
-      warning('최소 하나 이상의 질문을 추가해주세요.');
-      return;
-    }
-
-    setIsSaving(true);
-
-    try {
-      if (documentId) {
-        // 업데이트
-        const result = await updateFieldBasedCoverLetter(
-          documentId,
-          companyName,
-          position,
-          questions
-        );
-
-        if (result.success) {
-          success('자소서가 수정되었습니다.');
-        } else {
-          showError(result.message || '수정에 실패했습니다.');
-        }
-      } else {
-        // 새로 저장
-        const result = await saveFieldBasedCoverLetter(
-          user.user_id,
-          companyName,
-          position,
-          questions
-        );
-
-        if (result.success && result.documentId) {
-          setDocumentId(result.documentId);
-          success('자소서가 저장되었습니다.');
-        } else {
-          showError(result.message || '저장에 실패했습니다.');
-        }
-      }
-    } catch (err) {
-      showError('저장 중 오류가 발생했습니다.');
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const handleLoadToRegularEditor = () => {
+  const handleLoadToRegularEditor = async () => {
+    trackButtonClick('자소서 편집하기', 'FieldBasedCoverLetterPage');
     if (!companyName.trim() || !position.trim()) {
       warning('회사명과 직무를 먼저 입력해주세요.');
       return;
@@ -374,6 +322,48 @@ export const FieldBasedCoverLetterPage: React.FC = () => {
     if (questions.length === 0) {
       warning('최소 하나 이상의 질문을 추가해주세요.');
       return;
+    }
+
+    // 로그인한 사용자인 경우 field_based_... 테이블에 저장
+    if (user) {
+      setIsSaving(true);
+      try {
+        if (documentId) {
+          // 업데이트
+          const result = await updateFieldBasedCoverLetter(
+            documentId,
+            companyName,
+            position,
+            questions
+          );
+          if (!result.success) {
+            showError(result.message || '저장에 실패했습니다.');
+            setIsSaving(false);
+            return;
+          }
+        } else {
+          // 새로 저장
+          const result = await saveFieldBasedCoverLetter(
+            user.user_id,
+            companyName,
+            position,
+            questions
+          );
+          if (!result.success) {
+            showError(result.message || '저장에 실패했습니다.');
+            setIsSaving(false);
+            return;
+          }
+          if (result.documentId) {
+            setDocumentId(result.documentId);
+          }
+        }
+      } catch (err) {
+        showError('저장 중 오류가 발생했습니다.');
+        setIsSaving(false);
+        return;
+      }
+      setIsSaving(false);
     }
 
     // 필드 기반 데이터를 일반 자소서 형식으로 변환
@@ -439,21 +429,11 @@ export const FieldBasedCoverLetterPage: React.FC = () => {
               </Link>
               <button
                 onClick={handleLoadToRegularEditor}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium whitespace-nowrap"
+                disabled={isSaving}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                자소서 편집하기
+                {isSaving ? '로딩 중...' : '자소서 편집하기'}
               </button>
-              {user && (
-                <>
-                  <button
-                    onClick={handleSave}
-                    disabled={isSaving}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isSaving ? '저장 중...' : '저장하기'}
-                  </button>
-                </>
-              )}
             </div>
           </div>
         </div>

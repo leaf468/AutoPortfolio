@@ -5,6 +5,7 @@ import EnhancedPortfolioEditor from '../components/EnhancedPortfolioEditor';
 import { usePortfolio } from '../contexts/PortfolioContext';
 import { PortfolioDocument } from '../services/autoFillService';
 import { GenerationResult } from '../services/oneClickGenerator';
+import { trackButtonClick } from '../utils/analytics';
 
 export default function EnhancedEditPage() {
   const navigate = useNavigate();
@@ -45,6 +46,7 @@ export default function EnhancedEditPage() {
   }, []); // Run only once on mount
 
   const handleSave = (document: PortfolioDocument) => {
+    trackButtonClick('Enhanced 편집 저장', 'EnhancedEditPage');
     // Convert PortfolioDocument back to GenerationResult format
     const result: GenerationResult = {
       id: document.doc_id,
