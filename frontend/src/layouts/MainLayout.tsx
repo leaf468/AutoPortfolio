@@ -99,43 +99,43 @@ export default function MainLayout({
       {/* 헤더 */}
       {showHeader && (
         <div className="bg-white shadow-sm border-b border-gray-200">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-            <div className="flex items-center justify-between">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
               <div
-                className="flex items-center gap-4 cursor-pointer hover:opacity-80 transition-opacity"
+                className="flex items-center gap-2 sm:gap-4 cursor-pointer hover:opacity-80 transition-opacity"
                 onClick={handleLogoClick}
                 title="홈으로 돌아가기"
               >
                 <img
                   src="/Careeroad_logo.png"
                   alt="Careeroad"
-                  className="h-20 w-auto"
+                  className="h-12 sm:h-16 md:h-20 w-auto"
                 />
-                <div className="border-l-2 border-gray-300 pl-4 py-1">
-                  <p className="text-xl font-bold text-gray-900">
+                <div className="border-l-2 border-gray-300 pl-2 sm:pl-4 py-1">
+                  <p className="text-base sm:text-lg md:text-xl font-bold text-gray-900">
                     당신만의 AI 커리어 비서
                   </p>
-                  <p className="text-xs text-gray-600 mt-0.5">
+                  <p className="text-xs text-gray-600 mt-0.5 hidden sm:block">
                     경험 관리부터 포트폴리오 생성까지
                   </p>
                 </div>
               </div>
-              <div className="flex items-center space-x-6">
+              <div className="flex flex-wrap items-center gap-2 sm:gap-4 md:gap-6 w-full sm:w-auto">
                 <Link
                   to="/cover-letter"
-                  className="text-sm text-gray-700 hover:text-blue-600 transition font-medium whitespace-nowrap"
+                  className="text-xs sm:text-sm text-gray-700 hover:text-blue-600 transition font-medium"
                 >
                   자기소개서 작성하기
                 </Link>
                 <Link
                   to="/template-selection"
-                  className="text-sm text-gray-700 hover:text-blue-600 transition font-medium whitespace-nowrap"
+                  className="text-xs sm:text-sm text-gray-700 hover:text-blue-600 transition font-medium"
                 >
                   포트폴리오 제작하기
                 </Link>
                 <Link
                   to="/mypage"
-                  className="text-sm text-gray-700 hover:text-blue-600 transition font-medium whitespace-nowrap"
+                  className="text-xs sm:text-sm text-gray-700 hover:text-blue-600 transition font-medium"
                 >
                   마이페이지
                 </Link>
@@ -147,29 +147,29 @@ export default function MainLayout({
 
       {/* 진행 단계 표시 */}
       {showProgress && state.currentStep !== 'complete' && (
-        <div className="bg-white border-b border-gray-200">
-          <div className="max-w-7xl mx-auto px-8 py-3">
-            <div className="flex items-center justify-between gap-3">
+        <div className="bg-white border-b border-gray-200 overflow-x-auto">
+          <div className="max-w-7xl mx-auto px-4 sm:px-8 py-3">
+            <div className="flex items-center justify-between gap-2 sm:gap-3 min-w-max sm:min-w-0">
               {steps.map((step, index) => {
                 const status = getStepStatus(step.id);
 
                 return (
                   <React.Fragment key={step.id}>
                     <div className="flex flex-col items-center min-w-0 flex-1">
-                      <div className={`w-9 h-9 rounded-full flex items-center justify-center ${getStepColor(status)} mb-1`}>
+                      <div className={`w-7 h-7 sm:w-9 sm:h-9 rounded-full flex items-center justify-center ${getStepColor(status)} mb-1`}>
                         {status === 'complete' ? (
-                          <CheckIcon className="w-5 h-5" />
+                          <CheckIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                         ) : (
-                          <span className="text-sm font-bold">{index + 1}</span>
+                          <span className="text-xs sm:text-sm font-bold">{index + 1}</span>
                         )}
                       </div>
-                      <p className={`text-xs font-medium whitespace-nowrap ${status === 'current' ? 'text-purple-600' : status === 'complete' ? 'text-green-600' : 'text-gray-500'}`}>
+                      <p className={`text-[10px] sm:text-xs font-medium whitespace-nowrap ${status === 'current' ? 'text-purple-600' : status === 'complete' ? 'text-green-600' : 'text-gray-500'}`}>
                         {step.name}
                       </p>
                     </div>
 
                     {index < steps.length - 1 && (
-                      <div className="flex-1 mx-2 mt-[-18px]">
+                      <div className="flex-1 mx-1 sm:mx-2 mt-[-18px]">
                         <div className={`h-0.5 rounded-full ${status === 'complete' ? 'bg-green-600' : 'bg-gray-200'}`} />
                       </div>
                     )}

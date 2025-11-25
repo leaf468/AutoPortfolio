@@ -529,16 +529,16 @@ const MyPage: React.FC = () => {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       {/* 헤더 */}
       <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+            <div className="flex items-center space-x-4 sm:space-x-8 w-full sm:w-auto">
               {/* 로고 - 로그인 상태에서는 마이페이지로 이동 */}
               <Link to="/mypage" className="flex items-center space-x-2">
-                <img src="/Careeroad_logo.png" alt="Careeroad" className="h-14" />
+                <img src="/Careeroad_logo.png" alt="Careeroad" className="h-10 sm:h-12 md:h-14" />
               </Link>
 
-              {/* 네비게이션 버튼들 */}
-              <nav className="flex items-center space-x-2">
+              {/* 네비게이션 버튼들 - 모바일에서 숨김 */}
+              <nav className="hidden md:flex items-center space-x-2">
                 <button
                   onClick={() => navigate('/cover-letter')}
                   className="px-4 py-2 text-gray-700 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors font-medium"
@@ -554,75 +554,91 @@ const MyPage: React.FC = () => {
               </nav>
             </div>
 
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-lg">
+            <div className="flex items-center space-x-2 sm:space-x-4 w-full sm:w-auto justify-between sm:justify-end">
+              <div className="flex items-center space-x-2 sm:space-x-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm sm:text-lg">
                   {user.name.charAt(0).toUpperCase()}
                 </div>
-                <div>
+                <div className="hidden sm:block">
                   <p className="text-sm font-semibold text-gray-900">{user.name}</p>
                   <p className="text-xs text-gray-500">{user.email}</p>
                 </div>
               </div>
               <button
                 onClick={handleLogout}
-                className="flex items-center space-x-2 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition"
+                className="flex items-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition"
               >
-                <ArrowRightOnRectangleIcon className="w-5 h-5" />
-                <span>로그아웃</span>
+                <ArrowRightOnRectangleIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+                <span className="text-xs sm:text-sm">로그아웃</span>
               </button>
             </div>
           </div>
+
+          {/* 모바일 네비게이션 - md 이하에서만 표시 */}
+          <nav className="flex md:hidden items-center gap-2 mt-3 pt-3 border-t border-gray-100">
+            <button
+              onClick={() => navigate('/cover-letter')}
+              className="flex-1 px-3 py-2 text-xs sm:text-sm text-gray-700 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors font-medium text-center"
+            >
+              자기소개서 작성
+            </button>
+            <button
+              onClick={() => navigate('/template-selection')}
+              className="flex-1 px-3 py-2 text-xs sm:text-sm text-gray-700 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors font-medium text-center"
+            >
+              포트폴리오 만들기
+            </button>
+          </nav>
         </div>
       </header>
 
       {/* 탭 네비게이션 */}
-      <div className="bg-white border-b">
+      <div className="bg-white border-b overflow-x-auto">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex space-x-8">
+          <div className="flex space-x-4 sm:space-x-8 min-w-max sm:min-w-0">
             <button
               onClick={() => setActiveTab('documents')}
-              className={`flex items-center space-x-2 py-4 border-b-2 transition ${
+              className={`flex items-center space-x-1 sm:space-x-2 py-3 sm:py-4 border-b-2 transition whitespace-nowrap ${
                 activeTab === 'documents'
                   ? 'border-blue-600 text-blue-600'
                   : 'border-transparent text-gray-600 hover:text-gray-900'
               }`}
             >
-              <DocumentTextIcon className="w-5 h-5" />
-              <span className="font-medium">내 자소서</span>
+              <DocumentTextIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="font-medium text-sm sm:text-base">내 자소서</span>
             </button>
             <button
               onClick={() => setActiveTab('portfolios')}
-              className={`flex items-center space-x-2 py-4 border-b-2 transition ${
+              className={`flex items-center space-x-1 sm:space-x-2 py-3 sm:py-4 border-b-2 transition whitespace-nowrap ${
                 activeTab === 'portfolios'
                   ? 'border-blue-600 text-blue-600'
                   : 'border-transparent text-gray-600 hover:text-gray-900'
               }`}
             >
-              <FolderOpenIcon className="w-5 h-5" />
-              <span className="font-medium">내 포트폴리오</span>
+              <FolderOpenIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="font-medium text-sm sm:text-base">내 포트폴리오</span>
             </button>
             <button
               onClick={() => setActiveTab('feedbacks')}
-              className={`flex items-center space-x-2 py-4 border-b-2 transition ${
+              className={`flex items-center space-x-1 sm:space-x-2 py-3 sm:py-4 border-b-2 transition whitespace-nowrap ${
                 activeTab === 'feedbacks'
                   ? 'border-blue-600 text-blue-600'
                   : 'border-transparent text-gray-600 hover:text-gray-900'
               }`}
             >
-              <ClipboardDocumentCheckIcon className="w-5 h-5" />
-              <span className="font-medium">자소서 첨삭 결과</span>
+              <ClipboardDocumentCheckIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="font-medium text-sm sm:text-base">첨삭 결과</span>
             </button>
             <button
               onClick={() => setActiveTab('profile')}
-              className={`flex items-center space-x-2 py-4 border-b-2 transition ${
+              className={`flex items-center space-x-1 sm:space-x-2 py-3 sm:py-4 border-b-2 transition whitespace-nowrap ${
                 activeTab === 'profile'
                   ? 'border-blue-600 text-blue-600'
                   : 'border-transparent text-gray-600 hover:text-gray-900'
               }`}
             >
-              <Cog6ToothIcon className="w-5 h-5" />
-              <span className="font-medium">프로필 설정</span>
+              <Cog6ToothIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="font-medium text-sm sm:text-base">프로필 설정</span>
             </button>
           </div>
         </div>

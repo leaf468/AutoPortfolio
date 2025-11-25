@@ -152,24 +152,23 @@ export default function HomePage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="pt-32 pb-20 px-6">
+      <section className="pt-24 sm:pt-32 pb-12 sm:pb-20 px-4 sm:px-6">
         <div className="max-w-[1400px] mx-auto text-center">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <div className="inline-block mb-4 px-4 py-2 bg-indigo-50 rounded-full">
-              <span className="text-indigo-600 font-semibold text-sm">✨ AI 자소서 첨삭 + 포트폴리오 생성</span>
+            <div className="inline-block mb-3 sm:mb-4 px-3 sm:px-4 py-1.5 sm:py-2 bg-indigo-50 rounded-full">
+              <span className="text-indigo-600 font-semibold text-xs sm:text-sm">✨ AI 자소서 첨삭 + 포트폴리오 생성</span>
             </div>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6" style={{ lineHeight: '1.5' }}>
+            <h1 className="text-2xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-4 sm:mb-6 leading-tight" style={{ lineHeight: '1.4' }}>
               <span className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">
                 자소서 작성,<br />어디서부터 시작할지 막막하신가요?
               </span>
             </h1>
-            <p className="text-xl md:text-2xl text-gray-600 mb-10 max-w-3xl mx-auto">
-              8가지 질문에 답하면 AI가 전문 자소서로 완성해드립니다.<br />
-              자소서 내용으로 포트폴리오까지 자동 생성됩니다.
+            <p className="text-sm sm:text-xl md:text-2xl text-gray-600 mb-6 sm:mb-10 max-w-3xl mx-auto leading-relaxed px-2">
+              질문에 답만 하면, AI가 자소서와 포트폴리오를 완성합니다.
             </p>
             <div className="flex items-center justify-center">
               <motion.button
@@ -181,12 +180,12 @@ export default function HomePage() {
                     pricingSection.scrollIntoView({ behavior: 'smooth' });
                   }
                 }}
-                className="px-10 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl text-lg shadow-lg hover:shadow-xl transition-all"
+                className="px-6 sm:px-10 py-3 sm:py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl text-sm sm:text-lg shadow-lg hover:shadow-xl transition-all"
               >
                 첫 한 달 무료로 사용하기
               </motion.button>
             </div>
-            <p className="mt-4 text-sm text-gray-500">
+            <p className="mt-3 sm:mt-4 text-xs sm:text-sm text-gray-500">
               ✓ 첫 한 달 무료 ✓ 모든 프로 기능 이용 ✓ 신용카드 불필요
             </p>
           </motion.div>
@@ -252,11 +251,11 @@ export default function HomePage() {
             </div>
 
             {/* Slide Info */}
-            <div className="text-center mt-12 max-w-4xl mx-auto px-4">
-              <h3 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4 leading-tight">
+            <div className="text-center mt-8 sm:mt-12 max-w-4xl mx-auto px-4">
+              <h3 className="text-lg sm:text-2xl md:text-3xl font-bold text-gray-900 mb-2 sm:mb-4 leading-tight">
                 {slides[currentSlide].title}
               </h3>
-              <p className="text-base md:text-lg text-gray-600 leading-relaxed">
+              <p className="text-sm sm:text-base md:text-lg text-gray-600 leading-relaxed">
                 {slides[currentSlide].subtitle}
               </p>
             </div>
@@ -264,8 +263,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Social Proof */}
-      <section className="py-12 bg-gray-50">
+      {/* Social Proof - 모바일에서 숨김 */}
+      <section className="hidden md:block py-12 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8 text-center">
             <div>
@@ -285,24 +284,22 @@ export default function HomePage() {
       </section>
 
       {/* Features Section */}
-      <section id="features" className="py-24 px-6 bg-gray-50">
+      <section id="features" className="py-12 sm:py-20 md:py-24 px-4 sm:px-6 bg-gray-50">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+          <div className="text-center mb-8 sm:mb-12 md:mb-16">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900">
               왜 CareeRoad를 선택해야 하나요?
             </h2>
-            <p className="text-xl text-gray-600">
-              8가지 질문에 답하면 AI가 자소서를 완성하고, 포트폴리오까지 자동으로 만들어줍니다
-            </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
+            {/* 모바일에서 숨김 */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.1 }}
-              className="p-8 bg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow border border-gray-100"
+              className="hidden md:block p-8 bg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow border border-gray-100"
             >
               <div className="w-14 h-14 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-xl flex items-center justify-center mb-6">
                 <DocumentTextIcon className="w-8 h-8 text-white" />
@@ -313,12 +310,13 @@ export default function HomePage() {
               </p>
             </motion.div>
 
+            {/* 모바일에서 숨김 */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.2 }}
-              className="p-8 bg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow border border-gray-100"
+              className="hidden md:block p-8 bg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow border border-gray-100"
             >
               <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center mb-6">
                 <ChartBarIcon className="w-8 h-8 text-white" />
@@ -334,13 +332,13 @@ export default function HomePage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.3 }}
-              className="p-8 bg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow border border-gray-100"
+              className="p-5 sm:p-8 bg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow border border-gray-100"
             >
-              <div className="w-14 h-14 bg-gradient-to-br from-pink-500 to-pink-600 rounded-xl flex items-center justify-center mb-6">
-                <CpuChipIcon className="w-8 h-8 text-white" />
+              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-pink-500 to-pink-600 rounded-xl flex items-center justify-center mb-4 sm:mb-6">
+                <CpuChipIcon className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">핵심만 입력하면 AI가 작성</h3>
-              <p className="text-gray-600 leading-relaxed">
+              <h3 className="text-lg sm:text-2xl font-bold text-gray-900 mb-3 sm:mb-4">핵심만 입력하면 AI가 작성</h3>
+              <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
                 키워드만 입력하면 AI가 STAR 기법을 적용한 완성도 높은 답변을 작성합니다.
               </p>
             </motion.div>
@@ -350,13 +348,13 @@ export default function HomePage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.4 }}
-              className="p-8 bg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow border border-gray-100"
+              className="p-5 sm:p-8 bg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow border border-gray-100"
             >
-              <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mb-6">
-                <UserGroupIcon className="w-8 h-8 text-white" />
+              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mb-4 sm:mb-6">
+                <UserGroupIcon className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">자소서→포트폴리오 자동 연결</h3>
-              <p className="text-gray-600 leading-relaxed">
+              <h3 className="text-lg sm:text-2xl font-bold text-gray-900 mb-3 sm:mb-4">자소서→포트폴리오 자동 연결</h3>
+              <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
                 작성한 자소서 내용이 포트폴리오에 자동으로 연결되어 한 번에 모든 서류를 완성합니다.
               </p>
             </motion.div>
@@ -366,13 +364,13 @@ export default function HomePage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.5 }}
-              className="p-8 bg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow border border-gray-100"
+              className="p-5 sm:p-8 bg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow border border-gray-100"
             >
-              <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center mb-6">
-                <RocketLaunchIcon className="w-8 h-8 text-white" />
+              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center mb-4 sm:mb-6">
+                <RocketLaunchIcon className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">직무별 맞춤 통계 제공</h3>
-              <p className="text-gray-600 leading-relaxed">
+              <h3 className="text-lg sm:text-2xl font-bold text-gray-900 mb-3 sm:mb-4">직무별 맞춤 통계 제공</h3>
+              <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
                 지원 직무를 입력하면 평균 스펙, 추천 활동, 필요한 자격증을 바로 확인할 수 있습니다.
               </p>
             </motion.div>
@@ -382,13 +380,13 @@ export default function HomePage() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: 0.6 }}
-              className="p-8 bg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow border border-gray-100"
+              className="p-5 sm:p-8 bg-white rounded-2xl shadow-md hover:shadow-xl transition-shadow border border-gray-100"
             >
-              <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center mb-6">
-                <CheckCircleIcon className="w-8 h-8 text-white" />
+              <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center mb-4 sm:mb-6">
+                <CheckCircleIcon className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">출시 기념 첫 달 0원</h3>
-              <p className="text-gray-600 leading-relaxed">
+              <h3 className="text-lg sm:text-2xl font-bold text-gray-900 mb-3 sm:mb-4">출시 기념 첫 달 0원</h3>
+              <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
                 무제한 AI 첨삭, 포트폴리오 생성, 프리미엄 템플릿을 모두 이용할 수 있습니다. 첫 달 무료 후 월 3,900원
               </p>
             </motion.div>
@@ -397,19 +395,20 @@ export default function HomePage() {
       </section>
 
       {/* Pricing Section */}
-      <section id="pricing" className="py-24 px-6">
+      <section id="pricing" className="py-12 sm:py-20 md:py-24 px-4 sm:px-6">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+          <div className="text-center mb-8 sm:mb-12 md:mb-16">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-3 sm:mb-4">
               모두를 위한 가격
             </h2>
-            <p className="text-xl text-gray-600">
+            <p className="text-sm sm:text-base md:text-xl text-gray-600 px-2">
               지금 시작하면 모든 기능을 무료로 사용할 수 있습니다
             </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            <div className="p-8 bg-white rounded-2xl shadow-md border border-gray-200">
+            {/* 무료 플랜 - 모바일에서 숨김 */}
+            <div className="hidden md:block p-8 bg-white rounded-2xl shadow-md border border-gray-200">
               <h3 className="text-2xl font-bold text-gray-900 mb-2">무료</h3>
               <div className="text-4xl font-bold text-gray-900 mb-6">
                 ₩0<span className="text-lg text-gray-500">/월</span>
@@ -440,56 +439,58 @@ export default function HomePage() {
               </button>
             </div>
 
-            <div className="p-8 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl shadow-xl relative border-4 border-indigo-400">
-              <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-yellow-400 to-orange-400 text-white text-sm font-bold rounded-full">
+            {/* 프로 플랜 - 모바일에서도 표시 */}
+            <div className="p-6 sm:p-8 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl shadow-xl relative border-4 border-indigo-400">
+              <div className="absolute -top-3 sm:-top-4 left-1/2 transform -translate-x-1/2 px-3 sm:px-4 py-1 bg-gradient-to-r from-yellow-400 to-orange-400 text-white text-xs sm:text-sm font-bold rounded-full whitespace-nowrap">
                 🎉 출시 특가
               </div>
-              <h3 className="text-2xl font-bold text-white mb-2">프로</h3>
+              <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">프로</h3>
               <div className="mb-6">
-                <div className="text-lg text-indigo-200 line-through mb-1">
+                <div className="text-base sm:text-lg text-indigo-200 line-through mb-1">
                   ₩14,900
                 </div>
-                <div className="text-4xl font-bold text-white">
-                  ₩0<span className="text-lg text-indigo-200">/첫 달</span>
+                <div className="text-3xl sm:text-4xl font-bold text-white">
+                  ₩0<span className="text-base sm:text-lg text-indigo-200">/첫 달</span>
                 </div>
-                <div className="text-sm text-white/90 mt-2">
+                <div className="text-xs sm:text-sm text-white/90 mt-2">
                   이후 ₩3,900/월
                 </div>
-                <div className="text-sm text-yellow-300 font-semibold mt-1">
-                  출시 기념 특가! 지금 시작하면 첫 달 무료
+                <div className="text-xs sm:text-sm text-yellow-300 font-semibold mt-1">
+                  지금 시작하면 첫 달 무료!
                 </div>
               </div>
-              <ul className="space-y-4 mb-8">
-                <li className="flex items-center text-white">
-                  <CheckCircleIcon className="w-5 h-5 text-yellow-300 mr-3" />
-                  무제한 자소서 AI 첨삭
+              <ul className="space-y-3 sm:space-y-4 mb-6 sm:mb-8">
+                <li className="flex items-center text-white text-sm sm:text-base">
+                  <CheckCircleIcon className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-300 mr-2 sm:mr-3 flex-shrink-0" />
+                  <span>무제한 자소서 AI 첨삭</span>
                 </li>
-                <li className="flex items-center text-white">
-                  <CheckCircleIcon className="w-5 h-5 text-yellow-300 mr-3" />
-                  포트폴리오 AI 생성
+                <li className="flex items-center text-white text-sm sm:text-base">
+                  <CheckCircleIcon className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-300 mr-2 sm:mr-3 flex-shrink-0" />
+                  <span>포트폴리오 AI 생성</span>
                 </li>
-                <li className="flex items-center text-white">
-                  <CheckCircleIcon className="w-5 h-5 text-yellow-300 mr-3" />
-                  모든 프리미엄 템플릿
+                <li className="flex items-center text-white text-sm sm:text-base">
+                  <CheckCircleIcon className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-300 mr-2 sm:mr-3 flex-shrink-0" />
+                  <span>모든 프리미엄 템플릿</span>
                 </li>
-                <li className="flex items-center text-white">
-                  <CheckCircleIcon className="w-5 h-5 text-yellow-300 mr-3" />
-                  무제한 AI 생성 및 편집
+                <li className="flex items-center text-white text-sm sm:text-base">
+                  <CheckCircleIcon className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-300 mr-2 sm:mr-3 flex-shrink-0" />
+                  <span>무제한 AI 생성/편집</span>
                 </li>
-                <li className="flex items-center text-white">
-                  <CheckCircleIcon className="w-5 h-5 text-yellow-300 mr-3" />
-                  우선 고객지원
+                <li className="flex items-center text-white text-sm sm:text-base">
+                  <CheckCircleIcon className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-300 mr-2 sm:mr-3 flex-shrink-0" />
+                  <span>우선 고객지원</span>
                 </li>
               </ul>
               <button
                 onClick={handleProPlanClick}
-                className="w-full py-3 bg-white text-indigo-600 font-semibold rounded-lg hover:bg-gray-50 transition-colors"
+                className="w-full py-2.5 sm:py-3 bg-white text-indigo-600 font-semibold rounded-lg hover:bg-gray-50 transition-colors text-sm sm:text-base"
               >
                 시작하기
               </button>
             </div>
 
-            <div className="p-8 bg-white rounded-2xl shadow-md border border-gray-200">
+            {/* 기업 플랜 - 모바일에서 숨김 */}
+            <div className="hidden md:block p-8 bg-white rounded-2xl shadow-md border border-gray-200">
               <h3 className="text-2xl font-bold text-gray-900 mb-2">기업</h3>
               <div className="text-4xl font-bold text-gray-900 mb-6">
                 문의<span className="text-lg text-gray-500"></span>
@@ -521,13 +522,13 @@ export default function HomePage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-24 px-6 bg-gradient-to-r from-indigo-600 to-purple-600">
+      <section className="py-12 sm:py-20 md:py-24 px-4 sm:px-6 bg-gradient-to-r from-indigo-600 to-purple-600">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 sm:mb-6 leading-tight">
             지금 바로 무료로 시작해보세요
           </h2>
-          <p className="text-xl text-indigo-100 mb-10">
-            회원가입만 하면 8가지 질문 기반 작성 + AI 답변 생성 + 1회 무료 첨삭이 무료입니다.
+          <p className="text-sm sm:text-base md:text-lg lg:text-xl text-indigo-100 mb-6 sm:mb-8 md:mb-10 leading-relaxed px-2">
+            회원가입만 하면 8가지 질문 기반 작성 +<br className="sm:hidden" /> AI 답변 생성 + 1회 무료 첨삭이 무료입니다.
           </p>
           <motion.button
             whileHover={{ scale: 1.05 }}
@@ -538,7 +539,7 @@ export default function HomePage() {
                 pricingSection.scrollIntoView({ behavior: 'smooth' });
               }
             }}
-            className="px-10 py-4 bg-white text-indigo-600 font-bold rounded-xl text-lg shadow-lg hover:shadow-xl transition-all"
+            className="px-6 sm:px-8 md:px-10 py-3 sm:py-4 bg-white text-indigo-600 font-bold rounded-xl text-base sm:text-lg shadow-lg hover:shadow-xl transition-all"
           >
             첫 한 달 무료로 사용하기
           </motion.button>

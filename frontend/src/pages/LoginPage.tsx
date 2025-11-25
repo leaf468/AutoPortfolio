@@ -69,7 +69,7 @@ const LoginPage: React.FC = () => {
         <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 w-full max-w-md">
           <div className="text-center mb-8">
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">로그인</h1>
-            <p className="text-gray-600">포트폴리오 생성 플랫폼에 오신 것을 환영합니다</p>
+            <p className="text-sm sm:text-base text-gray-600">AI 커리어 비서, Careeroad</p>
           </div>
 
           <div className="space-y-6">

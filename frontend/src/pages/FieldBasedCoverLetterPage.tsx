@@ -395,42 +395,42 @@ export const FieldBasedCoverLetterPage: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex flex-col">
       {/* 헤더 */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+            <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
               <Link to={user ? '/mypage' : '/'}>
                 <img
                   src="/Careeroad_logo.png"
                   alt="Careeroad"
-                  className="h-20 w-auto cursor-pointer"
+                  className="h-12 sm:h-16 md:h-20 w-auto cursor-pointer"
                 />
               </Link>
-              <div className="border-l-2 border-gray-300 pl-4 py-1">
-                <h1 className="text-xl font-bold text-gray-900">
+              <div className="border-l-2 border-gray-300 pl-2 sm:pl-4 py-1">
+                <h1 className="text-base sm:text-lg md:text-xl font-bold text-gray-900">
                   자소서 작성
                 </h1>
-                <p className="text-xs text-gray-600 mt-0.5">
+                <p className="text-xs text-gray-600 mt-0.5 hidden sm:block">
                   질문을 선택하고 핵심 내용을 입력하세요
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-6">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4 md:gap-6 w-full sm:w-auto">
               <Link
                 to={`/cover-letter-basic${new URLSearchParams(window.location.search).get('mode') === 'guest' ? '?mode=guest' : ''}`}
-                className="text-sm text-gray-700 hover:text-blue-600 transition font-medium whitespace-nowrap"
+                className="text-xs sm:text-sm text-gray-700 hover:text-blue-600 transition font-medium"
               >
                 자유 작성 모드
               </Link>
               <Link
                 to="/mypage"
-                className="text-sm text-gray-700 hover:text-blue-600 transition font-medium whitespace-nowrap"
+                className="text-xs sm:text-sm text-gray-700 hover:text-blue-600 transition font-medium"
               >
                 마이페이지
               </Link>
               <button
                 onClick={handleLoadToRegularEditor}
                 disabled={isSaving}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-3 sm:px-4 py-1.5 sm:py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium text-xs sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSaving ? '로딩 중...' : '자소서 편집하기'}
               </button>
@@ -439,33 +439,47 @@ export const FieldBasedCoverLetterPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 py-8 flex-1">
-        {/* 안내 문구 */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-5 mb-6">
-          <div className="flex items-start gap-3">
-            <span className="text-2xl">💡</span>
+      <div className="max-w-5xl mx-auto px-4 py-4 sm:py-8 flex-1">
+        {/* 안내 문구 - 모바일에서 간소화 */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-5 mb-4 sm:mb-6">
+          <div className="flex items-start gap-2 sm:gap-3">
+            <span className="text-xl sm:text-2xl">💡</span>
             <div className="flex-1">
-              <h3 className="text-lg font-bold text-gray-900 mb-3">
-                작성 방법
-              </h3>
+              {/* 데스크톱 버전 */}
+              <div className="hidden sm:block">
+                <h3 className="text-lg font-bold text-gray-900 mb-3">
+                  작성 방법
+                </h3>
 
-              <div className="space-y-2.5 text-base text-gray-700 leading-relaxed">
-                <p><strong className="text-blue-700">1.</strong> 아래에서 답변하고 싶은 질문을 선택하세요</p>
-                <p><strong className="text-blue-700">2.</strong> 질문을 펼쳐서 핵심 내용을 입력하고 AI로 답변을 생성하거나, 건너뛸 수 있어요</p>
-                <p><strong className="text-blue-700">3.</strong> 상단의 <strong className="text-green-600">'자소서 편집하기'</strong> 버튼을 눌러 본격적으로 작성하세요</p>
+                <div className="space-y-2.5 text-base text-gray-700 leading-relaxed">
+                  <p><strong className="text-blue-700">1.</strong> 아래에서 답변하고 싶은 질문을 선택하세요</p>
+                  <p><strong className="text-blue-700">2.</strong> 질문을 펼쳐서 핵심 내용을 입력하고 AI로 답변을 생성하거나, 건너뛸 수 있어요</p>
+                  <p><strong className="text-blue-700">3.</strong> 상단의 <strong className="text-green-600">'자소서 편집하기'</strong> 버튼을 눌러 본격적으로 작성하세요</p>
+                </div>
+
+                <div className="mt-4 pt-4 border-t border-blue-200 text-sm text-gray-600">
+                  💬 빈 화면에서 바로 작성하고 싶다면 상단의 <strong>'자유 작성 모드'</strong>를 클릭하세요
+                </div>
               </div>
 
-              <div className="mt-4 pt-4 border-t border-blue-200 text-sm text-gray-600">
-                💬 빈 화면에서 바로 작성하고 싶다면 상단의 <strong>'자유 작성 모드'</strong>를 클릭하세요
+              {/* 모바일 버전 - 간소화 */}
+              <div className="sm:hidden">
+                <h3 className="text-sm font-bold text-gray-900 mb-2">
+                  작성 방법
+                </h3>
+                <div className="space-y-1.5 text-xs text-gray-700">
+                  <p>질문 선택 → 내용 입력 → AI 생성</p>
+                  <p className="text-green-600 font-medium">완료 후 상단 '자소서 편집하기' 클릭</p>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
         {/* 기본 정보 입력 */}
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-          <h2 className="text-lg font-bold text-gray-900 mb-4">기본 정보</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6 mb-4 sm:mb-6">
+          <h2 className="text-base sm:text-lg font-bold text-gray-900 mb-3 sm:mb-4">기본 정보</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 지원 회사 <span className="text-red-500">*</span>

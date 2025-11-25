@@ -608,43 +608,43 @@ export const CoverLetterPageV3: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex flex-col">
       {/* 헤더 */}
       <div className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
+            <div className="flex items-center gap-2 sm:gap-4 w-full sm:w-auto">
               <Link to={user ? "/mypage" : "/"}>
                 <img
                   src="/Careeroad_logo.png"
                   alt="Careeroad"
-                  className="h-20 w-auto cursor-pointer"
+                  className="h-12 sm:h-16 md:h-20 w-auto cursor-pointer"
                 />
               </Link>
-              <div className="border-l-2 border-gray-300 pl-4 py-1">
-                <h1 className="text-xl font-bold text-gray-900">
+              <div className="border-l-2 border-gray-300 pl-2 sm:pl-4 py-1">
+                <h1 className="text-base sm:text-lg md:text-xl font-bold text-gray-900">
                   AI 기반 자소서 작성 도우미
                 </h1>
-                <p className="text-xs text-gray-600 mt-0.5">
+                <p className="text-xs text-gray-600 mt-0.5 hidden sm:block">
                   AI가 직무와 활동을 분석해 실시간 피드백을 제공합니다
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-6">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4 md:gap-6 w-full sm:w-auto">
               {!isGuestMode && (
                 <>
                   <Link
                     to="/cover-letter"
-                    className="text-sm text-gray-700 hover:text-blue-600 transition font-medium whitespace-nowrap"
+                    className="text-xs sm:text-sm text-gray-700 hover:text-blue-600 transition font-medium"
                   >
                     자기소개서 작성하기
                   </Link>
                   <Link
                     to="/template-selection"
-                    className="text-sm text-gray-700 hover:text-blue-600 transition font-medium whitespace-nowrap"
+                    className="text-xs sm:text-sm text-gray-700 hover:text-blue-600 transition font-medium"
                   >
                     포트폴리오 제작하기
                   </Link>
                   <Link
                     to="/mypage"
-                    className="text-sm text-gray-700 hover:text-blue-600 transition font-medium whitespace-nowrap"
+                    className="text-xs sm:text-sm text-gray-700 hover:text-blue-600 transition font-medium"
                   >
                     마이페이지
                   </Link>
@@ -655,7 +655,7 @@ export const CoverLetterPageV3: React.FC = () => {
                   onClick={() => {
                     window.location.href = '/login';
                   }}
-                  className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition font-semibold whitespace-nowrap"
+                  className="px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:shadow-lg transition font-semibold text-xs sm:text-sm"
                 >
                   로그인하고 더 많은 기능 탐색하기
                 </button>
@@ -705,7 +705,7 @@ export const CoverLetterPageV3: React.FC = () => {
                       showError('저장 중 오류가 발생했습니다.');
                     }
                   }}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium whitespace-nowrap"
+                  className="px-3 sm:px-4 py-1.5 sm:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium text-xs sm:text-sm"
                 >
                   저장하기
                 </button>
