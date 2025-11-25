@@ -46,6 +46,8 @@ const AuthCallbackPage: React.FC = () => {
                 profile_image_url: authUser.user_metadata?.avatar_url || null,
                 email_verified: true,
                 is_active: true,
+                pay: true,
+                last_pay_date: new Date().toISOString(),
               }
             ])
             .select()
@@ -72,6 +74,8 @@ const AuthCallbackPage: React.FC = () => {
                 created_at: new Date().toISOString(),
                 is_active: true,
                 email_verified: true,
+                pay: true,
+                last_pay_date: new Date().toISOString(),
               };
             }
           } else {
@@ -113,6 +117,10 @@ const AuthCallbackPage: React.FC = () => {
           last_login_at: userData.last_login_at,
           is_active: userData.is_active,
           email_verified: userData.email_verified,
+          pay: userData.pay,
+          last_pay_date: userData.last_pay_date,
+          free_pdf_used: userData.free_pdf_used,
+          subscription_cancelled: userData.subscription_cancelled,
         };
 
         tokenService.setUser(user);

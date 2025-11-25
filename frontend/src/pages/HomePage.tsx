@@ -7,7 +7,8 @@ import {
   DocumentTextIcon,
   UserGroupIcon,
   ChartBarIcon,
-  CheckCircleIcon
+  CheckCircleIcon,
+  XMarkIcon
 } from '@heroicons/react/24/outline';
 import { trackMainPageVisit, trackButtonClick } from '../utils/analytics';
 import LandingFooter from '../components/LandingFooter';
@@ -386,9 +387,9 @@ export default function HomePage() {
               <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center mb-6">
                 <CheckCircleIcon className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">월 3,900원에 모든 기능</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-4">출시 기념 첫 달 0원</h3>
               <p className="text-gray-600 leading-relaxed">
-                무제한 AI 첨삭, 포트폴리오 생성, 프리미엄 템플릿을 모두 이용할 수 있습니다. (출시 특가 73% 할인)
+                무제한 AI 첨삭, 포트폴리오 생성, 프리미엄 템플릿을 모두 이용할 수 있습니다. 첫 달 무료 후 월 3,900원
               </p>
             </motion.div>
           </div>
@@ -441,7 +442,7 @@ export default function HomePage() {
 
             <div className="p-8 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl shadow-xl relative border-4 border-indigo-400">
               <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-yellow-400 to-orange-400 text-white text-sm font-bold rounded-full">
-                첫 한 달 무료
+                🎉 출시 특가
               </div>
               <h3 className="text-2xl font-bold text-white mb-2">프로</h3>
               <div className="mb-6">
@@ -451,8 +452,11 @@ export default function HomePage() {
                 <div className="text-4xl font-bold text-white">
                   ₩0<span className="text-lg text-indigo-200">/첫 달</span>
                 </div>
-                <div className="text-sm text-yellow-300 font-semibold mt-2">
-                  첫 한 달 무료!
+                <div className="text-sm text-white/90 mt-2">
+                  이후 ₩3,900/월
+                </div>
+                <div className="text-sm text-yellow-300 font-semibold mt-1">
+                  출시 기념 특가! 지금 시작하면 첫 달 무료
                 </div>
               </div>
               <ul className="space-y-4 mb-8">
@@ -528,29 +532,48 @@ export default function HomePage() {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={handleGetStarted}
+            onClick={() => {
+              const pricingSection = document.getElementById('pricing');
+              if (pricingSection) {
+                pricingSection.scrollIntoView({ behavior: 'smooth' });
+              }
+            }}
             className="px-10 py-4 bg-white text-indigo-600 font-bold rounded-xl text-lg shadow-lg hover:shadow-xl transition-all"
           >
-            무료로 시작하기
+            첫 한 달 무료로 사용하기
           </motion.button>
         </div>
       </section>
 
       <LandingFooter />
 
-      {/* 회원가입 안내 모달 */}
+      {/* 로그인 안내 모달 */}
       {showSignupModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-8">
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowSignupModal(false)}
+        >
+          <div
+            className="bg-white rounded-2xl max-w-md w-full p-8 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* 닫기 버튼 */}
+            <button
+              onClick={() => setShowSignupModal(false)}
+              className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-all duration-200"
+            >
+              <XMarkIcon className="w-5 h-5" />
+            </button>
+
             <div className="text-center">
               <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <UserGroupIcon className="w-8 h-8 text-purple-600" />
               </div>
               <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                회원가입이 필요합니다
+                로그인이 필요합니다
               </h3>
               <p className="text-gray-600 mb-6">
-                프로 플랜을 구독하려면 먼저 로그인이 필요합니다.<br />
+                프로 플랜을 이용하려면 먼저 로그인이 필요합니다.<br />
                 Google로 간편하게 로그인하고 프리미엄 기능을 이용해보세요!
               </p>
               <div className="space-y-3">
@@ -561,22 +584,7 @@ export default function HomePage() {
                   }}
                   className="w-full px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold rounded-xl hover:shadow-lg transition-all transform hover:scale-[1.02]"
                 >
-                  로그인하기
-                </button>
-                <button
-                  onClick={() => {
-                    setShowSignupModal(false);
-                    navigate('/login', { state: { returnTo: '/mypage', openSubscribe: true } });
-                  }}
-                  className="w-full px-6 py-3 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200 transition-colors"
-                >
-                  이미 계정이 있어요 (로그인)
-                </button>
-                <button
-                  onClick={() => setShowSignupModal(false)}
-                  className="w-full px-6 py-3 text-gray-500 hover:text-gray-700 transition-colors text-sm"
-                >
-                  닫기
+                  간편 로그인하러 가기
                 </button>
               </div>
             </div>
