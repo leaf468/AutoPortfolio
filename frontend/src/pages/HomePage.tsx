@@ -182,11 +182,11 @@ export default function HomePage() {
                 }}
                 className="px-6 sm:px-10 py-3 sm:py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-semibold rounded-xl text-sm sm:text-lg shadow-lg hover:shadow-xl transition-all"
               >
-                첫 한 달 무료로 사용하기
+                무료로 시작하기
               </motion.button>
             </div>
             <p className="mt-3 sm:mt-4 text-xs sm:text-sm text-gray-500">
-              ✓ 첫 한 달 무료 ✓ 모든 프로 기능 이용 ✓ 신용카드 불필요
+              ✓ 모든 기능 무료 ✓ 신용카드 불필요 ✓ 바로 시작 가능
             </p>
           </motion.div>
 
@@ -385,9 +385,9 @@ export default function HomePage() {
               <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center mb-4 sm:mb-6">
                 <CheckCircleIcon className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
               </div>
-              <h3 className="text-lg sm:text-2xl font-bold text-gray-900 mb-3 sm:mb-4">출시 기념 첫 달 0원</h3>
+              <h3 className="text-lg sm:text-2xl font-bold text-gray-900 mb-3 sm:mb-4">출시 기념 완전 무료</h3>
               <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
-                무제한 AI 첨삭, 포트폴리오 생성, 프리미엄 템플릿을 모두 이용할 수 있습니다. 첫 달 무료 후 월 3,900원
+                무제한 AI 첨삭, 포트폴리오 생성, 프리미엄 템플릿을 지금 무료로 이용하세요.
               </p>
             </motion.div>
           </div>
@@ -399,123 +399,61 @@ export default function HomePage() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-8 sm:mb-12 md:mb-16">
             <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-3 sm:mb-4">
-              모두를 위한 가격
+              모든 기능, 완전 무료
             </h2>
             <p className="text-sm sm:text-base md:text-xl text-gray-600 px-2">
-              지금 시작하면 모든 기능을 무료로 사용할 수 있습니다
+              출시 기념 모든 프로 기능을 무료로 제공합니다
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            {/* 무료 플랜 - 모바일에서 숨김 */}
-            <div className="hidden md:block p-8 bg-white rounded-2xl shadow-md border border-gray-200">
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">무료</h3>
-              <div className="text-4xl font-bold text-gray-900 mb-6">
-                ₩0<span className="text-lg text-gray-500">/월</span>
-              </div>
-              <ul className="space-y-4 mb-8">
-                <li className="flex items-center text-gray-600">
-                  <CheckCircleIcon className="w-5 h-5 text-green-500 mr-3" />
-                  8가지 질문 기반 자소서 작성
-                </li>
-                <li className="flex items-center text-gray-600">
-                  <CheckCircleIcon className="w-5 h-5 text-green-500 mr-3" />
-                  AI 답변 생성
-                </li>
-                <li className="flex items-center text-gray-600">
-                  <CheckCircleIcon className="w-5 h-5 text-green-500 mr-3" />
-                  자소서 1회 무료 첨삭
-                </li>
-                <li className="flex items-center text-gray-600">
-                  <CheckCircleIcon className="w-5 h-5 text-green-500 mr-3" />
-                  PDF 다운로드
-                </li>
-              </ul>
-              <button
-                onClick={handleGetStarted}
-                className="w-full py-3 bg-gray-100 text-gray-900 font-semibold rounded-lg hover:bg-gray-200 transition-colors"
-              >
-                시작하기
-              </button>
+          {/* 프로 플랜 - 가로 레이아웃 */}
+          <div className="p-6 sm:p-8 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl shadow-xl relative max-w-2xl mx-auto">
+            <div className="absolute -top-3 sm:-top-4 left-1/2 transform -translate-x-1/2 px-4 py-1.5 bg-gradient-to-r from-yellow-400 to-orange-400 text-white text-xs sm:text-sm font-bold rounded-full whitespace-nowrap">
+              🚀 출시 기념 무료
             </div>
 
-            {/* 프로 플랜 - 모바일에서도 표시 */}
-            <div className="p-6 sm:p-8 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-2xl shadow-xl relative border-4 border-indigo-400">
-              <div className="absolute -top-3 sm:-top-4 left-1/2 transform -translate-x-1/2 px-3 sm:px-4 py-1 bg-gradient-to-r from-yellow-400 to-orange-400 text-white text-xs sm:text-sm font-bold rounded-full whitespace-nowrap">
-                🎉 출시 특가
-              </div>
-              <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">프로</h3>
-              <div className="mb-6">
-                <div className="text-base sm:text-lg text-indigo-200 line-through mb-1">
-                  ₩14,900
-                </div>
-                <div className="text-3xl sm:text-4xl font-bold text-white">
-                  ₩0<span className="text-base sm:text-lg text-indigo-200">/첫 달</span>
-                </div>
-                <div className="text-xs sm:text-sm text-white/90 mt-2">
-                  이후 ₩3,900/월
-                </div>
-                <div className="text-xs sm:text-sm text-yellow-300 font-semibold mt-1">
-                  지금 시작하면 첫 달 무료!
-                </div>
-              </div>
-              <ul className="space-y-3 sm:space-y-4 mb-6 sm:mb-8">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 md:gap-6 mt-4">
+              {/* 기능 리스트 */}
+              <ul className="space-y-3">
                 <li className="flex items-center text-white text-sm sm:text-base">
-                  <CheckCircleIcon className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-300 mr-2 sm:mr-3 flex-shrink-0" />
-                  <span>무제한 자소서 AI 첨삭</span>
+                  <CheckCircleIcon className="w-5 h-5 text-yellow-300 mr-3 flex-shrink-0" />
+                  무제한 자소서 AI 첨삭
                 </li>
                 <li className="flex items-center text-white text-sm sm:text-base">
-                  <CheckCircleIcon className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-300 mr-2 sm:mr-3 flex-shrink-0" />
-                  <span>포트폴리오 AI 생성</span>
+                  <CheckCircleIcon className="w-5 h-5 text-yellow-300 mr-3 flex-shrink-0" />
+                  포트폴리오 AI 생성
                 </li>
                 <li className="flex items-center text-white text-sm sm:text-base">
-                  <CheckCircleIcon className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-300 mr-2 sm:mr-3 flex-shrink-0" />
-                  <span>모든 프리미엄 템플릿</span>
+                  <CheckCircleIcon className="w-5 h-5 text-yellow-300 mr-3 flex-shrink-0" />
+                  모든 프리미엄 템플릿
                 </li>
                 <li className="flex items-center text-white text-sm sm:text-base">
-                  <CheckCircleIcon className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-300 mr-2 sm:mr-3 flex-shrink-0" />
-                  <span>무제한 AI 생성/편집</span>
+                  <CheckCircleIcon className="w-5 h-5 text-yellow-300 mr-3 flex-shrink-0" />
+                  무제한 AI 생성/편집
                 </li>
                 <li className="flex items-center text-white text-sm sm:text-base">
-                  <CheckCircleIcon className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-300 mr-2 sm:mr-3 flex-shrink-0" />
-                  <span>우선 고객지원</span>
+                  <CheckCircleIcon className="w-5 h-5 text-yellow-300 mr-3 flex-shrink-0" />
+                  우선 고객지원
                 </li>
               </ul>
-              <button
-                onClick={handleProPlanClick}
-                className="w-full py-2.5 sm:py-3 bg-white text-indigo-600 font-semibold rounded-lg hover:bg-gray-50 transition-colors text-sm sm:text-base"
-              >
-                시작하기
-              </button>
-            </div>
 
-            {/* 기업 플랜 - 모바일에서 숨김 */}
-            <div className="hidden md:block p-8 bg-white rounded-2xl shadow-md border border-gray-200">
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">기업</h3>
-              <div className="text-4xl font-bold text-gray-900 mb-6">
-                문의<span className="text-lg text-gray-500"></span>
+              {/* CTA 영역 */}
+              <div className="flex flex-col items-center md:items-end w-full md:w-auto">
+                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 sm:p-5 text-center mb-4 w-full md:w-auto">
+                  <div className="text-indigo-200 text-xs sm:text-sm mb-1">지금 가입하면</div>
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="text-2xl sm:text-3xl font-bold text-white">₩0</span>
+                    <span className="px-2 py-0.5 bg-yellow-400 text-yellow-900 text-xs font-bold rounded-full">FREE</span>
+                  </div>
+                  <div className="text-indigo-200 text-xs mt-1">모든 프로 기능 포함</div>
+                </div>
+                <button
+                  onClick={handleProPlanClick}
+                  className="w-full md:w-auto px-8 py-3 bg-white text-indigo-600 font-bold rounded-xl hover:bg-gray-50 transition-all text-base sm:text-lg shadow-lg hover:shadow-xl hover:scale-105"
+                >
+                  지금 시작하기
+                </button>
               </div>
-              <ul className="space-y-4 mb-8">
-                <li className="flex items-center text-gray-600">
-                  <CheckCircleIcon className="w-5 h-5 text-green-500 mr-3" />
-                  팀 협업 기능
-                </li>
-                <li className="flex items-center text-gray-600">
-                  <CheckCircleIcon className="w-5 h-5 text-green-500 mr-3" />
-                  커스텀 브랜딩
-                </li>
-                <li className="flex items-center text-gray-600">
-                  <CheckCircleIcon className="w-5 h-5 text-green-500 mr-3" />
-                  전담 매니저
-                </li>
-                <li className="flex items-center text-gray-600">
-                  <CheckCircleIcon className="w-5 h-5 text-green-500 mr-3" />
-                  API 연동
-                </li>
-              </ul>
-              <button className="w-full py-3 bg-gray-100 text-gray-900 font-semibold rounded-lg hover:bg-gray-200 transition-colors">
-                문의하기
-              </button>
             </div>
           </div>
         </div>
@@ -528,7 +466,7 @@ export default function HomePage() {
             지금 바로 무료로 시작해보세요
           </h2>
           <p className="text-sm sm:text-base md:text-lg lg:text-xl text-indigo-100 mb-6 sm:mb-8 md:mb-10 leading-relaxed px-2">
-            회원가입만 하면 8가지 질문 기반 작성 +<br className="sm:hidden" /> AI 답변 생성 + 1회 무료 첨삭이 무료입니다.
+            회원가입만 하면 모든 프로 기능을 바로 이용할 수 있습니다.
           </p>
           <motion.button
             whileHover={{ scale: 1.05 }}
@@ -541,7 +479,7 @@ export default function HomePage() {
             }}
             className="px-6 sm:px-8 md:px-10 py-3 sm:py-4 bg-white text-indigo-600 font-bold rounded-xl text-base sm:text-lg shadow-lg hover:shadow-xl transition-all"
           >
-            첫 한 달 무료로 사용하기
+            무료로 시작하기
           </motion.button>
         </div>
       </section>
