@@ -521,8 +521,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="py-12 sm:py-20 md:py-24 px-4 sm:px-6 bg-gradient-to-r from-indigo-600 to-purple-600">
+      {/* CTA Section - 모바일에서 숨김 */}
+      <section className="hidden md:block py-12 sm:py-20 md:py-24 px-4 sm:px-6 bg-gradient-to-r from-indigo-600 to-purple-600">
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 sm:mb-6 leading-tight">
             지금 바로 무료로 시작해보세요
