@@ -237,7 +237,7 @@ const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
               className="w-full h-80 p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-600 focus:border-transparent resize-none text-sm"
               placeholder="예: 3년차 풀스택 개발자입니다. React와 Node.js로 쇼핑몰 플랫폼을 개발했고, 사용자 50% 증가와 매출 200% 상승에 기여했습니다..."
             />
-            <div className="flex items-center justify-between mt-1.5">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-1.5 gap-2">
               <div className="text-xs text-gray-500">
                 {input.length} / 5000 글자
               </div>
@@ -245,10 +245,11 @@ const AIOrganizer: React.FC<AIOrganizerProps> = ({ onComplete }) => {
                 <button
                   onClick={loadCoverLetters}
                   disabled={loadingCoverLetters}
-                  className="flex items-center gap-2 px-5 py-3 text-sm font-semibold text-purple-600 bg-white border-2 border-purple-300 hover:border-purple-400 hover:bg-purple-50 rounded-lg transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 py-2 sm:px-5 sm:py-3 text-xs sm:text-sm font-semibold text-purple-600 bg-white border-2 border-purple-300 hover:border-purple-400 hover:bg-purple-50 rounded-lg transition-all shadow-sm hover:shadow-md disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <DocumentArrowDownIcon className="w-5 h-5" />
-                  {loadingCoverLetters ? '불러오는 중...' : '작성한 자소서에서 불러오기'}
+                  <DocumentArrowDownIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <span className="sm:hidden">{loadingCoverLetters ? '불러오는 중...' : '자소서 불러오기'}</span>
+                  <span className="hidden sm:inline">{loadingCoverLetters ? '불러오는 중...' : '작성한 자소서에서 불러오기'}</span>
                 </button>
               )}
             </div>
