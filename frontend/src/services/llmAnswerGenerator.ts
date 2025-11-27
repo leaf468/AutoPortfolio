@@ -1,4 +1,3 @@
-import OpenAI from 'openai';
 import {
   MotivationFields,
   ExperienceFields,
@@ -10,16 +9,27 @@ import {
   ConflictFields,
 } from '../types/fieldBasedCoverLetter';
 
-// API 키 확인
-const API_KEY = process.env.REACT_APP_OPENAI_API_KEY;
-if (!API_KEY || API_KEY.length < 20) {
-  console.error('OpenAI API key is missing or invalid in .env file');
-}
+// Vercel Serverless Function으로 OpenAI API 호출
+async function callOpenAI(messages: any[], temperature = 0.7, max_tokens = 1500) {
+  const response = await fetch('/api/openai', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      messages,
+      model: 'gpt-4o-mini',
+      temperature,
+      max_tokens,
+    }),
+  });
 
-const openai = new OpenAI({
-  apiKey: API_KEY,
-  dangerouslyAllowBrowser: true,
-});
+  if (!response.ok) {
+    throw new Error(`OpenAI API Error: ${response.statusText}`);
+  }
+
+  return response.json();
+}
 
 /**
  * LLM을 사용하여 필드 데이터로부터 전문적인 자소서 답변 생성
@@ -63,42 +73,32 @@ export async function generateAnswerWithLLM(
       userPrompt += `\n\n참고 데이터 (영감용, 절대 복사 금지):\n${referenceData}`;
     }
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'system',
-          content: systemPrompt,
-        },
-        {
-          role: 'user',
-          content: userPrompt,
-        },
-      ],
-      temperature: 0.8,
-      max_tokens: 1500,
-    });
+    const response = await callOpenAI([
+      {
+        role: 'system',
+        content: systemPrompt,
+      },
+      {
+        role: 'user',
+        content: userPrompt,
+      },
+    ], 0.8, 1500);
 
     const generatedAnswer = response.choices[0]?.message?.content?.trim() || '';
 
     // 최대 길이 체크
     if (generatedAnswer.length > maxLength) {
       // 길이 초과시 재생성 요청
-      const truncateResponse = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: `다음 자소서 답변을 ${maxLength}자 이내로 축약하세요. 핵심 내용은 유지하되, 불필요한 부분을 제거하세요. 답변만 작성하세요.`,
-          },
-          {
-            role: 'user',
-            content: generatedAnswer,
-          },
-        ],
-        temperature: 0.7,
-        max_tokens: 1000,
-      });
+      const truncateResponse = await callOpenAI([
+        {
+          role: 'system',
+          content: `다음 자소서 답변을 ${maxLength}자 이내로 축약하세요. 핵심 내용은 유지하되, 불필요한 부분을 제거하세요. 답변만 작성하세요.`,
+        },
+        {
+          role: 'user',
+          content: generatedAnswer,
+        },
+      ], 0.7, 1000);
 
       return truncateResponse.choices[0]?.message?.content?.trim() || generatedAnswer.slice(0, maxLength);
     }
@@ -177,31 +177,22 @@ ${guidance}
       userPrompt += `\n\n참고 데이터 (영감용):\n${referenceData}`;
     }
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      temperature: 0.8,
-      max_tokens: 1500,
-    });
+    const response = await callOpenAI([
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt },
+    ], 0.8, 1500);
 
     let generatedAnswer = response.choices[0]?.message?.content?.trim() || '';
 
     // 길이 초과시 축약
     if (generatedAnswer.length > maxLength) {
-      const truncateResponse = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: `다음 답변을 ${maxLength}자 이내로 축약하세요. 핵심 내용은 유지하되, 불필요한 부분을 제거하세요.`,
-          },
-          { role: 'user', content: generatedAnswer },
-        ],
-        temperature: 0.7,
-      });
+      const truncateResponse = await callOpenAI([
+        {
+          role: 'system',
+          content: `다음 답변을 ${maxLength}자 이내로 축약하세요. 핵심 내용은 유지하되, 불필요한 부분을 제거하세요.`,
+        },
+        { role: 'user', content: generatedAnswer },
+      ], 0.7);
 
       generatedAnswer = truncateResponse.choices[0]?.message?.content?.trim() || generatedAnswer.slice(0, maxLength);
     }
