@@ -1,3 +1,4 @@
+import OpenAI from 'openai';
 import {
   MotivationFields,
   ExperienceFields,
@@ -8,7 +9,17 @@ import {
   TeamworkFields,
   ConflictFields,
 } from '../types/fieldBasedCoverLetter';
-import { openai } from '../utils/openaiClient';
+
+// API 키 확인
+const API_KEY = process.env.REACT_APP_OPENAI_API_KEY;
+if (!API_KEY || API_KEY.length < 20) {
+  console.error('OpenAI API key is missing or invalid in .env file');
+}
+
+const openai = new OpenAI({
+  apiKey: API_KEY,
+  dangerouslyAllowBrowser: true,
+});
 
 /**
  * LLM을 사용하여 필드 데이터로부터 전문적인 자소서 답변 생성
