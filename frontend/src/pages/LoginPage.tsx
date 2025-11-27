@@ -19,6 +19,36 @@ const LoginPage: React.FC = () => {
       setSuccessMessage('로그아웃 되었습니다');
       setTimeout(() => setSuccessMessage(''), 3000);
     }
+
+    // WebView 감지 및 외부 브라우저로 리다이렉트
+    const userAgent = navigator.userAgent || navigator.vendor;
+    const isWebView =
+      // iOS WebView
+      (/(iPhone|iPod|iPad).*AppleWebKit(?!.*Safari)/i.test(userAgent)) ||
+      // Android WebView (카카오톡, 네이버 등)
+      (/wv|kakaotalk|naver|line|fb|instagram|twitter/i.test(userAgent)) ||
+      // 기타 인앱 브라우저
+      (userAgent.includes('KAKAOTALK') || userAgent.includes('NAVER'));
+
+    if (isWebView) {
+      const currentUrl = window.location.href;
+      // iOS
+      if (/iPad|iPhone|iPod/.test(userAgent)) {
+        // Safari로 열기 시도
+        window.location.href = `x-safari-https://${window.location.host}${window.location.pathname}${window.location.search}`;
+      }
+      // Android
+      else {
+        // Chrome으로 열기 시도
+        const intent = `intent://${window.location.host}${window.location.pathname}${window.location.search}#Intent;scheme=https;package=com.android.chrome;end`;
+        window.location.href = intent;
+      }
+
+      // 리다이렉트 실패 시 안내 메시지
+      setTimeout(() => {
+        setError('인앱 브라우저에서는 Google 로그인이 제한됩니다. Chrome 또는 Safari 브라우저로 열어주세요.');
+      }, 1000);
+    }
   }, [location]);
 
   const handleGoogleLogin = async () => {
