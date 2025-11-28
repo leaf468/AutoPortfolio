@@ -1576,7 +1576,7 @@ const ColorfulEditor: React.FC<BaseEditorProps> = ({
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.5 }}
                 onClick={() => setShowNaturalLanguage(true)}
-                className="fixed bottom-6 right-6 z-50 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-5 py-3.5 rounded-full shadow-2xl hover:shadow-3xl hover:scale-105 transition-all duration-200 flex items-center gap-2.5"
+                className="hidden fixed bottom-6 right-6 z-50 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-5 py-3.5 rounded-full shadow-2xl hover:shadow-3xl hover:scale-105 transition-all duration-200 flex items-center gap-2.5"
                 style={{ position: 'fixed' }}
             >
                 <ChatBubbleLeftRightIcon className="w-5 h-5" />
