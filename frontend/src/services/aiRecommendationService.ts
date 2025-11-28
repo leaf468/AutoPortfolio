@@ -240,7 +240,7 @@ function generateActivityRecommendations(
       recommendations.push({
         type: 'pattern',
         title: `${activity.activityType} - 핵심 경험`,
-        content: `합격자의 ${activity.percentage.toFixed(0)}%가 ${activity.activityType} 경험을 언급했습니다. ${activity.insight}`,
+        content: `${activity.activityType} 경험을 언급하셨군요. ${activity.insight}`,
         relevance: activity.percentage,
       });
     }
@@ -281,7 +281,7 @@ function generateKeywordRecommendations(
     recommendations.push({
       type: 'insight',
       title: '리더십 경험',
-      content: `좋습니다! 합격자의 ${leadershipActivity.percentage.toFixed(0)}%가 리더십 경험을 강조합니다. 구체적인 성과와 팀 규모를 언급하면 더욱 효과적입니다.`,
+      content: `좋습니다! 리더십 경험을 강조하셨군요. 구체적인 성과와 팀 규모를 언급하면 더욱 효과적입니다.`,
       relevance: 85,
     });
   }
@@ -296,7 +296,7 @@ function generateKeywordRecommendations(
     recommendations.push({
       type: 'insight',
       title: '협업 경험',
-      content: `팀 협업은 중요한 역량입니다. 합격자의 ${teamworkActivity.percentage.toFixed(0)}%가 팀 프로젝트를 언급합니다. 본인의 구체적인 역할과 기여도를 명시하세요.`,
+      content: `팀 협업은 중요한 역량입니다. 본인의 구체적인 역할과 기여도를 명시하세요.`,
       relevance: 80,
     });
   }
@@ -548,7 +548,7 @@ export async function analyzeCoverLetterComplete(
     const isAlreadyMentioned = allText.includes(lastWord);
 
     if (!isAlreadyMentioned && activity.percentage >= 15) {
-      recommendations.push(`"${activity.activityType}" 경험 추가를 고려해보세요 (합격자의 ${activity.percentage.toFixed(0)}%가 보유)`);
+      recommendations.push(`"${activity.activityType}" 경험 추가를 고려해보세요`);
     }
   });
 
@@ -589,7 +589,7 @@ export async function analyzeCoverLetterComplete(
   if (stats.topCertificates && stats.topCertificates.length > 0 && !allText.includes('자격증')) {
     const topCert = stats.topCertificates[0];
     if (topCert.percentage >= 30) {
-      recommendations.push(`합격자의 ${topCert.percentage.toFixed(0)}%가 "${topCert.name}" 자격증을 보유하고 있습니다`);
+      recommendations.push(`"${topCert.name}" 자격증을 고려해보세요`);
     }
   }
 
