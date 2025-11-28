@@ -358,7 +358,7 @@ export async function compareCoverLetter(
     const weaknesses: string[] = [];
     if (missingActivities.length > 0) {
       weaknesses.push(
-        `합격자의 ${missingActivities[0].percentage.toFixed(0)}%가 ${missingActivities[0].activityType} 경험을 언급했으나, 귀하의 자소서에는 없습니다.`
+        `${missingActivities[0].activityType} 경험을 언급하면 더 좋습니다.`
       );
     }
 
@@ -366,7 +366,7 @@ export async function compareCoverLetter(
     const suggestions: string[] = [];
     missingActivities.forEach((act) => {
       suggestions.push(
-        `${act.activityType} 경험 추가 권장 (합격자의 ${act.percentage.toFixed(0)}%가 보유)`
+        `${act.activityType} 경험 추가를 고려해보세요`
       );
     });
 
