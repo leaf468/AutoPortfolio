@@ -1,9 +1,4 @@
-import OpenAI from 'openai';
-
-const openai = new OpenAI({
-  apiKey: process.env.REACT_APP_OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true,
-});
+import { createChatCompletion } from '../lib/openaiClient';
 
 export interface CustomFieldDefinition {
   key: string;
@@ -24,7 +19,7 @@ export interface CustomQuestionAnalysis {
  */
 export async function analyzeCustomQuestion(questionText: string): Promise<CustomQuestionAnalysis> {
   try {
-    const response = await openai.chat.completions.create({
+    const response = await createChatCompletion({
       model: 'gpt-4o-mini',
       messages: [
         {

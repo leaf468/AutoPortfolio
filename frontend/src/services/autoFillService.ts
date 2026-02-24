@@ -1,9 +1,4 @@
-import OpenAI from 'openai';
-
-const openai = new OpenAI({
-    apiKey: process.env.REACT_APP_OPENAI_API_KEY || "",
-    dangerouslyAllowBrowser: true
-});
+import { createChatCompletion } from '../lib/openaiClient';
 
 const MODEL = "gpt-4o-mini";
 
@@ -214,7 +209,7 @@ ${examplesText}
 
 
             const requestStartTime = Date.now();
-            const response = await openai.chat.completions.create({
+            const response = await createChatCompletion({
                 model: MODEL,
                 messages: [
                     { role: 'system', content: systemPrompt },
@@ -561,7 +556,7 @@ ${examplesText}
                 "지금 바로 채용담당자를 감동시킬 최고의 포트폴리오를 생성하세요! 🚀";
 
 
-            const response = await openai.chat.completions.create({
+            const response = await createChatCompletion({
                 model: MODEL,
                 messages: [
                     { role: 'system', content: systemPrompt },
@@ -806,7 +801,7 @@ ${examplesText}
                 "Refinement instructions: " + (instructions || '톤과 문체를 일관되게 맞춰주세요') + "\n\n" +
                 "Return the refined blocks in the same JSON format, maintaining origin tracking.";
 
-            const response = await openai.chat.completions.create({
+            const response = await createChatCompletion({
                 model: MODEL,
                 messages: [
                     { role: 'system', content: systemPrompt },

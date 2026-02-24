@@ -1,11 +1,4 @@
-import OpenAI from "openai";
-
-const openai = new OpenAI({
-    apiKey: process.env.REACT_APP_OPENAI_API_KEY || "",
-    dangerouslyAllowBrowser: true,
-});
-
-const REACT_APP_OPENAI_MODEL = process.env.REACT_APP_OPENAI_MODEL || "gpt-4o-mini";
+import { createChatCompletion, OPENAI_MODEL } from '../lib/openaiClient';
 
 export interface EnhancedText {
     original: string;
@@ -73,8 +66,8 @@ class PortfolioTextEnhancer {
 }
 `;
 
-            const response = await openai.chat.completions.create({
-                model: REACT_APP_OPENAI_MODEL,
+            const response = await createChatCompletion({
+                model: OPENAI_MODEL,
                 messages: [
                     { role: "system", content: "You are a professional portfolio writing assistant specialized in HR-approved content. IMPORTANT: You must respond in Korean language only. 반드시 한국어로만 응답하세요." },
                     { role: "user", content: prompt }
@@ -156,8 +149,8 @@ React와 TypeScript로 컴포넌트를 모듈화하고, Lazy Loading으로 초�
 }
 `;
 
-            const response = await openai.chat.completions.create({
-                model: REACT_APP_OPENAI_MODEL,
+            const response = await createChatCompletion({
+                model: OPENAI_MODEL,
                 messages: [
                     { role: "system", content: "You are a Silicon Valley tech recruiter specialized in STAR framework." },
                     { role: "user", content: prompt }
@@ -237,8 +230,8 @@ React와 TypeScript로 컴포넌트를 모듈화하고, Lazy Loading으로 초�
 }
 `;
 
-            const response = await openai.chat.completions.create({
-                model: REACT_APP_OPENAI_MODEL,
+            const response = await createChatCompletion({
+                model: OPENAI_MODEL,
                 messages: [
                     { role: "system", content: "You are a professional portfolio writing assistant." },
                     { role: "user", content: prompt }
@@ -313,8 +306,8 @@ React와 TypeScript로 컴포넌트를 모듈화하고, Lazy Loading으로 초�
 }
 `;
 
-            const response = await openai.chat.completions.create({
-                model: REACT_APP_OPENAI_MODEL,
+            const response = await createChatCompletion({
+                model: OPENAI_MODEL,
                 messages: [
                     { role: "system", content: "You are a professional portfolio writing assistant." },
                     { role: "user", content: prompt }
@@ -378,8 +371,8 @@ ${JSON.stringify(data, null, 2)}
 응답은 완전한 PortfolioData JSON 형식으로 제공해주세요.
 `;
 
-            const response = await openai.chat.completions.create({
-                model: REACT_APP_OPENAI_MODEL,
+            const response = await createChatCompletion({
+                model: OPENAI_MODEL,
                 messages: [
                     { role: "system", content: "You are a professional Korean portfolio writing assistant. CRITICAL: You MUST respond in Korean language ONLY. Do NOT generate any English text. 모든 응답은 반드시 한국어로만 작성하세요. 영어로 생성하지 마세요. Also, respond with PLAIN TEXT only, NO HTML tags like <h2>, <p>, <br> etc. Just pure text content." },
                     { role: "user", content: prompt }
@@ -428,8 +421,8 @@ JSON 배열 형식으로 응답해주세요:
 ]
 `;
 
-            const response = await openai.chat.completions.create({
-                model: REACT_APP_OPENAI_MODEL,
+            const response = await createChatCompletion({
+                model: OPENAI_MODEL,
                 messages: [
                     { role: "system", content: "You are a professional Korean portfolio writing assistant." },
                     { role: "user", content: prompt }
@@ -483,8 +476,8 @@ JSON 배열 형식으로 응답해주세요:
 ]
 `;
 
-            const response = await openai.chat.completions.create({
-                model: REACT_APP_OPENAI_MODEL,
+            const response = await createChatCompletion({
+                model: OPENAI_MODEL,
                 messages: [
                     { role: "system", content: "You are a professional Korean portfolio writing assistant." },
                     { role: "user", content: prompt }

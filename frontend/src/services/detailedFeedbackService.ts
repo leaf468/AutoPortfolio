@@ -1,13 +1,6 @@
-import OpenAI from 'openai';
 import { CoverLetterQuestion } from '../components/CoverLetterQuestionInput';
 import { getComprehensiveStats } from './comprehensiveAnalysisService';
-
-const openai = new OpenAI({
-  apiKey: process.env.REACT_APP_OPENAI_API_KEY || "",
-  dangerouslyAllowBrowser: true,
-});
-
-const OPENAI_MODEL = process.env.REACT_APP_OPENAI_MODEL || "gpt-4o-mini";
+import { createChatCompletion, OPENAI_MODEL } from '../lib/openaiClient';
 
 export interface DetailedQuestionFeedback {
   questionNumber: number;
@@ -373,7 +366,7 @@ ${userCertificates && userCertificates.length > 0 ? `- 자격증: ${userCertific
 5. 합격자 비교는 질문 성격에 맞게 (지원동기면 회사 이해도, 경험이면 프로젝트 깊이)
 6. 세부 점수도 다양화 (논리성 4-9점, 구체성 4-10점, 문장력 2-5점, 전문성 2-5점)`;
 
-    const response = await openai.chat.completions.create({
+    const response = await createChatCompletion({
       model: OPENAI_MODEL,
       messages: [
         {

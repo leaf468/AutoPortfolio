@@ -1,0 +1,12 @@
+{
+  "name": "autoportfolio",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "openai": "^4.20.0",
+    "@vercel/node": "^3.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.1.0"
+  }
+}

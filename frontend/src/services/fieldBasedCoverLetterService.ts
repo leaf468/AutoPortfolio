@@ -12,6 +12,12 @@ export const saveFieldBasedCoverLetter = async (
   questions: FieldBasedQuestion[]
 ): Promise<{ success: boolean; documentId?: number; message?: string }> => {
   try {
+    // 개발 모드: Supabase 없이 작동
+    if (!supabase) {
+      console.log('개발 모드: 자소서 저장 스킵');
+      return { success: true, documentId: Date.now(), message: '개발 모드에서는 저장이 비활성화됩니다.' };
+    }
+
     // 현재 인증된 사용자 가져오기
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -80,6 +86,11 @@ export const updateFieldBasedCoverLetter = async (
   questions: FieldBasedQuestion[]
 ): Promise<{ success: boolean; message?: string }> => {
   try {
+    // 개발 모드: Supabase 없이 작동
+    if (!supabase) {
+      return { success: true, message: '개발 모드에서는 업데이트가 비활성화됩니다.' };
+    }
+
     // 1. 문서 업데이트
     const { error: docError } = await supabase
       .from('field_based_documents')
@@ -135,6 +146,11 @@ export const loadFieldBasedCoverLetter = async (
   documentId: number
 ): Promise<{ success: boolean; data?: FieldBasedCoverLetter; message?: string }> => {
   try {
+    // 개발 모드: Supabase 없이 작동
+    if (!supabase) {
+      return { success: false, message: '개발 모드에서는 불러오기가 비활성화됩니다.' };
+    }
+
     // 1. 문서 조회
     const { data: docData, error: docError } = await supabase
       .from('field_based_documents')
@@ -195,6 +211,11 @@ export const getUserFieldBasedDocuments = async (
   userId: string
 ): Promise<{ success: boolean; data?: Array<{ documentId: number; companyName: string; position: string; createdAt: Date }>; message?: string }> => {
   try {
+    // 개발 모드: Supabase 없이 작동
+    if (!supabase) {
+      return { success: true, data: [] };
+    }
+
     const { data, error } = await supabase
       .from('field_based_documents')
       .select('document_id, company_name, position, created_at')
@@ -227,6 +248,11 @@ export const deleteFieldBasedCoverLetter = async (
   documentId: number
 ): Promise<{ success: boolean; message?: string }> => {
   try {
+    // 개발 모드: Supabase 없이 작동
+    if (!supabase) {
+      return { success: true, message: '개발 모드에서는 삭제가 비활성화됩니다.' };
+    }
+
     const { error } = await supabase
       .from('field_based_documents')
       .delete()

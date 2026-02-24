@@ -1,9 +1,4 @@
-import OpenAI from 'openai';
-
-const openai = new OpenAI({
-    apiKey: process.env.REACT_APP_OPENAI_API_KEY || "",
-    dangerouslyAllowBrowser: true
-});
+import { createChatCompletion } from '../lib/openaiClient';
 
 const MODEL = "gpt-4o-mini";
 
@@ -26,7 +21,7 @@ class PortfolioTranslator {
         const userMessage = `다음 포트폴리오 데이터를 ${targetLanguage === 'en' ? '영어' : '한국어'}로 번역해주세요:\n\n${JSON.stringify(portfolioData, null, 2)}`;
 
 
-        const response = await openai.chat.completions.create({
+        const response = await createChatCompletion({
             model: MODEL,
             messages: [
                 { role: 'system', content: systemPrompt },

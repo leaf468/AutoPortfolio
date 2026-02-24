@@ -19,11 +19,25 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// 개발용 가짜 유저 (로그인 건너뛰기)
+const DEV_SKIP_AUTH = true;
+const devUser: User = {
+  user_id: 'dev-user-123',
+  email: 'dev@test.com',
+  name: '개발자',
+  profile_image_url: '',
+  created_at: new Date().toISOString(),
+  is_active: true,
+  email_verified: true,
+  pay: true,
+  last_pay_date: new Date().toISOString(),
+};
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUserState] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUserState] = useState<User | null>(DEV_SKIP_AUTH ? devUser : null);
+  const [loading, setLoading] = useState(DEV_SKIP_AUTH ? false : true);
   const [subscriptionInfo, setSubscriptionInfo] = useState<SubscriptionInfo>(
-    getSubscriptionInfo(null)
+    getSubscriptionInfo(DEV_SKIP_AUTH ? devUser : null)
   );
 
   // setUser를 래핑하여 subscriptionInfo도 함께 업데이트
@@ -33,6 +47,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   useEffect(() => {
+    // 개발 모드에서는 인증 건너뛰기
+    if (DEV_SKIP_AUTH) {
+      return;
+    }
+
     const initAuth = async () => {
       const storedUser = tokenService.getUser();
 

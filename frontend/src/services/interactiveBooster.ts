@@ -1,12 +1,5 @@
-import OpenAI from "openai";
 import { OrganizedContent } from "./aiOrganizer";
-
-const openai = new OpenAI({
-    apiKey: process.env.REACT_APP_OPENAI_API_KEY || "",
-    dangerouslyAllowBrowser: true,
-});
-
-const REACT_APP_OPENAI_MODEL = process.env.REACT_APP_OPENAI_MODEL || "gpt-4o-mini";
+import { createChatCompletion, OPENAI_MODEL } from '../lib/openaiClient';
 
 export interface BoosterQuestion {
     id: string;
@@ -100,8 +93,8 @@ JSON 배열 형식으로 반환:
 `;
 
         try {
-            const response = await openai.chat.completions.create({
-                model: REACT_APP_OPENAI_MODEL,
+            const response = await createChatCompletion({
+                model: OPENAI_MODEL,
                 messages: [
                     { role: "system", content: systemPrompt },
                     {
@@ -245,8 +238,8 @@ JSON 형식으로 반환:
 `;
 
         try {
-            const response = await openai.chat.completions.create({
-                model: REACT_APP_OPENAI_MODEL,
+            const response = await createChatCompletion({
+                model: OPENAI_MODEL,
                 messages: [
                     { role: "system", content: systemPrompt },
                     {

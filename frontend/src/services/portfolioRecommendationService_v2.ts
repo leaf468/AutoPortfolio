@@ -1,13 +1,6 @@
 import { supabase } from '../lib/supabaseClient';
-import OpenAI from 'openai';
 import { SyntheticApplicant, toCoverLetters, toActivitiesBatch } from './syntheticDataAdapter';
-
-const openai = new OpenAI({
-  apiKey: process.env.REACT_APP_OPENAI_API_KEY || '',
-  dangerouslyAllowBrowser: true,
-});
-
-const REACT_APP_OPENAI_MODEL = process.env.REACT_APP_OPENAI_MODEL || 'gpt-4o-mini';
+import { createChatCompletion, OPENAI_MODEL } from '../lib/openaiClient';
 
 export interface PortfolioRecommendation {
   skillsSuggestions: string[];
@@ -226,8 +219,8 @@ ${targetCompanies && targetCompanies.length > 0 ? `=== 목표 기업 ===\n${targ
 모든 내용은 한국어로 작성하세요.
 `;
 
-    const response = await openai.chat.completions.create({
-      model: REACT_APP_OPENAI_MODEL,
+    const response = await createChatCompletion({
+      model: OPENAI_MODEL,
       messages: [
         {
           role: 'system',

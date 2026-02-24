@@ -101,6 +101,25 @@ const MyPage: React.FC = () => {
   const loadProfile = async () => {
     if (!user) return;
 
+    // 개발 모드: Supabase 없이 기본값 사용
+    if (!supabase) {
+      setProfileData({
+        name: user.name,
+        phone: '',
+        birth_date: '',
+        company: '',
+        position: '',
+        major: '',
+        grade: '',
+        gpa: '',
+        toeic: '',
+        github_url: '',
+        blog_url: '',
+        instagram_url: '',
+      });
+      return;
+    }
+
     // users 테이블에서 name 가져오기
     const { data: userData, error: userError } = await supabase
       .from('users')
@@ -167,7 +186,10 @@ const MyPage: React.FC = () => {
   };
 
   const loadDocuments = async () => {
-    if (!user) return;
+    if (!user || !supabase) {
+      setDocuments([]);
+      return;
+    }
 
     setIsLoadingDocuments(true);
     try {
@@ -186,7 +208,10 @@ const MyPage: React.FC = () => {
   };
 
   const loadPortfolios = async () => {
-    if (!user) return;
+    if (!user || !supabase) {
+      setPortfolios([]);
+      return;
+    }
 
     setIsLoadingPortfolios(true);
     try {
@@ -205,7 +230,10 @@ const MyPage: React.FC = () => {
   };
 
   const loadFeedbacks = async () => {
-    if (!user) return;
+    if (!user || !supabase) {
+      setFeedbacks([]);
+      return;
+    }
 
     setIsLoadingFeedbacks(true);
     try {
@@ -224,7 +252,10 @@ const MyPage: React.FC = () => {
   };
 
   const loadRecommendedJobs = async () => {
-    if (!user) return;
+    if (!user || !supabase) {
+      setRecommendedJobs([]);
+      return;
+    }
 
     setIsLoadingJobs(true);
     try {
@@ -283,6 +314,11 @@ const MyPage: React.FC = () => {
   const handleSaveProfile = async () => {
     trackButtonClick('프로필 저장', 'MyPage');
     if (!user) return;
+    if (!supabase) {
+      success('개발 모드에서는 프로필 저장이 비활성화됩니다.');
+      setIsEditing(false);
+      return;
+    }
 
     setIsSaving(true);
     try {
@@ -347,6 +383,11 @@ const MyPage: React.FC = () => {
   const handleCancelSubscription = async () => {
     trackButtonClick('구독 취소', 'MyPage');
     if (!user) return;
+    if (!supabase) {
+      success('개발 모드에서는 구독 취소가 비활성화됩니다.');
+      setShowCancelConfirmModal(false);
+      return;
+    }
 
     setIsCancellingSubscription(true);
     try {
@@ -388,6 +429,10 @@ const MyPage: React.FC = () => {
   const handleDeleteAccount = async () => {
     trackButtonClick('계정 삭제', 'MyPage');
     if (!user) return;
+    if (!supabase) {
+      showError('개발 모드에서는 계정 삭제가 비활성화됩니다.');
+      return;
+    }
 
     const confirmed = window.confirm(
       '정말로 회원 탈퇴하시겠습니까?\n모든 데이터가 삭제되며 복구할 수 없습니다.'
@@ -713,6 +758,10 @@ const MyPage: React.FC = () => {
                         </button>
                         <button
                           onClick={async () => {
+                            if (!supabase) {
+                              showError('개발 모드에서는 삭제가 비활성화됩니다.');
+                              return;
+                            }
                             if (window.confirm('정말 삭제하시겠습니까?')) {
                               const { error } = await supabase
                                 .from('user_documents')
@@ -818,6 +867,10 @@ const MyPage: React.FC = () => {
                         </button>
                         <button
                           onClick={async () => {
+                            if (!supabase) {
+                              showError('개발 모드에서는 삭제가 비활성화됩니다.');
+                              return;
+                            }
                             if (window.confirm('정말 삭제하시겠습니까?')) {
                               const { error } = await supabase
                                 .from('portfolios')
@@ -991,6 +1044,10 @@ const MyPage: React.FC = () => {
                         </button>
                         <button
                           onClick={async () => {
+                            if (!supabase) {
+                              showError('개발 모드에서는 삭제가 비활성화됩니다.');
+                              return;
+                            }
                             if (window.confirm('이 첨삭 결과를 삭제하시겠습니까?')) {
                               const { error } = await supabase
                                 .from('cover_letter_feedback')

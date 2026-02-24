@@ -1,14 +1,7 @@
 import { supabase } from '../lib/supabaseClient';
 import { calculatePositionSimilarity } from './flexibleAnalysisService';
 import { SyntheticApplicant } from './syntheticDataAdapter';
-import OpenAI from 'openai';
-
-const openai = new OpenAI({
-  apiKey: process.env.REACT_APP_OPENAI_API_KEY || "",
-  dangerouslyAllowBrowser: true,
-});
-
-const OPENAI_MODEL = process.env.REACT_APP_OPENAI_MODEL || "gpt-4o-mini";
+import { createChatCompletion, OPENAI_MODEL } from '../lib/openaiClient';
 
 // Activity 타입 정의
 interface Activity {
@@ -112,7 +105,7 @@ ${activity.examples.slice(0, 5).map((ex, i) => `${i + 1}. ${ex}`).join('\n')}
   ]
 }`;
 
-    const response = await openai.chat.completions.create({
+    const response = await createChatCompletion({
       model: OPENAI_MODEL,
       messages: [{
         role: 'system',

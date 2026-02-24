@@ -1,6 +1,7 @@
 import PizZip from 'pizzip';
 import { PortfolioData } from '../types/portfolio';
 import { PPTTemplateId } from '../types/pptTemplate';
+import { createChatCompletion } from '../lib/openaiClient';
 
 interface PPTData {
   cover: {
@@ -451,16 +452,42 @@ class PPTXGenerationService {
   }
 
   /**
+   * 텍스트에서 줄바꿈을 PowerPoint XML 형식으로 변환
+   * \n을 <a:br/>로 변환하여 PPT에서 줄바꿈이 유지되도록 함
+   */
+  private convertLineBreaksForPPT(text: string): string {
+    if (!text) return '';
+    // 줄바꿈을 PPT의 break 요소로 변환
+    return text.replace(/\n/g, '</a:t><a:br/><a:t>');
+  }
+
+  /**
+   * 텍스트 정리 - 특수문자 처리 및 공백 정규화
+   */
+  private cleanTextForPPT(text: string): string {
+    if (!text) return '';
+    return text
+      .replace(/\r\n/g, '\n')  // Windows 줄바꿈 정규화
+      .replace(/\r/g, '\n')     // 구형 Mac 줄바꿈 정규화
+      .replace(/\t/g, ' ')      // 탭을 공백으로
+      .replace(/\s+/g, ' ')     // 연속 공백 제거
+      .trim();
+  }
+
+  /**
+   * 안전한 텍스트 교체 - 빈 값 처리 및 기본값 지원
+   */
+  private safeReplaceText(xml: string, placeholder: string, value: string | undefined | null, defaultValue: string = ''): string {
+    const safeValue = value ? this.cleanTextForPPT(value) : defaultValue;
+    return this.replaceTextInXML(xml, placeholder, safeValue);
+  }
+
+  /**
    * LLM을 사용하여 포트폴리오 데이터를 PPT 형식으로 변환
    */
   async optimizeForPPT(data: PortfolioData, userProfile?: any): Promise<PPTData> {
 
-    const OpenAI = (await import('openai')).default;
-    const openai = new OpenAI({
-      apiKey: process.env.REACT_APP_OPENAI_API_KEY || "",
-      dangerouslyAllowBrowser: true,
-    });
-
+    
     // 프로필에서 이름, 이메일, 전화번호 가져오기 (우선순위: 프로필 > 포트폴리오 데이터)
     const userName = userProfile?.name || data.userInfo.name || '이름 없음';
     const userEmail = userProfile?.email || data.userInfo.email || '';
@@ -545,7 +572,7 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
 `;
 
     try {
-      const response = await openai.chat.completions.create({
+      const response = await createChatCompletion({
         model: process.env.REACT_APP_OPENAI_MODEL || "gpt-4o-mini",
         messages: [
           { role: "system", content: "You are a PPT portfolio optimizer. Respond only with valid JSON. 한국어로 작성하세요." },
@@ -650,22 +677,145 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
 
   /**
    * XML에서 특정 텍스트를 정확히 찾아서 교체 (디자인과 서식 유지)
-   * Python 코드의 replace_text_in_shape 로직을 JavaScript로 구현
+   * PowerPoint XML에서 텍스트가 여러 <a:t> 태그로 분리되는 문제 해결
    */
   private replaceTextInXML(xml: string, oldText: string, newText: string): string {
-    if (!oldText || !newText) return xml;
+    if (!oldText || newText === undefined || newText === null) return xml;
 
     const escapedNew = this.escapeXML(newText);
     const trimmedOld = oldText.trim();
 
-    // <a:t> 태그 내의 텍스트를 정확히 매칭해서 교체
-    const regex = /<a:t>([^<]*?)<\/a:t>/g;
-
-    return xml.replace(regex, (match, content) => {
+    // 방법 1: 단일 <a:t> 태그에서 정확히 매칭
+    const singleTagRegex = /<a:t>([^<]*?)<\/a:t>/g;
+    let result = xml.replace(singleTagRegex, (match, content) => {
       if (content.trim() === trimmedOld) {
         return `<a:t>${escapedNew}</a:t>`;
       }
       return match;
+    });
+
+    // 방법 2: 분리된 텍스트 처리 - <a:p> (paragraph) 단위로 처리
+    // PowerPoint에서 텍스트가 여러 <a:r><a:t>...</a:t></a:r>로 분리되는 경우
+    const paragraphRegex = /<a:p[^>]*>([\s\S]*?)<\/a:p>/g;
+
+    result = result.replace(paragraphRegex, (paragraphMatch, paragraphContent) => {
+      // 해당 paragraph 내의 모든 텍스트 추출
+      const textMatches = paragraphContent.match(/<a:t>([^<]*)<\/a:t>/g);
+      if (!textMatches) return paragraphMatch;
+
+      // 모든 텍스트를 합쳐서 확인
+      const combinedText = textMatches
+        .map((t: string) => t.replace(/<\/?a:t>/g, ''))
+        .join('');
+
+      // 합쳐진 텍스트에 oldText가 포함되어 있는지 확인
+      if (combinedText.includes(trimmedOld)) {
+        // 첫 번째 <a:r>...</a:r> 블록의 스타일을 유지하면서 텍스트만 교체
+        // <a:r> 블록 찾기
+        const runRegex = /<a:r>([\s\S]*?)<\/a:r>/g;
+        const runs = [...paragraphContent.matchAll(runRegex)];
+
+        if (runs.length > 0) {
+          // 첫 번째 run의 스타일 정보 추출 (rPr = run properties)
+          const firstRun = runs[0][0];
+          const styleMatch = firstRun.match(/<a:rPr[^>]*>[\s\S]*?<\/a:rPr>|<a:rPr[^\/]*\/>/);
+          const style = styleMatch ? styleMatch[0] : '';
+
+          // 새로운 텍스트로 교체된 paragraph 생성
+          const newCombinedText = combinedText.replace(trimmedOld, escapedNew);
+
+          // 기존 run들을 새로운 단일 run으로 교체
+          // paragraph의 속성들은 유지
+          const pPropsMatch = paragraphContent.match(/<a:pPr[^>]*>[\s\S]*?<\/a:pPr>|<a:pPr[^\/]*\/>/);
+          const pProps = pPropsMatch ? pPropsMatch[0] : '';
+          const endParaRPr = paragraphContent.match(/<a:endParaRPr[^>]*>[\s\S]*?<\/a:endParaRPr>|<a:endParaRPr[^\/]*\/>/) || '';
+
+          // 새로운 paragraph 내용 구성
+          let newParagraphContent = pProps;
+          newParagraphContent += `<a:r>${style}<a:t>${newCombinedText}</a:t></a:r>`;
+          if (endParaRPr) newParagraphContent += endParaRPr;
+
+          // <a:p> 태그의 속성 유지
+          const pTagMatch = paragraphMatch.match(/<a:p([^>]*)>/);
+          const pAttrs = pTagMatch ? pTagMatch[1] : '';
+
+          return `<a:p${pAttrs}>${newParagraphContent}</a:p>`;
+        }
+      }
+
+      return paragraphMatch;
+    });
+
+    // 방법 3: 단순 문자열 교체 (위 방법들이 실패한 경우의 fallback)
+    // 이 방법은 서식을 깨뜨릴 수 있으므로 마지막 수단으로만 사용
+    if (result === xml && xml.includes(trimmedOld)) {
+      // XML 태그 밖에서만 교체 시도 (매우 보수적)
+      const escapedOld = this.escapeXML(trimmedOld);
+      if (result.includes(escapedOld)) {
+        result = result.split(escapedOld).join(escapedNew);
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * 고급 텍스트 교체 - 여러 run에 걸쳐 분리된 텍스트도 처리
+   * shape(도형) 단위로 텍스트를 합쳐서 매칭 후 교체
+   */
+  private replaceTextInShape(xml: string, oldText: string, newText: string): string {
+    if (!oldText || newText === undefined || newText === null) return xml;
+
+    const escapedNew = this.escapeXML(newText);
+    const trimmedOld = oldText.trim();
+
+    // <p:sp> (shape) 또는 <p:txBody> (text body) 단위로 처리
+    const shapeRegex = /<p:txBody>([\s\S]*?)<\/p:txBody>/g;
+
+    return xml.replace(shapeRegex, (shapeMatch, shapeContent) => {
+      // shape 내의 모든 텍스트 추출
+      const allTextMatches = shapeContent.match(/<a:t>([^<]*)<\/a:t>/g);
+      if (!allTextMatches) return shapeMatch;
+
+      const fullText = allTextMatches
+        .map((t: string) => t.replace(/<\/?a:t>/g, ''))
+        .join('');
+
+      // 해당 텍스트가 포함되어 있으면 paragraph 단위로 처리
+      if (fullText.includes(trimmedOld)) {
+        return shapeMatch.replace(/<a:p[^>]*>([\s\S]*?)<\/a:p>/g, (pMatch, pContent) => {
+          const pTextMatches = pContent.match(/<a:t>([^<]*)<\/a:t>/g);
+          if (!pTextMatches) return pMatch;
+
+          const pText = pTextMatches
+            .map((t: string) => t.replace(/<\/?a:t>/g, ''))
+            .join('');
+
+          if (pText.includes(trimmedOld)) {
+            // 첫 번째 run의 스타일 유지
+            const runMatch = pContent.match(/<a:r>([\s\S]*?)<a:t>/);
+            const runStyle = runMatch ? runMatch[1] : '';
+
+            // paragraph 속성 유지
+            const pPropsMatch = pContent.match(/<a:pPr[^>]*>[\s\S]*?<\/a:pPr>|<a:pPr[^\/]*\/>/);
+            const pProps = pPropsMatch ? pPropsMatch[0] : '';
+
+            const endParaMatch = pContent.match(/<a:endParaRPr[^>]*>[\s\S]*?<\/a:endParaRPr>|<a:endParaRPr[^\/]*\/>/);
+            const endPara = endParaMatch ? endParaMatch[0] : '';
+
+            const newText = pText.replace(trimmedOld, escapedNew);
+
+            const pTagMatch = pMatch.match(/<a:p([^>]*)>/);
+            const pAttrs = pTagMatch ? pTagMatch[1] : '';
+
+            return `<a:p${pAttrs}>${pProps}<a:r>${runStyle}<a:t>${newText}</a:t></a:r>${endPara}</a:p>`;
+          }
+
+          return pMatch;
+        });
+      }
+
+      return shapeMatch;
     });
   }
 
@@ -674,12 +824,7 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
    */
   async optimizeForColorfulCleanPPT(data: PortfolioData, userProfile?: any): Promise<ColorfulCleanPPTData> {
 
-    const OpenAI = (await import('openai')).default;
-    const openai = new OpenAI({
-      apiKey: process.env.REACT_APP_OPENAI_API_KEY || "",
-      dangerouslyAllowBrowser: true,
-    });
-
+    
     const userName = userProfile?.name || data.userInfo.name || '이름 없음';
     const userEmail = userProfile?.email || data.userInfo.email || '';
     const userPhone = userProfile?.phone || data.userInfo.phone || '';
@@ -795,7 +940,7 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
 `;
 
     try {
-      const response = await openai.chat.completions.create({
+      const response = await createChatCompletion({
         model: process.env.REACT_APP_OPENAI_MODEL || "gpt-4o-mini",
         messages: [
           { role: "system", content: "You are a PPT portfolio optimizer. Respond only with valid JSON. 한국어로 작성하세요." },
@@ -981,25 +1126,13 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
 
     // Slide 6: 경력·학력
     let slide6 = zip.file('ppt/slides/slide6.xml')?.asText() || '';
-    // 경력 교체
+    // 경력 교체 (replaceTextInXML 사용으로 분리된 텍스트도 처리)
     for (let i = 0; i < Math.min(2, pptData.experience.length); i++) {
       const exp = pptData.experience[i];
-      slide6 = slide6.replace(
-        '<a:t>[회사명] · [직책]</a:t>',
-        `<a:t>${this.escapeXML(exp.company)} · ${this.escapeXML(exp.position)}</a:t>`
-      );
-      slide6 = slide6.replace(
-        '<a:t>[기간]</a:t>',
-        `<a:t>${this.escapeXML(exp.period)}</a:t>`
-      );
-      slide6 = slide6.replace(
-        '<a:t>[핵심 성과 1줄 — 예: 매출 +15% 달성]</a:t>',
-        `<a:t>${this.escapeXML(exp.achievement)}</a:t>`
-      );
-      slide6 = slide6.replace(
-        '<a:t>[핵심 성과 1줄 — 예: 프로세스 리드타임 -30%]</a:t>',
-        `<a:t>${this.escapeXML(exp.achievement)}</a:t>`
-      );
+      slide6 = this.replaceTextInXML(slide6, '[회사명] · [직책]', `${exp.company} · ${exp.position}`);
+      slide6 = this.replaceTextInXML(slide6, '[기간]', exp.period);
+      slide6 = this.replaceTextInXML(slide6, '[핵심 성과 1줄 — 예: 매출 +15% 달성]', exp.achievement);
+      slide6 = this.replaceTextInXML(slide6, '[핵심 성과 1줄 — 예: 프로세스 리드타임 -30%]', exp.achievement);
     }
     // 학력 교체
     slide6 = this.replaceTextInXML(slide6, '[학교] · [전공] / [학위]', `${pptData.education.school} · ${pptData.education.major}`);
@@ -1035,12 +1168,7 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
    */
   async optimizeForImpactFocusedPPT(data: PortfolioData, userProfile?: any): Promise<ImpactFocusedPPTData> {
 
-    const OpenAI = (await import('openai')).default;
-    const openai = new OpenAI({
-      apiKey: process.env.REACT_APP_OPENAI_API_KEY || "",
-      dangerouslyAllowBrowser: true,
-    });
-
+    
     const userName = userProfile?.name || data.userInfo.name || '이름 없음';
     const userEmail = userProfile?.email || data.userInfo.email || '';
     const userPhone = userProfile?.phone || data.userInfo.phone || '';
@@ -1163,7 +1291,7 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
 `;
 
     try {
-      const response = await openai.chat.completions.create({
+      const response = await createChatCompletion({
         model: process.env.REACT_APP_OPENAI_MODEL || "gpt-4o-mini",
         messages: [
           { role: "system", content: "You are a PPT portfolio optimizer focusing on KPIs and metrics. Respond only with valid JSON. 한국어로 작성하세요." },
@@ -1502,19 +1630,10 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
         const item = pptData.timeline[i];
         const orgText = this.truncateText(`${item.organization} · ${item.position}`, 50);
 
-        // 순차적으로 플레이스홀더 교체
-        slide6 = slide6.replace(
-          '<a:t>[기관/회사] · [직무/전공]</a:t>',
-          `<a:t>${this.escapeXML(orgText)}</a:t>`
-        );
-        slide6 = slide6.replace(
-          '<a:t>[기간]</a:t>',
-          `<a:t>${this.escapeXML(this.truncateText(item.period, 20))}</a:t>`
-        );
-        slide6 = slide6.replace(
-          '<a:t>[핵심 성과/활동 1]</a:t>',
-          `<a:t>${this.escapeXML(this.truncateText(item.achievement, 60))}</a:t>`
-        );
+        // 순차적으로 플레이스홀더 교체 (replaceTextInXML 사용으로 분리된 텍스트도 처리)
+        slide6 = this.replaceTextInXML(slide6, '[기관/회사] · [직무/전공]', orgText);
+        slide6 = this.replaceTextInXML(slide6, '[기간]', this.truncateText(item.period, 20));
+        slide6 = this.replaceTextInXML(slide6, '[핵심 성과/활동 1]', this.truncateText(item.achievement, 60));
       }
       zip.file('ppt/slides/slide6.xml', slide6);
 
@@ -1543,12 +1662,7 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
    */
   async optimizeForMarketingPlanningPPT(data: PortfolioData, userProfile?: any): Promise<MarketingPlanningPPTData> {
 
-    const OpenAI = (await import('openai')).default;
-    const openai = new OpenAI({
-      apiKey: process.env.REACT_APP_OPENAI_API_KEY || "",
-      dangerouslyAllowBrowser: true,
-    });
-
+    
     const userName = userProfile?.name || data.userInfo.name || '이름 없음';
     const userEmail = userProfile?.email || data.userInfo.email || '';
     const userPhone = userProfile?.phone || data.userInfo.phone || '';
@@ -1707,7 +1821,7 @@ ${data.projects.slice(0, 3).map((p, i) => `${i + 1}. ${p.name || ''}
 `;
 
     try {
-      const response = await openai.chat.completions.create({
+      const response = await createChatCompletion({
         model: "gpt-4o-mini",
         messages: [{ role: "user", content: prompt }],
         temperature: 0.7,
@@ -1886,12 +2000,7 @@ ${data.projects.slice(0, 3).map((p, i) => `${i + 1}. ${p.name || ''}
    */
   async optimizeForPMPPT(data: PortfolioData, userProfile?: any): Promise<PMPPTData> {
 
-    const OpenAI = (await import('openai')).default;
-    const openai = new OpenAI({
-      apiKey: process.env.REACT_APP_OPENAI_API_KEY || "",
-      dangerouslyAllowBrowser: true,
-    });
-
+    
     const userName = userProfile?.name || data.userInfo.name || '이름 없음';
     const userEmail = userProfile?.email || data.userInfo.email || '';
     const userPhone = userProfile?.phone || data.userInfo.phone || '';
@@ -2040,7 +2149,7 @@ PM/PO 전문 포트폴리오에 맞게 데이터를 변환하세요. Discovery-D
 `;
 
     try {
-      const response = await openai.chat.completions.create({
+      const response = await createChatCompletion({
         model: "gpt-4o-mini",
         messages: [{ role: "user", content: prompt }],
         temperature: 0.7,

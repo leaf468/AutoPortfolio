@@ -1,10 +1,5 @@
 import { getComprehensiveStats, ComprehensiveStats } from './comprehensiveAnalysisService';
-import OpenAI from 'openai';
-
-const openai = new OpenAI({
-  apiKey: process.env.REACT_APP_OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true,
-});
+import { createChatCompletion } from '../lib/openaiClient';
 
 export interface QuestionAnalysis {
   questionId: string;
@@ -32,7 +27,7 @@ interface LLMQuestionIntent {
  */
 async function analyzeQuestionIntentWithLLM(question: string, position: string, availableActivities: string[]): Promise<LLMQuestionIntent> {
   try {
-    const response = await openai.chat.completions.create({
+    const response = await createChatCompletion({
       model: 'gpt-4o-mini',
       messages: [
         {

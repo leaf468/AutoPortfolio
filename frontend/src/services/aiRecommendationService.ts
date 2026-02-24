@@ -1,13 +1,6 @@
 import { supabase } from '../lib/supabaseClient';
 import { ComprehensiveStats, getComprehensiveStats } from './comprehensiveAnalysisService';
-import OpenAI from 'openai';
-
-const openai = new OpenAI({
-  apiKey: process.env.REACT_APP_OPENAI_API_KEY || "",
-  dangerouslyAllowBrowser: true,
-});
-
-const OPENAI_MODEL = process.env.REACT_APP_OPENAI_MODEL || "gpt-4o-mini";
+import { createChatCompletion, OPENAI_MODEL } from '../lib/openaiClient';
 
 export interface AIRecommendation {
   type: 'pattern' | 'example' | 'keyword' | 'insight' | 'llm_suggestion';
@@ -160,7 +153,7 @@ ${JSON.stringify(topActivities, null, 2)}${similarActivitiesInfo}
   ]
 }`;
 
-    const response = await openai.chat.completions.create({
+    const response = await createChatCompletion({
       model: OPENAI_MODEL,
       messages: [{
         role: 'system',

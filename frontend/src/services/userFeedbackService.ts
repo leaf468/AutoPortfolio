@@ -1,12 +1,5 @@
-import OpenAI from "openai";
 import { OrganizedContent } from "./aiOrganizer";
-
-const openai = new OpenAI({
-    apiKey: process.env.REACT_APP_OPENAI_API_KEY || "",
-    dangerouslyAllowBrowser: true,
-});
-
-const REACT_APP_OPENAI_MODEL = process.env.REACT_APP_OPENAI_MODEL || "gpt-4o-mini";
+import { createChatCompletion, OPENAI_MODEL } from '../lib/openaiClient';
 
 export interface FeedbackOption {
     id: string;
@@ -199,8 +192,8 @@ ${allRequests.map((req, idx) => `${idx + 1}. ${req}`).join("\n")}
 - 채용담당자가 5초 안에 핵심을 파악할 수 있도록 구조화
 `;
 
-            const response = await openai.chat.completions.create({
-                model: REACT_APP_OPENAI_MODEL,
+            const response = await createChatCompletion({
+                model: OPENAI_MODEL,
                 messages: [
                     { role: "system", content: systemPrompt },
                     {
@@ -286,8 +279,8 @@ ${allRequests.map((req, idx) => `${idx + 1}. ${req}`).join("\n")}
 숫자만 반환하세요 (예: 25)
 `;
 
-            const response = await openai.chat.completions.create({
-                model: REACT_APP_OPENAI_MODEL,
+            const response = await createChatCompletion({
+                model: OPENAI_MODEL,
                 messages: [
                     { role: "system", content: systemPrompt },
                     {
@@ -322,8 +315,8 @@ ${allRequests.map((req, idx) => `${idx + 1}. ${req}`).join("\n")}
 숫자만 반환하세요 (예: 88)
 `;
 
-            const response = await openai.chat.completions.create({
-                model: REACT_APP_OPENAI_MODEL,
+            const response = await createChatCompletion({
+                model: OPENAI_MODEL,
                 messages: [
                     { role: "system", content: systemPrompt },
                     { role: "user", content: `포트폴리오:\n${content}` },
@@ -386,8 +379,8 @@ ${allRequests.map((req, idx) => `${idx + 1}. ${req}`).join("\n")}
 반드시 JSON 형식의 포트폴리오 데이터로 응답해주세요.
 `;
 
-            const response = await openai.chat.completions.create({
-                model: REACT_APP_OPENAI_MODEL,
+            const response = await createChatCompletion({
+                model: OPENAI_MODEL,
                 messages: [
                     { role: "system", content: systemPrompt },
                     {

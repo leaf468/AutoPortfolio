@@ -1,4 +1,3 @@
-import OpenAI from 'openai';
 import {
   MotivationFields,
   ExperienceFields,
@@ -9,17 +8,7 @@ import {
   TeamworkFields,
   ConflictFields,
 } from '../types/fieldBasedCoverLetter';
-
-// API 키 확인
-const API_KEY = process.env.REACT_APP_OPENAI_API_KEY;
-if (!API_KEY || API_KEY.length < 20) {
-  console.error('OpenAI API key is missing or invalid in .env file');
-}
-
-const openai = new OpenAI({
-  apiKey: API_KEY,
-  dangerouslyAllowBrowser: true,
-});
+import { createChatCompletion } from '../lib/openaiClient';
 
 /**
  * LLM을 사용하여 필드 데이터로부터 전문적인 자소서 답변 생성
@@ -63,7 +52,7 @@ export async function generateAnswerWithLLM(
       userPrompt += `\n\n참고 데이터 (영감용, 절대 복사 금지):\n${referenceData}`;
     }
 
-    const response = await openai.chat.completions.create({
+    const response = await createChatCompletion({
       model: 'gpt-4o-mini',
       messages: [
         {
@@ -84,7 +73,7 @@ export async function generateAnswerWithLLM(
     // 최대 길이 체크
     if (generatedAnswer.length > maxLength) {
       // 길이 초과시 재생성 요청
-      const truncateResponse = await openai.chat.completions.create({
+      const truncateResponse = await createChatCompletion({
         model: 'gpt-4o-mini',
         messages: [
           {
@@ -177,7 +166,7 @@ ${guidance}
       userPrompt += `\n\n참고 데이터 (영감용):\n${referenceData}`;
     }
 
-    const response = await openai.chat.completions.create({
+    const response = await createChatCompletion({
       model: 'gpt-4o-mini',
       messages: [
         { role: 'system', content: systemPrompt },
@@ -191,7 +180,7 @@ ${guidance}
 
     // 길이 초과시 축약
     if (generatedAnswer.length > maxLength) {
-      const truncateResponse = await openai.chat.completions.create({
+      const truncateResponse = await createChatCompletion({
         model: 'gpt-4o-mini',
         messages: [
           {
