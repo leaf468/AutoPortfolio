@@ -1,16 +1,17 @@
-// Transparent OpenAI proxy (Vercel Serverless Function).
-// The frontend OpenAI SDK is pointed at `${origin}/api/openai`, so requests hit
-// this same-origin endpoint (no CORS) and the real API key stays on the server.
+// Transparent OpenAI proxy (flat Vercel Serverless Function — no bracketed
+// catch-all filename, which the CRA/vc-build pipeline fails to detect).
 //
-// Required env var (server-side, NOT prefixed with REACT_APP_):
-//   OPENAI_API_KEY   - your OpenAI secret key
+// The frontend OpenAI SDK targets `${origin}/api/openai`, so it requests paths
+// like `/api/openai/chat/completions`. A rewrite in vercel.json maps
+//   /api/openai/(.*)  ->  /api/openai-proxy?path=$1
+// so this function receives the OpenAI sub-path in `req.query.path`.
+//
+// Required server-side env var (NOT prefixed with REACT_APP_):
+//   OPENAI_API_KEY
 // Optional:
-//   OPENAI_ORG_ID    - OpenAI organization id
-
-export const config = { runtime: 'nodejs' };
+//   OPENAI_ORG_ID
 
 export default async function handler(req: any, res: any) {
-  // Preflight (same-origin in production, but harmless to answer)
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
@@ -25,9 +26,13 @@ export default async function handler(req: any, res: any) {
     return;
   }
 
-  // Rebuild the OpenAI path, e.g. ["chat", "completions"] -> "chat/completions"
-  const segments = req.query?.path;
-  const subPath = Array.isArray(segments) ? segments.join('/') : (segments || '');
+  const raw = req.query?.path;
+  const subPath = Array.isArray(raw) ? raw.join('/') : (raw || '');
+  if (!subPath) {
+    res.status(400).json({ error: 'Missing OpenAI sub-path' });
+    return;
+  }
+
   const targetUrl = `https://api.openai.com/v1/${subPath}`;
 
   try {

@@ -5,15 +5,14 @@
   "installCommand": "cd frontend && npm install",
   "devCommand": "cd frontend && npm run start",
   "functions": {
-    "api/**/*.ts": {
-      "memory": 1024,
+    "api/*.ts": {
       "maxDuration": 30
     }
   },
   "rewrites": [
     {
-      "source": "/api/:path*",
-      "destination": "/api/:path*"
+      "source": "/api/openai/:path*",
+      "destination": "/api/openai-proxy?path=:path*"
     }
   ]
 }

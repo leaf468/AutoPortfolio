@@ -1,0 +1,4 @@
+// Diagnostic function: confirms Vercel is building /api serverless functions.
+export default function handler(req: any, res: any) {
+  res.status(200).json({ ok: true, ts: Date.now() });
+}
