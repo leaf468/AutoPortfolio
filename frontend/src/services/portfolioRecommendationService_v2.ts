@@ -3,9 +3,10 @@ import OpenAI from 'openai';
 import { SyntheticApplicant, toCoverLetters, toActivitiesBatch } from './syntheticDataAdapter';
 
 const openai = new OpenAI({
-  apiKey: process.env.REACT_APP_OPENAI_API_KEY || '',
-  dangerouslyAllowBrowser: true,
-});
+    baseURL: process.env.REACT_APP_OPENAI_BASE_URL || `${window.location.origin}/api/openai`,
+    apiKey: process.env.REACT_APP_OPENAI_API_KEY || "proxy",
+    dangerouslyAllowBrowser: true,
+  });
 
 const REACT_APP_OPENAI_MODEL = process.env.REACT_APP_OPENAI_MODEL || 'gpt-4o-mini';
 

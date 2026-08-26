@@ -457,9 +457,10 @@ class PPTXGenerationService {
 
     const OpenAI = (await import('openai')).default;
     const openai = new OpenAI({
-      apiKey: process.env.REACT_APP_OPENAI_API_KEY || "",
-      dangerouslyAllowBrowser: true,
-    });
+    baseURL: process.env.REACT_APP_OPENAI_BASE_URL || `${window.location.origin}/api/openai`,
+    apiKey: process.env.REACT_APP_OPENAI_API_KEY || "proxy",
+    dangerouslyAllowBrowser: true,
+  });
 
     // 프로필에서 이름, 이메일, 전화번호 가져오기 (우선순위: 프로필 > 포트폴리오 데이터)
     const userName = userProfile?.name || data.userInfo.name || '이름 없음';
@@ -676,9 +677,10 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
 
     const OpenAI = (await import('openai')).default;
     const openai = new OpenAI({
-      apiKey: process.env.REACT_APP_OPENAI_API_KEY || "",
-      dangerouslyAllowBrowser: true,
-    });
+    baseURL: process.env.REACT_APP_OPENAI_BASE_URL || `${window.location.origin}/api/openai`,
+    apiKey: process.env.REACT_APP_OPENAI_API_KEY || "proxy",
+    dangerouslyAllowBrowser: true,
+  });
 
     const userName = userProfile?.name || data.userInfo.name || '이름 없음';
     const userEmail = userProfile?.email || data.userInfo.email || '';
@@ -1037,9 +1039,10 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
 
     const OpenAI = (await import('openai')).default;
     const openai = new OpenAI({
-      apiKey: process.env.REACT_APP_OPENAI_API_KEY || "",
-      dangerouslyAllowBrowser: true,
-    });
+    baseURL: process.env.REACT_APP_OPENAI_BASE_URL || `${window.location.origin}/api/openai`,
+    apiKey: process.env.REACT_APP_OPENAI_API_KEY || "proxy",
+    dangerouslyAllowBrowser: true,
+  });
 
     const userName = userProfile?.name || data.userInfo.name || '이름 없음';
     const userEmail = userProfile?.email || data.userInfo.email || '';
@@ -1545,9 +1548,10 @@ ${data.education.length > 0 ? data.education.map((e, i) => `${i + 1}. ${e.instit
 
     const OpenAI = (await import('openai')).default;
     const openai = new OpenAI({
-      apiKey: process.env.REACT_APP_OPENAI_API_KEY || "",
-      dangerouslyAllowBrowser: true,
-    });
+    baseURL: process.env.REACT_APP_OPENAI_BASE_URL || `${window.location.origin}/api/openai`,
+    apiKey: process.env.REACT_APP_OPENAI_API_KEY || "proxy",
+    dangerouslyAllowBrowser: true,
+  });
 
     const userName = userProfile?.name || data.userInfo.name || '이름 없음';
     const userEmail = userProfile?.email || data.userInfo.email || '';
@@ -1888,9 +1892,10 @@ ${data.projects.slice(0, 3).map((p, i) => `${i + 1}. ${p.name || ''}
 
     const OpenAI = (await import('openai')).default;
     const openai = new OpenAI({
-      apiKey: process.env.REACT_APP_OPENAI_API_KEY || "",
-      dangerouslyAllowBrowser: true,
-    });
+    baseURL: process.env.REACT_APP_OPENAI_BASE_URL || `${window.location.origin}/api/openai`,
+    apiKey: process.env.REACT_APP_OPENAI_API_KEY || "proxy",
+    dangerouslyAllowBrowser: true,
+  });
 
     const userName = userProfile?.name || data.userInfo.name || '이름 없음';
     const userEmail = userProfile?.email || data.userInfo.email || '';

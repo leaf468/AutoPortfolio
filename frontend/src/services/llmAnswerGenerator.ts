@@ -17,9 +17,10 @@ if (!API_KEY || API_KEY.length < 20) {
 }
 
 const openai = new OpenAI({
-  apiKey: API_KEY,
-  dangerouslyAllowBrowser: true,
-});
+    baseURL: process.env.REACT_APP_OPENAI_BASE_URL || `${window.location.origin}/api/openai`,
+    apiKey: process.env.REACT_APP_OPENAI_API_KEY || "proxy",
+    dangerouslyAllowBrowser: true,
+  });
 
 /**
  * LLM을 사용하여 필드 데이터로부터 전문적인 자소서 답변 생성

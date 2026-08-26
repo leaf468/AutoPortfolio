@@ -2,9 +2,10 @@ import { getComprehensiveStats, ComprehensiveStats } from './comprehensiveAnalys
 import OpenAI from 'openai';
 
 const openai = new OpenAI({
-  apiKey: process.env.REACT_APP_OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true,
-});
+    baseURL: process.env.REACT_APP_OPENAI_BASE_URL || `${window.location.origin}/api/openai`,
+    apiKey: process.env.REACT_APP_OPENAI_API_KEY || "proxy",
+    dangerouslyAllowBrowser: true,
+  });
 
 export interface QuestionAnalysis {
   questionId: string;
